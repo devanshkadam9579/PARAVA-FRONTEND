@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (getUserRole() == 'admin' || getUserRole() == 'master_admin');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Users can't change their own roles, only admins can
+      allow create: if isSignedIn() && request.auth.uid == userId && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'user');
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      allow delete: if isAdmin();
+    }
+
+    // Vendors collection - Publicly readable, admin writable, user/prospective vendors can create unapproved listings
+    match /vendors/{vendorId} {
+      allow read: if true;
+      allow create: if request.resource.data.approved == false;
+      allow update, delete: if isAdmin();
+    }
+
+    // Categories collection - Publicly readable, admin writable
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Leads collection - Anyone can submit an enquiry, admin can read/manage
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Admins collection - Read allowed for login verification, writes allowed for admins setup
+    match /admins/{adminId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Promos collection - Publicly readable, admin writable
+    match /promos/{promoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
