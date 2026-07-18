@@ -2037,10 +2037,22 @@ export default function App() {
                           setCurrentUser(newUser);
                           localStorage.setItem('parva_user', JSON.stringify(newUser));
                           
-                          // Save user to Firestore
-                          const db = getDb();
-                          const { doc, setDoc } = await import('firebase/firestore');
-                          await setDoc(doc(db, 'users', user.uid), newUser, { merge: true });
+                          // Save user to Firestore (Admin uses backend to bypass client rules)
+                          if (isMasterAdminEmail) {
+                            try {
+                              await fetch('https://parava-backend-1.onrender.com/api/admin/sync-user', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(newUser)
+                              });
+                            } catch (e) {
+                              console.error('Failed to sync master admin via Google:', e);
+                            }
+                          } else {
+                            const db = getDb();
+                            const { doc, setDoc } = await import('firebase/firestore');
+                            await setDoc(doc(db, 'users', user.uid), newUser, { merge: true });
+                          }
                           
                           showNotification('🎉 Google Sign-In Successful! Welcome to PARVA.');
                         } catch (error) {
@@ -2128,6 +2140,19 @@ export default function App() {
                                   city: 'Mumbai',
                                   role: isMasterAdminEmail ? 'master_admin' : 'user'
                                 };
+
+                                // Securely register admin in backend database via server to bypass client rules
+                                if (isMasterAdminEmail) {
+                                  try {
+                                    await fetch('https://parava-backend-1.onrender.com/api/admin/sync-user', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(loggedInUser)
+                                    });
+                                  } catch (e) {
+                                    console.error('Failed to sync master admin to database:', e);
+                                  }
+                                }
                               }
                               
                               setCurrentUser(loggedInUser);
