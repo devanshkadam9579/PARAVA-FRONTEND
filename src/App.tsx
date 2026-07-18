@@ -265,7 +265,11 @@ export default function App() {
   // User State
   const [currentUser, setCurrentUser] = useState<any>(() => {
     const cached = localStorage.getItem('parva_user');
-    return cached ? JSON.parse(cached) : null;
+    try {
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   // Admin state
@@ -348,7 +352,9 @@ export default function App() {
   // Leads list for CSV extraction
   const [leadsList, setLeadsList] = useState<any[]>(() => {
     const cached = localStorage.getItem('parva_leads_list');
-    if (cached) return JSON.parse(cached);
+    try {
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
     // Seed initial leads so the CSV file and analytics charts look amazing!
     const initialLeads = [
       { id: 'lead-1', name: 'Rohan Malhotra', phone: '9812345678', email: 'rohan.m@gmail.com', city: 'Mumbai', vendorName: 'Royal Grand Pavilion', budget: 180000, timestamp: '2026-07-07 14:32:10' },
