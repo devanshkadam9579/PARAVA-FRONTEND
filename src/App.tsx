@@ -2073,7 +2073,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Email Address</label>
                           <input
                             type="email"
-                            placeholder="yourname@gmail.com"
+                            
                             value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
                             className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -2083,7 +2083,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Password</label>
                           <input
                             type="password"
-                            placeholder="••••••••"
+                            
                             value={loginPassword}
                             onChange={(e) => setLoginPassword(e.target.value)}
                             className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -2159,7 +2159,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Full Name</label>
                           <input
                             type="text"
-                            placeholder="Devansh Sharma"
+                            
                             value={loginName}
                             onChange={(e) => setLoginName(e.target.value)}
                             className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -2170,7 +2170,7 @@ export default function App() {
                             <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">WhatsApp Phone</label>
                             <input
                               type="tel"
-                              placeholder="9999912345"
+                              
                               value={loginPhone}
                               onChange={(e) => setLoginPhone(e.target.value)}
                               className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -2193,7 +2193,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Email Address</label>
                           <input
                             type="email"
-                            placeholder="yourname@gmail.com"
+                            
                             value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
                             className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -2203,7 +2203,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Password</label>
                           <input
                             type="password"
-                            placeholder="Create Password (min 6 chars)"
+                            
                             value={loginPassword}
                             onChange={(e) => setLoginPassword(e.target.value)}
                             className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
@@ -3046,7 +3046,7 @@ export default function App() {
             {/* Quick Horizontal Scroll Categories */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-brand-text text-base uppercase tracking-wider">Occasion Categories</h3>
+                <h3 className="font-bold text-brand-text text-base uppercase tracking-wider">Vendor Categories</h3>
                 <span className="text-sm text-brand-primary font-semibold hover:underline cursor-pointer">View All</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
@@ -3054,8 +3054,8 @@ export default function App() {
                   <button
                     key={cat.id}
                     onClick={() => {
-                      setSelectedExploreCategory('all');
-                      setExploreOccasion(cat.name); // Set occasion filter too
+                      setSelectedExploreCategory(cat.name);
+                      setExploreOccasion('all');
                       setActiveTab('explore');
                     }}
                     className="flex flex-col items-center shrink-0 snap-center group"
@@ -5373,14 +5373,14 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* SUB-TAB 3: OCCASION CATEGORIES (CRUD) */}
+                    {/* SUB-TAB 3: VENDOR CATEGORIES (CRUD) */}
                     {adminSubTab === 'categories' && (
                       <div className="bg-white p-3.5 rounded-2xl border border-brand-border space-y-3.5 text-xs animate-in fade-in duration-200">
-                        <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest block">Add Occasions Category</span>
+                        <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest block">Add Vendor Category</span>
                         <div className="space-y-2">
                           <input
                             type="text"
-                            placeholder="Occasion Category Name (e.g. Sangeet Party)"
+                            placeholder="Vendor Category Name (e.g. Photographer)"
                             value={adminCategoryName}
                             onChange={(e) => setAdminCategoryName(e.target.value)}
                             className="w-full bg-gray-50 border border-brand-border rounded-lg px-2.5 py-1.5 text-xs outline-none focus:bg-white"
@@ -5424,7 +5424,7 @@ export default function App() {
                             }}
                             className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold py-2 rounded-lg text-[10px]"
                           >
-                            Create Occasions Category
+                            Create Vendor Category
                           </button>
                         </div>
 

@@ -40,52 +40,52 @@ export const EVENT_PLANNERS: EventPlanner[] = [
 
 export const QUICK_CATEGORIES: QuickCategory[] = [
   {
-    id: 'wedding',
-    name: 'Wedding',
-    iconName: 'Heart',
-    image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=400'
+    id: 'banquet-hall',
+    name: 'Banquet Hall',
+    iconName: 'Building2',
+    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=400'
   },
   {
-    id: 'birthday',
-    name: 'Birthday',
-    iconName: 'Cake',
-    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'corporate',
-    name: 'Corporate',
-    iconName: 'Briefcase',
-    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'festival',
-    name: 'Festival',
+    id: 'decorator',
+    name: 'Decorator',
     iconName: 'Sparkles',
-    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=400'
+    image: 'https://images.unsplash.com/photo-1522413416052-4065f8a8de35?auto=format&fit=crop&q=80&w=400'
   },
   {
-    id: 'housewarming',
-    name: 'Housewarming',
-    iconName: 'Home',
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=400'
+    id: 'photographer',
+    name: 'Photographer',
+    iconName: 'Camera',
+    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400'
   },
   {
-    id: 'engagement',
-    name: 'Engagement',
-    iconName: 'Gift',
-    image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=400'
+    id: 'dj',
+    name: 'DJ',
+    iconName: 'Music',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=400'
   },
   {
-    id: 'anniversary',
-    name: 'Anniversary',
-    iconName: 'Award',
-    image: 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&q=80&w=400'
+    id: 'catering',
+    name: 'Catering',
+    iconName: 'Utensils',
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=400'
   },
   {
-    id: 'baby-shower',
-    name: 'Baby Shower',
-    iconName: 'Smile',
-    image: 'https://images.unsplash.com/photo-1519689680058-324335c77eb2?auto=format&fit=crop&q=80&w=400'
+    id: 'makeup-artist',
+    name: 'Makeup Artist',
+    iconName: 'Palette',
+    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 'cake-desserts',
+    name: 'Cake & Desserts',
+    iconName: 'Cake',
+    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 'event-planner',
+    name: 'Event Planner',
+    iconName: 'ClipboardList',
+    image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=400'
   }
 ];
 

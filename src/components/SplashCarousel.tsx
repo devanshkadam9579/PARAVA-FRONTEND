@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, ArrowRight, ShieldCheck, Gift, Calendar, Heart, PartyPopper } from 'lucide-react';
+import { Sparkles, ArrowRight, CheckCircle2, MapPin, Package, Building2 } from 'lucide-react';
 import mandalaPattern from '../assets/images/mandala_pattern_1782933605563.jpg';
 
 interface SplashCarouselProps {
@@ -27,31 +27,37 @@ export default function SplashCarousel({ onComplete, appLogo }: SplashCarouselPr
 
   const slides = [
     {
-      title: "Plan Your Celebrations Like Pro",
-      subtitle: "Zomato-Style Easy Matching",
-      description: "Simply select your event type, date, guest size, and target budget. Our smart matchmaker filters and highlights perfect verified vendors instantly.",
-      badge: "Smart Filters",
-      icon: Calendar,
-      color: "from-orange-500 to-red-600",
-      image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600"
+      title: "Welcome to Parva",
+      subtitle: "Your Complete Event Platform",
+      description: "Plan your celebrations effortlessly. We bring the best professionals together in one place so you can focus on creating memories.",
+      stats: [
+        { icon: Building2, text: "500+ Verified Vendors" },
+        { icon: MapPin, text: "Active in 15+ Cities" }
+      ],
+      icon: Sparkles,
+      color: "text-brand-primary"
     },
     {
-      title: "Handpicked Premium Categories",
-      subtitle: "Urban Clap Style Simplicity",
-      description: "Browse handpicked banquet halls, DJs, decorators, photographers, makeups, and gorgeous cakes. Clean, standard service pricing with zero hidden margins.",
-      badge: "Verified Quality",
-      icon: ShieldCheck,
-      color: "from-amber-500 to-orange-600",
-      image: "https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=600"
+      title: "Step 1: Discover & Filter",
+      subtitle: "Find the Perfect Match",
+      description: "Select your city and choose from various categories like Banquet Halls, Decorators, and Photographers. Use our smart filters to match your exact budget and guest size.",
+      stats: [
+        { icon: CheckCircle2, text: "Transparent Pricing" },
+        { icon: CheckCircle2, text: "Verified Reviews" }
+      ],
+      icon: MapPin,
+      color: "text-amber-500"
     },
     {
-      title: "Unlock Super Saver Discounts",
-      subtitle: "The More You Bundle, The More You Save",
-      description: "Add multiple service slots to your active plan and enjoy automated multiplier discounts. Save up to 22% on combined packages with 1-click booking.",
-      badge: "Super Saver Packs",
-      icon: Gift,
-      color: "from-pink-500 to-purple-600",
-      image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=600"
+      title: "Step 2: Bundle & Save",
+      subtitle: "Maximize Your Budget",
+      description: "Add multiple services to your event plan and unlock automated bundle discounts. Manage all your bookings through a single, unified dashboard.",
+      stats: [
+        { icon: Package, text: "Automated Discounts" },
+        { icon: CheckCircle2, text: "1-Click Booking" }
+      ],
+      icon: Package,
+      color: "text-pink-500"
     }
   ];
 
@@ -160,56 +166,49 @@ export default function SplashCarousel({ onComplete, appLogo }: SplashCarouselPr
             </div>
 
             {/* Slide Body */}
-            <div className="flex-1 flex flex-col justify-center py-4 space-y-6">
-              {/* Illustration Block */}
-              <div className="relative rounded-[32px] overflow-hidden shadow-xl aspect-video border border-brand-border bg-white group">
-                <img
-                  src={slides[currentSlide].image}
-                  alt={slides[currentSlide].title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600';
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                
-                {/* Floating category badges */}
-                <div className="absolute top-4 left-4">
-                  <span className="bg-white/95 text-brand-text text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
-                    {React.createElement(slides[currentSlide].icon, { size: 12, className: "text-brand-primary" })}
-                    <span>{slides[currentSlide].badge}</span>
-                  </span>
+            <div className="flex-1 flex flex-col justify-center py-4 space-y-8">
+              
+              <div className="flex flex-col items-center text-center space-y-6">
+                <div className={`w-24 h-24 rounded-full bg-white shadow-xl border border-brand-border flex items-center justify-center ${slides[currentSlide].color}`}>
+                  {React.createElement(slides[currentSlide].icon, { size: 48 })}
                 </div>
                 
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent mb-1 block">
-                    {slides[currentSlide].subtitle}
-                  </span>
-                  <p className="text-sm font-bold leading-tight">
-                    Premium Verified Vendors Only
+                {/* Title & Description */}
+                <div className="space-y-4 px-4">
+                  <div className="space-y-1">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-brand-accent">
+                      {slides[currentSlide].subtitle}
+                    </span>
+                    <h2 className="text-3xl font-black text-brand-text leading-tight tracking-tight font-display">
+                      {slides[currentSlide].title}
+                    </h2>
+                  </div>
+                  <p className="text-sm text-brand-text-secondary leading-relaxed font-medium">
+                    {slides[currentSlide].description}
                   </p>
                 </div>
               </div>
 
-              {/* Title & Description */}
-              <div className="space-y-3">
-                <h2 className="text-2xl font-black text-brand-text leading-tight tracking-tight font-display">
-                  {slides[currentSlide].title}
-                </h2>
-                <p className="text-xs text-brand-text-secondary leading-relaxed font-medium">
-                  {slides[currentSlide].description}
-                </p>
+              {/* Stats / Features Grid */}
+              <div className="grid grid-cols-1 gap-3 px-4">
+                {slides[currentSlide].stats.map((stat, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl p-4 shadow-sm border border-brand-border flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary">
+                      {React.createElement(stat.icon, { size: 20 })}
+                    </div>
+                    <span className="font-bold text-brand-text">{stat.text}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Interactive preview indicators */}
-              <div className="flex gap-1.5 items-center justify-start py-2">
+              <div className="flex gap-2 items-center justify-center pt-4">
                 {slides.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      currentSlide === idx ? 'w-6 bg-brand-primary' : 'w-2 bg-brand-primary/20'
+                      currentSlide === idx ? 'w-8 bg-brand-primary' : 'w-2 bg-brand-primary/20'
                     }`}
                   />
                 ))}
@@ -220,14 +219,14 @@ export default function SplashCarousel({ onComplete, appLogo }: SplashCarouselPr
             <div className="space-y-4 py-2">
               <button
                 onClick={handleNext}
-                className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-sm py-4 rounded-[18px] transition shadow-lg shadow-brand-primary/15 flex items-center justify-center gap-1.5"
+                className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-lg py-4 rounded-[18px] transition shadow-lg shadow-brand-primary/15 flex items-center justify-center gap-2"
               >
-                <span>{currentSlide === slides.length - 1 ? "Let's Get Started" : "Continue Tour"}</span>
-                <ArrowRight size={16} strokeWidth={2.5} />
+                <span>{currentSlide === slides.length - 1 ? "Start Planning" : "Continue"}</span>
+                <ArrowRight size={20} strokeWidth={2.5} />
               </button>
               
               <div className="text-center">
-                <span className="text-[10px] text-brand-text-secondary font-semibold">
+                <span className="text-[11px] text-brand-text-secondary font-semibold">
                   By continuing, you agree to our verified event execution warranty
                 </span>
               </div>
