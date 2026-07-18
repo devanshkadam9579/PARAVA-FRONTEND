@@ -13,7 +13,9 @@ const getFirebase = () => {
       throw new Error('Firebase API key is missing. Please check your Firebase configuration.');
     }
     app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    db = firebaseConfig.firestoreDatabaseId 
+      ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+      : getFirestore(app);
     auth = getAuth(app);
   }
   return { db: db!, auth: auth! };
