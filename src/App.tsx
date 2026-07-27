@@ -3042,7 +3042,7 @@ export default function App() {
                       .map(v => (
                         <div 
                           key={v.id} 
-                          onClick={() => { setSearchQuery(v.name); setActiveTab('explore'); }}
+                          onClick={() => { setSearchQuery(v.name); handleVendorSelect(v); }}
                           className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-0 transition"
                         >
                           <div>
@@ -3262,7 +3262,7 @@ export default function App() {
                       .map(v => (
                         <div 
                           key={v.id} 
-                          onClick={() => { setSearchQuery(v.name); setActiveTab('explore'); }}
+                          onClick={() => { setSearchQuery(v.name); handleVendorSelect(v); }}
                           className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-0 transition"
                         >
                           <div>
