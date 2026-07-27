@@ -9,7 +9,7 @@ import {
   CheckCircle2, ArrowRight, User, ThumbsUp, CalendarIcon, Heart,
   ChevronLeft, ChevronRight, Instagram, Phone, MessageCircle, Lock, Play, Video,
   Download, FileText, User as UserIcon, DollarSign, Info, Smartphone, CreditCard, Users,
-  MessageSquare
+  MessageSquare, Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
