@@ -490,6 +490,17 @@ export default function VendorDetailSheet({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        const message = `Check out ${vendor.name} on PARVA!%0A${vendor.tagline}%0A${window.location.origin}`;
+                        window.open(`https://wa.me/?text=${message}`, '_blank');
+                      }}
+                      className="p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition"
+                      title="Share via WhatsApp"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/></svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onToggleWishlist();
                       }}
                       className="p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition"
@@ -679,103 +690,115 @@ export default function VendorDetailSheet({
                       Select specific services below to instantly add them to your custom event bundle:
                     </p>
                     
-                    {vendor.services.map((svc, index) => {
-                      const isAdded = bundledServices.some((s) => s.name === svc.name);
-                      const isEditingSvc = editingServiceIndex === index;
+                    <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                      {vendor.services.map((svc, index) => {
+                        const isAdded = bundledServices.some((s) => s.name === svc.name);
+                        const isEditingSvc = editingServiceIndex === index;
 
-                      return (
-                        <div
-                          key={svc.name}
-                          className={`p-4 rounded-2xl border bg-white transition-all ${
-                            isAdded ? 'border-brand-primary bg-brand-primary-light/10 shadow-sm' : 'border-brand-border'
-                          }`}
-                          id={`service-card-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
-                        >
-                          {isEditingSvc ? (
-                            <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-dashed border-brand-primary/20">
-                              <span className="text-[9px] font-black uppercase text-brand-primary block">Modify Service Option</span>
-                              <div className="space-y-1">
-                                <label className="text-[8px] font-bold text-gray-500 uppercase">Service Name</label>
-                                <input
-                                  type="text"
-                                  value={editedServiceName}
-                                  onChange={(e) => setEditedServiceName(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-lg p-1.5 text-xs outline-none focus:border-brand-primary"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[8px] font-bold text-gray-500 uppercase">Price (₹)</label>
-                                <input
-                                  type="number"
-                                  value={editedServicePrice}
-                                  onChange={(e) => setEditedServicePrice(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-lg p-1.5 text-xs outline-none focus:border-brand-primary"
-                                />
-                              </div>
-                              <div className="flex justify-end gap-1.5 text-[10px]">
-                                <button onClick={() => setEditingServiceIndex(null)} className="px-2.5 py-1 rounded bg-gray-200 text-gray-700 font-bold">Cancel</button>
-                                <button onClick={() => handleSaveService(index)} className="px-2.5 py-1 rounded bg-brand-primary text-white font-bold">Save Changes</button>
+                        return (
+                          <div
+                            key={svc.name}
+                            className={`min-w-[260px] w-[260px] snap-center shrink-0 rounded-3xl overflow-hidden border transition-all ${
+                              isAdded ? 'border-brand-primary bg-brand-primary-light/5 shadow-md shadow-brand-primary/10' : 'border-gray-100 bg-white shadow-sm'
+                            }`}
+                            id={`service-card-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {/* Service Image Section */}
+                            <div className="h-32 bg-gray-100 relative w-full overflow-hidden">
+                              {svc.image ? (
+                                <img src={svc.image} alt={svc.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                                  <ImageIcon size={32} />
+                                </div>
+                              )}
+                              <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm border border-white">
+                                <span className="text-sm font-extrabold text-brand-text">₹{svc.price.toLocaleString('en-IN')}</span>
                               </div>
                             </div>
-                          ) : (
-                            <>
-                              <div className="flex justify-between items-start gap-4 mb-2">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h5 className="font-semibold text-brand-text text-sm leading-snug">
-                                      {svc.name}
-                                    </h5>
-                                    {isAdmin && (
+                            
+                            <div className="p-4">
+                              {isEditingSvc ? (
+                                <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-dashed border-brand-primary/20">
+                                  <span className="text-[9px] font-black uppercase text-brand-primary block">Modify Service Option</span>
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-gray-500 uppercase">Service Name</label>
+                                    <input
+                                      type="text"
+                                      value={editedServiceName}
+                                      onChange={(e) => setEditedServiceName(e.target.value)}
+                                      className="w-full bg-white border border-brand-border rounded-lg p-1.5 text-xs outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-gray-500 uppercase">Price (₹)</label>
+                                    <input
+                                      type="number"
+                                      value={editedServicePrice}
+                                      onChange={(e) => setEditedServicePrice(e.target.value)}
+                                      className="w-full bg-white border border-brand-border rounded-lg p-1.5 text-xs outline-none focus:border-brand-primary"
+                                    />
+                                  </div>
+                                  <div className="flex justify-end gap-1.5 text-[10px]">
+                                    <button onClick={() => setEditingServiceIndex(null)} className="px-2.5 py-1 rounded bg-gray-200 text-gray-700 font-bold">Cancel</button>
+                                    <button onClick={() => handleSaveService(index)} className="px-2.5 py-1 rounded bg-brand-primary text-white font-bold">Save</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="mb-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h5 className="font-bold text-brand-text text-[15px] leading-tight line-clamp-1">{svc.name}</h5>
+                                      {isAdmin && (
+                                        <button
+                                          onClick={() => {
+                                            setEditingServiceIndex(index);
+                                            setEditedServiceName(svc.name);
+                                            setEditedServicePrice(String(svc.price));
+                                          }}
+                                          className="text-[9px] font-black text-brand-primary underline shrink-0 hover:text-brand-primary-dark"
+                                        >
+                                          Edit
+                                        </button>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-brand-text-secondary line-clamp-2 min-h-[32px]">
+                                      {svc.description}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                                    <span className="text-[10px] text-brand-text-secondary font-bold uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-md">
+                                      Per {svc.unit}
+                                    </span>
+                                    
+                                    {isAdded ? (
                                       <button
-                                        onClick={() => {
-                                          setEditingServiceIndex(index);
-                                          setEditedServiceName(svc.name);
-                                          setEditedServicePrice(String(svc.price));
-                                        }}
-                                        className="text-[9px] font-black text-brand-primary underline shrink-0 hover:text-brand-primary-dark"
+                                        onClick={() => onRemoveServiceFromBundle(svc.name)}
+                                        className="bg-brand-primary text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md shadow-brand-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-1.5"
+                                        id={`remove-svc-btn-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
                                       >
-                                        Edit Service
+                                        <Check size={14} />
+                                        <span>Added</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => onAddServiceToBundle(svc)}
+                                        className="bg-gray-900 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md shadow-black/10 hover:bg-black hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-1.5"
+                                        id={`add-svc-btn-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
+                                      >
+                                        <ShoppingCart size={14} />
+                                        <span>Add</span>
                                       </button>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-brand-text-secondary mt-1">
-                                    {svc.description}
-                                  </p>
-                                </div>
-                                <span className="text-base font-extrabold text-brand-text shrink-0">
-                                  ₹{svc.price.toLocaleString('en-IN')}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                                <span className="text-[10px] text-brand-text-secondary font-medium uppercase tracking-wider">
-                                  Per {svc.unit}
-                                </span>
-                                
-                                {isAdded ? (
-                                  <button
-                                    onClick={() => onRemoveServiceFromBundle(svc.name)}
-                                    className="bg-brand-primary text-white text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-brand-primary-dark transition flex items-center gap-1"
-                                    id={`remove-svc-btn-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
-                                  >
-                                    <Check size={12} />
-                                    <span>Added to Bundle</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => onAddServiceToBundle(svc)}
-                                    className="border border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-white text-xs font-semibold py-1.5 px-3.5 rounded-lg transition"
-                                    id={`add-svc-btn-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
-                                  >
-                                    + Add to Bundle
-                                  </button>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
@@ -1438,28 +1461,66 @@ export default function VendorDetailSheet({
                           <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider mb-4">
                             Meet the Founder
                           </h4>
-                          <div className="flex items-center gap-4 bg-brand-bg/50 p-4 rounded-[20px] border border-brand-border/50">
-                            <div className="relative">
-                              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-white">
-                                <img 
-                                  src={vendor.founderImage || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200"} 
-                                  alt={vendor.founderName}
-                                  className="w-full h-full object-cover"
-                                />
+                          <div className="flex items-center gap-4">
+                            {vendor.founderImage ? (
+                              <img src={vendor.founderImage} alt={vendor.founderName} className="w-16 h-16 rounded-full object-cover border-2 border-brand-primary/20" />
+                            ) : (
+                              <div className="w-16 h-16 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary text-xl font-bold">
+                                {vendor.founderName?.charAt(0) || 'F'}
                               </div>
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                <Check size={10} strokeWidth={4} />
-                              </div>
-                            </div>
+                            )}
                             <div>
-                              <p className="text-sm font-black text-brand-text">{vendor.founderName || 'Add Founder Name'}</p>
-                              <p className="text-[10px] text-brand-text-secondary font-bold uppercase tracking-wider">Managing Director & Visionary</p>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <span className="text-[10px] font-bold bg-white text-brand-primary px-2 py-0.5 rounded-full border border-brand-primary/10">{vendor.experience || '10+ Years Experience'}</span>
-                              </div>
+                              <p className="font-bold text-brand-text">{vendor.founderName}</p>
+                              <p className="text-xs text-brand-text-secondary">{vendor.founderBio || 'Founder & Owner'}</p>
                             </div>
                           </div>
                         </div>
+                      )}
+
+                      {/* Budgets & Events Section */}
+                      <div className="pt-5 border-t border-gray-100 grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Budget Range</h4>
+                          <p className="text-xs font-bold text-brand-text">
+                            {vendor.minBudget ? `₹${vendor.minBudget.toLocaleString()}` : (vendor.basePrice ? `₹${vendor.basePrice.toLocaleString()}` : 'Price on request')}
+                            {vendor.maxBudget ? ` - ₹${vendor.maxBudget.toLocaleString()}` : ''}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Events Handled</h4>
+                          <p className="text-xs font-bold text-brand-text">
+                            {vendor.eventsHandled && vendor.eventsHandled.length > 0 ? vendor.eventsHandled.join(', ') : vendor.occasion.join(', ')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Google Maps Location */}
+                      {(vendor.googleMapsUrl || vendor.location) && (
+                        <div className="pt-5 border-t border-gray-100">
+                          <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider mb-3">
+                            Location & Map
+                          </h4>
+                          <div className="flex items-start gap-2 mb-3">
+                            <MapPin size={16} className="text-brand-primary shrink-0 mt-0.5" />
+                            <p className="text-xs font-medium text-brand-text-secondary leading-relaxed">
+                              {vendor.location}
+                            </p>
+                          </div>
+                          {vendor.googleMapsUrl && (
+                            <div className="rounded-xl overflow-hidden border border-gray-100 h-40">
+                              <iframe 
+                                src={vendor.googleMapsUrl} 
+                                width="100%" 
+                                height="100%" 
+                                style={{ border: 0 }} 
+                                allowFullScreen 
+                                loading="lazy" 
+                                referrerPolicy="no-referrer-when-downgrade"
+                              ></iframe>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       )}
 
                       {/* Amenities & Features Section */}

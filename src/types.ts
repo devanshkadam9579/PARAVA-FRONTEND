@@ -17,12 +17,19 @@ export interface VendorServiceItem {
   price: number;
   description: string;
   unit: string;
+  image?: string;
 }
 
 export interface Vendor {
   id: string;
+  vendorPortalId?: string;
   name: string;
   category: string; // e.g. "Banquet Hall", "Decorator", "Photographer"
+  region?: string;
+  minBudget?: number;
+  maxBudget?: number;
+  eventsHandled?: string[];
+  googleMapsUrl?: string;
   occasion: string[]; // e.g. ["Wedding", "Birthday"]
   tagline: string;
   description: string;
@@ -32,7 +39,7 @@ export interface Vendor {
   distance: string;
   responseTime: string;
   verified: boolean;
-  basePrice: number;
+  basePrice: number; // Keeping for backward compatibility
   images: string[];
   videos?: string[];
   location: string;
