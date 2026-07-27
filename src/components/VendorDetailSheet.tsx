@@ -1518,9 +1518,7 @@ export default function VendorDetailSheet({
                                 referrerPolicy="no-referrer-when-downgrade"
                               ></iframe>
                             </div>
-                          )}
                         </div>
-                      )}
                       )}
 
                       {/* Amenities & Features Section */}
