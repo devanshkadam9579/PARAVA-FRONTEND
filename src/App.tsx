@@ -3059,22 +3059,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Quick trending tags */}
-              <div className="flex gap-2 items-center overflow-x-auto py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] text-[11px]">
-                <span className="text-brand-text-secondary font-black uppercase tracking-tighter shrink-0">Hot:</span>
-                {["Luxe Wedding", "Birthday Decor", "Pool Party", "Cocktail DJ"].map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => {
-                      setSearchQuery(tag);
-                      setActiveTab('explore');
-                    }}
-                    className="bg-white/80 backdrop-blur-sm border border-white text-brand-text px-3.5 py-1.5 rounded-xl hover:bg-brand-primary hover:text-white hover:border-brand-primary transition shrink-0 font-bold shadow-sm"
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+
             </div>
 
             {/* Real-time Hero Carousel from Firestore */}
