@@ -3134,10 +3134,33 @@ export default function App() {
               
               {/* Horizontal list of cards */}
               <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x no-scrollbar">
-                      />
+                {isLoadingVendors ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="w-[280px] shrink-0 snap-center bg-white rounded-[24px] border border-gray-100 p-3 h-[320px] animate-pulse flex flex-col">
+                      <div className="w-full h-40 bg-gray-200 rounded-xl mb-3"></div>
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-auto"></div>
+                      <div className="h-10 bg-gray-200 rounded-xl w-full mt-4"></div>
                     </div>
-                  ))}
-                {vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false).length === 0 && (
+                  ))
+                ) : (
+                  vendors
+                    .filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false)
+                    .slice(0, 3)
+                    .map((vendor) => (
+                      <div key={vendor.id} className="w-[280px] shrink-0 snap-center">
+                        <VendorCard
+                          vendor={vendor}
+                          onSelect={(v) => handleVendorSelect(v)}
+                          isWishlisted={(wishlist || []).includes(vendor.id)}
+                          onToggleWishlist={handleToggleWishlist}
+                          layout="horizontal"
+                          userCoords={userCoords}
+                        />
+                      </div>
+                    ))
+                )}
+                {!isLoadingVendors && vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false).length === 0 && (
                   <div className="text-center py-8 text-xs text-brand-text-secondary w-full bg-white/50 rounded-2xl border border-brand-border border-dashed">
                     No trending vendors listed in {currentCity} yet.
                   </div>
