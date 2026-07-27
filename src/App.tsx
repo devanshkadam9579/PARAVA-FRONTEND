@@ -13,9 +13,11 @@ import {
   Home, Compass, Calendar, MessageSquare, User, MapPin, Bell, 
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
-  Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText
+  Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
+  ChevronUp, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // Data and types imports
 import { Vendor, Booking, ChatMessage, ChatThread, QuickCategory, VendorServiceItem } from './types';
@@ -342,6 +344,7 @@ export default function App() {
 
   // Dynamic Vendors, Categories, Promos State
   const [vendors, setVendors] = useState<Vendor[]>(VENDORS);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [appLogo, setAppLogo] = useState('https://i.postimg.cc/mgk6dNNd/parva-logo.png');
 
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
@@ -423,9 +426,11 @@ export default function App() {
         ...doc.data() 
       } as Vendor));
       setVendors(vendorsData);
+      setIsLoadingVendors(false);
       localStorage.setItem('parva_vendors_list', JSON.stringify(vendorsData));
     }, (error) => {
       console.warn("Vendors sync error (might be offline):", error);
+      setIsLoadingVendors(false);
     });
 
     // Listen for Promos collection
@@ -596,6 +601,7 @@ export default function App() {
   const [priceRange, setPriceRange] = useState<number>(200000);
   const [selectedServices, setSelectedServices] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<'rating' | 'trust' | 'priceAsc' | 'priceDesc'>('trust');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Event planning matcher states
   const [planningEventType, setPlanningEventType] = useState('Wedding');
@@ -3044,24 +3050,30 @@ export default function App() {
 
             {/* Real-time Hero Carousel from Firestore */}
             {promosList.length > 0 && currentPromo && (
-              <div className="relative rounded-[24px] overflow-hidden shadow-xl h-[200px] bg-brand-primary group cursor-pointer" onClick={() => setActiveTab('explore')}>
-                <div className="absolute inset-0">
-                  <img 
-                    key={safeHeroIndex}
-                    src={currentPromo.image} 
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                    alt={currentPromo.title}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+              <div className="relative rounded-[24px] overflow-hidden h-[200px] bg-slate-100 group cursor-pointer shadow-sm border border-slate-200/50" onClick={() => setActiveTab('explore')}>
+                {promosList.map((promo, idx) => (
+                  <div 
+                    key={promo.id || idx}
+                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === safeHeroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                  >
+                    <img 
+                      src={promo.image} 
+                      className="w-full h-full object-cover mix-blend-darken opacity-90"
+                      alt={promo.title || 'Offer'}
+                      referrerPolicy="no-referrer"
+                    />
+                    {/* Native blend overlay to make it look like part of the app */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent mix-blend-overlay"></div>
+                  </div>
+                ))}
                 
                 {/* Carousel Indicators */}
-                <div className="absolute bottom-4 left-6 flex gap-1.5 z-10">
+                <div className="absolute bottom-4 left-6 flex gap-1.5 z-20">
                   {promosList.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${idx === safeHeroIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'}`}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${idx === safeHeroIndex ? 'w-6 bg-white shadow-sm' : 'w-1.5 bg-white/50 hover:bg-white/80'}`}
                     />
                   ))}
                 </div>
@@ -3104,23 +3116,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Second Banner above Trending Vendors */}
-            <div className="relative rounded-[24px] overflow-hidden shadow-xl h-[120px] bg-brand-primary group cursor-pointer" onClick={() => setActiveTab('explore')}>
-              <img 
-                src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1000" 
-                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
-                alt="Banner 2"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 flex flex-col justify-center p-6 text-white">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] mb-1">Curated List</span>
-                <h3 className="text-xl font-black italic">Verified Wedding Professionals</h3>
-                <p className="text-xs font-bold text-white/80">Book with trust and zero hidden charges.</p>
-              </div>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                <ArrowRight size={20} />
-              </div>
-            </div>
 
             {/* Trending & Featured Section */}
             <div>
@@ -3139,18 +3134,6 @@ export default function App() {
               
               {/* Horizontal list of cards */}
               <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x no-scrollbar">
-                {vendors
-                  .filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false)
-                  .slice(0, 3)
-                  .map((vendor) => (
-                    <div key={vendor.id} className="w-[280px] shrink-0 snap-center">
-                      <VendorCard
-                        vendor={vendor}
-                        onSelect={(v) => handleVendorSelect(v)}
-                        isWishlisted={(wishlist || []).includes(vendor.id)}
-                        onToggleWishlist={handleToggleWishlist}
-                        layout="horizontal"
-                        userCoords={userCoords}
                       />
                     </div>
                   ))}
@@ -3301,53 +3284,78 @@ export default function App() {
             </div>
 
 
-            {/* Interactive sliders for pricing and Sort option */}
-            <div className="bg-white rounded-2xl border border-brand-border p-4 space-y-3.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-semibold text-brand-text-secondary uppercase tracking-wider">Starting Price Cap</span>
-                <span className="font-bold text-brand-primary">₹{priceRange >= 100000 ? `${(priceRange / 100000).toFixed(1)} Lakh` : priceRange.toLocaleString('en-IN')}</span>
-              </div>
-              <input
-                type="range"
-                min="1000"
-                max="250000"
-                step="5000"
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-                className="w-full accent-brand-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                id="price-range-slider"
-              />
-
-              <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100">
-                <span className="text-[11px] font-semibold text-brand-text-secondary uppercase tracking-wider">Sort by</span>
-                <div className="flex gap-1.5">
-                  {(['trust', 'rating', 'priceAsc'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setSortBy(mode)}
-                      className={`text-[10px] font-bold py-1 px-2.5 rounded-lg border transition ${
-                        sortBy === mode
-                          ? 'bg-brand-primary-light border-brand-primary/20 text-brand-primary-dark'
-                          : 'bg-white border-brand-border text-brand-text-secondary hover:text-brand-text'
-                      }`}
-                    >
-                      {mode === 'trust' ? 'Trust Score' : mode === 'rating' ? 'Rating' : 'Price: Low-High'}
-                    </button>
-                  ))}
+            {/* Interactive Filters (Collapsible to reduce UI complexity) */}
+            <div className="bg-white rounded-2xl border border-brand-border p-4">
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className="w-full flex justify-between items-center text-sm font-bold text-gray-800"
+              >
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className="text-brand-primary" />
+                  Apply Filters & Sorting
                 </div>
-              </div>
+                {showFilters ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+              
+              {showFilters && (
+                <div className="pt-4 mt-4 border-t border-dashed border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-brand-text-secondary uppercase tracking-wider">Starting Price Cap</span>
+                    <span className="font-bold text-brand-primary">₹{priceRange >= 100000 ? `${(priceRange / 100000).toFixed(1)} Lakh` : priceRange.toLocaleString('en-IN')}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1000"
+                    max="250000"
+                    step="5000"
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(Number(e.target.value))}
+                    className="w-full accent-brand-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                  />
+
+                  <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100">
+                    <span className="text-[11px] font-semibold text-brand-text-secondary uppercase tracking-wider">Sort by</span>
+                    <div className="flex gap-1.5 flex-wrap justify-end">
+                      {(['trust', 'rating', 'priceAsc'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => { setSortBy(mode); setShowFilters(false); }}
+                          className={`text-[10px] font-bold py-1 px-2.5 rounded-lg border transition ${
+                            sortBy === mode
+                              ? 'bg-brand-primary-light border-brand-primary/20 text-brand-primary-dark'
+                              : 'bg-white border-brand-border text-brand-text-secondary hover:text-brand-text'
+                          }`}
+                        >
+                          {mode === 'trust' ? 'Trust Score' : mode === 'rating' ? 'Rating' : 'Price: Low-High'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Search Results count & listings */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-xs font-semibold text-brand-text-secondary uppercase tracking-wider">
-                  Available Matches ({filteredVendors.length})
+                  {isLoadingVendors ? 'Searching...' : `Available Matches (${filteredVendors.length})`}
                 </span>
                 <span className="text-[10px] text-brand-text-secondary">Location: {currentCity}</span>
               </div>
 
-              {filteredVendors.length === 0 ? (
+              {isLoadingVendors ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-white rounded-[24px] border border-gray-100 p-3 h-[320px] animate-pulse flex flex-col">
+                      <div className="w-full h-40 bg-gray-200 rounded-xl mb-3"></div>
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-auto"></div>
+                      <div className="h-10 bg-gray-200 rounded-xl w-full mt-4"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredVendors.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-brand-border p-10 text-center">
                   <p className="text-sm font-medium text-brand-text mb-1">No matching vendors found</p>
                   <p className="text-xs text-brand-text-secondary mb-4">Try clearing filter parameters or expanding search terms.</p>
@@ -3618,11 +3626,11 @@ export default function App() {
 
             {bookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
-                <img 
-                  src="/src/assets/images/no_bookings_illustration_1783773107501.jpg" 
-                  alt="No bookings yet" 
-                  className="w-48 h-48 mb-6 object-contain"
-                  referrerPolicy="no-referrer"
+                <DotLottieReact 
+                  src="https://lottie.host/8c067d5e-ef15-4fa7-889a-0e6d5e16ec3f/W3dOpxG1fF.lottie" 
+                  loop 
+                  autoplay 
+                  className="w-48 h-48 mb-2"
                 />
                 <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
                 <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
