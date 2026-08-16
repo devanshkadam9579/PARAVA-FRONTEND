@@ -485,6 +485,9 @@ export default function App() {
         const data = docSnap.data();
         const enabled = data.paymentsEnabled ?? data.paymentEnabled ?? true;
         setPaymentsEnabled(enabled);
+        if (data.bookingFeePercentage !== undefined) {
+          setBookingFeePercentage(Number(data.bookingFeePercentage));
+        }
       }
     }, (error) => {
       console.warn("Global settings sync error:", error);
@@ -3643,116 +3646,100 @@ export default function App() {
                 </div>
 
                 {/* Estimate checkout total and Connection Fee Details */}
-                <div className="border-t border-dashed border-gray-100 pt-3 space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <div className="text-left">
-                      <span className="text-[9px] text-brand-text-secondary uppercase tracking-wider block font-bold">Services Event Value</span>
-                      <span className="font-extrabold text-brand-text-secondary">
-                        ₹{bundledItems.reduce((sum, item) => sum + item.service.price, 0).toLocaleString('en-IN')}
-                      </span>
+                {(() => {
+                  const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+                  const calculatedBookingFee = Math.round(servicesTotal * (bookingFeePercentage / 100));
+                  const gstAmount = Math.round(calculatedBookingFee * 0.18);
+                  const finalPayableTotal = Math.max(0, calculatedBookingFee + gstAmount - couponDiscount);
+
+                  return (
+                    <div className="border-t border-dashed border-gray-100 pt-3 space-y-3">
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>SERVICES EVENT VALUE:</span>
+                          <span className="font-bold text-gray-800">₹{servicesTotal.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>DIRECT CONNECTION / BOOKING ADVANCE FEE ({bookingFeePercentage}%):</span>
+                          <span className="font-bold text-gray-800">₹{calculatedBookingFee.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>GST (18%):</span>
+                          <span className="font-bold text-gray-800">₹{gstAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between items-center text-emerald-600 font-bold">
+                            <span>COUPON DISCOUNT:</span>
+                            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between bg-brand-primary-light/30 p-3 rounded-xl border border-brand-primary/10">
+                        <div>
+                          <span className="text-[9px] text-brand-primary-dark uppercase tracking-wider block font-black">Total Amount Due</span>
+                          <span className="font-black text-brand-primary-dark text-base">
+                            ₹{finalPayableTotal.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            let targetUser = currentUser;
+                            if (!targetUser) {
+                              const nameEl = document.getElementById('cart-user-name') as HTMLInputElement;
+                              const phoneEl = document.getElementById('cart-user-phone') as HTMLInputElement;
+                              const emailEl = document.getElementById('cart-user-email') as HTMLInputElement;
+
+                              if (!nameEl?.value || !phoneEl?.value || !emailEl?.value) {
+                                showNotification('⚠️ Please enter all connection details to unlock direct contact! 📲');
+                                return;
+                              }
+
+                              const newUserObj = {
+                                name: nameEl.value,
+                                phone: phoneEl.value,
+                                email: emailEl.value,
+                                city: currentCity
+                              };
+                              setCurrentUser(newUserObj);
+                              localStorage.setItem('parva_user', JSON.stringify(newUserObj));
+                              targetUser = newUserObj;
+                            }
+
+                            const discountVal = bundledItems.length >= 4 ? Math.round(servicesTotal * 0.22) : bundledItems.length === 3 ? Math.round(servicesTotal * 0.15) : bundledItems.length === 2 ? Math.round(servicesTotal * 0.08) : 0;
+                            const finalVal = servicesTotal - discountVal;
+
+                            const newBooking: Booking = {
+                              id: `b-new-${Date.now()}`,
+                              vendor: bundledItems[0].vendor,
+                              selectedServices: bundledItems.map(item => item.service),
+                              eventDate: planningStartDate,
+                              eventType: planningEventType,
+                              status: 'Pending',
+                              totalPrice: servicesTotal,
+                              bundleDiscount: discountVal,
+                              finalPrice: finalVal,
+                              paymentStatus: 'Paid',
+                              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
+                            };
+
+                            handlePayWithRazorpay({
+                              vendorId: newBooking.vendor.id,
+                              type: 'booking',
+                              amount: finalPayableTotal,
+                              bookingData: newBooking
+                            });
+                          }}
+                          className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold px-5 py-3 rounded-xl text-xs shadow-md shadow-brand-primary/10 flex items-center gap-1.5 transition active:scale-95 shrink-0"
+                        >
+                          <span>Pay Booking Fee & Confirm</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[9px] text-brand-text-secondary uppercase tracking-wider block font-bold">Direct Connection Fee</span>
-                      <span className="font-extrabold text-brand-text">₹99.00</span>
-                    </div>
-                  </div>
-
-                  {couponApplied && (
-                    <div className="flex justify-between items-center text-xs text-brand-success font-bold">
-                      <span>Coupon Discount:</span>
-                      <span>-₹{couponDiscount}.00</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between bg-brand-primary-light/30 p-3 rounded-xl border border-brand-primary/10">
-                    <div>
-                      <span className="text-[9px] text-brand-primary-dark uppercase tracking-wider block font-black">Total Connection Fee Due</span>
-                      <span className="font-black text-brand-primary-dark text-base">
-                        ₹{Math.max(0, 99 - couponDiscount)}.00
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        // Gather or register current user
-                        let targetUser = currentUser;
-                        if (!targetUser) {
-                          const nameEl = document.getElementById('cart-user-name') as HTMLInputElement;
-                          const phoneEl = document.getElementById('cart-user-phone') as HTMLInputElement;
-                          const emailEl = document.getElementById('cart-user-email') as HTMLInputElement;
-
-                          if (!nameEl?.value || !phoneEl?.value || !emailEl?.value) {
-                            showNotification('⚠️ Please enter all connection details to unlock direct contact! 📲');
-                            return;
-                          }
-
-                          const newUserObj = {
-                            name: nameEl.value,
-                            phone: phoneEl.value,
-                            email: emailEl.value,
-                            city: currentCity
-                          };
-                          setCurrentUser(newUserObj);
-                          localStorage.setItem('parva_user', JSON.stringify(newUserObj));
-                          targetUser = newUserObj;
-                        }
-
-                        // Build pending booking
-                        const totalVal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
-                        const discountVal = bundledItems.length >= 4 ? Math.round(totalVal * 0.22) : bundledItems.length === 3 ? Math.round(totalVal * 0.15) : bundledItems.length === 2 ? Math.round(totalVal * 0.08) : 0;
-                        const finalVal = totalVal - discountVal;
-
-                        const newBooking: Booking = {
-                          id: `b-new-${Date.now()}`,
-                          vendor: bundledItems[0].vendor,
-                          selectedServices: bundledItems.map(item => item.service),
-                          eventDate: planningStartDate,
-                          eventType: planningEventType,
-                          status: 'Pending',
-                          totalPrice: totalVal,
-                          bundleDiscount: discountVal,
-                          finalPrice: finalVal,
-                          paymentStatus: 'Paid',
-                          bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
-                        };
-
-                        const dueAmount = Math.max(0, 499 - couponDiscount);
-                        if (dueAmount === 0) {
-                          const db = getDb();
-                          import('firebase/firestore').then(async ({ doc, setDoc }) => {
-                            await setDoc(doc(db, 'bookings', newBooking.id), newBooking);
-                          });
-                          setBundledItems([]);
-                          setCouponCode('');
-                          setCouponApplied(false);
-                          setCouponDiscount(0);
-                          setCouponMessage('');
-
-                          const vendorPhone = newBooking.vendor.whatsapp || newBooking.vendor.phone || '919999999999';
-                          const servicesStr = newBooking.selectedServices.map(s => `• ${s.name} (₹${s.price.toLocaleString('en-IN')})`).join('\n');
-                          const waText = `Hello ${newBooking.vendor.name},\n\nI have locked a Direct Booking with your services via Parva Celebrations (Connection Fee PAID)! 📲\n\nEvent Details:\n- Name: ${targetUser.name}\n- Contact: ${targetUser.phone}\n- Event Date: ${newBooking.eventDate}\n- Type: ${newBooking.eventType}\n\nSelected Services:\n${servicesStr}\n\nEstimated Event Value: ₹${newBooking.finalPrice.toLocaleString('en-IN')}\n\nPlease confirm availability & package customizations! Thank you!`;
-                          
-                          setPendingCheckoutBooking({
-                            booking: newBooking,
-                            waUrl: `https://wa.me/${vendorPhone}?text=${encodeURIComponent(waText)}`
-                          });
-                          showNotification(`🎉 Checkout Complete! Booking confirmed and connection unlocked!`);
-                        } else {
-                          handlePayWithRazorpay({
-                            vendorId: newBooking.vendor.id,
-                            type: 'booking',
-                            amount: newBooking.finalPrice,
-                            bookingData: newBooking
-                          });
-                        }
-                      }}
-                      className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold px-5 py-3 rounded-xl text-xs shadow-md shadow-brand-primary/10 flex items-center gap-1.5 transition active:scale-95 shrink-0"
-                    >
-                      <span>Pay Connection Fee & Connect</span>
-                      <ArrowRight size={13} />
-                    </button>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -4855,6 +4842,7 @@ export default function App() {
           planningEndDate={planningEndDate}
           planningGuestSize={planningGuestSize}
           bookingFeePercentage={bookingFeePercentage}
+          onNavigateToBookings={() => setActiveTab('bookings')}
           handlePayWithRazorpay={(params: any) => {
             setRazorpayAmount(params.totalAmountDue);
             setRazorpayPurpose('connection');

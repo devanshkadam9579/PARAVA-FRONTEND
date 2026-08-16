@@ -80,6 +80,7 @@ interface VendorDetailSheetProps {
   onStartInAppChat?: (vendor: Vendor) => void;
   bookingFeePercentage?: number;
   handlePayWithRazorpay?: (params: any) => void;
+  onNavigateToBookings?: () => void;
 }
 
 export default function VendorDetailSheet({
@@ -104,7 +105,8 @@ export default function VendorDetailSheet({
   onAddReview,
   onStartInAppChat,
   bookingFeePercentage = 5,
-  handlePayWithRazorpay
+  handlePayWithRazorpay,
+  onNavigateToBookings
 }: VendorDetailSheetProps) {
   const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -834,176 +836,28 @@ export default function VendorDetailSheet({
                       })}
                     </div>
 
-                    {/* Draft Selection Bundle Console - Image 2 Match */}
-                    <div className="mt-6 bg-[#FAF9F5] p-5 rounded-3xl border border-brand-border space-y-4 shadow-sm">
-                      <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black uppercase text-brand-text flex items-center gap-1.5">
-                            <Sparkles size={14} className="text-amber-500 fill-amber-500" />
-                            <span>Draft Selection Bundle</span>
-                          </span>
-                          <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">
-                            {bundledServices.length || 1} ADDED
+                    {/* Sticky Bottom Action Bar when services are added */}
+                    {bundledServices.length > 0 && (
+                      <div className="mt-6 sticky bottom-0 bg-white border border-brand-border p-4 rounded-2xl shadow-xl flex items-center justify-between z-20">
+                        <div>
+                          <span className="text-[10px] font-black text-brand-primary uppercase tracking-wider block">Draft Selection Bundle</span>
+                          <span className="text-xs font-extrabold text-brand-text">
+                            {bundledServices.length} Service{bundledServices.length > 1 ? 's' : ''} Added • ₹{bundledServices.reduce((a, b) => a + b.price, 0).toLocaleString('en-IN')}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            if (onNavigateToBookings) onNavigateToBookings();
+                          }}
+                          className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-5 py-3 rounded-xl shadow-md shadow-brand-primary/20 flex items-center gap-1.5 transition active:scale-95"
+                        >
+                          <span>Review & Book in Cart</span>
+                          <ArrowRight size={14} />
+                        </button>
                       </div>
-
-                      {/* Selected Items List */}
-                      <div className="space-y-2">
-                        {bundledServices.length > 0 ? (
-                          bundledServices.map((svc) => (
-                            <div key={svc.name} className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                              <div className="flex items-center gap-2.5">
-                                <CheckCircle2 size={16} className="text-brand-primary shrink-0" />
-                                <div>
-                                  <span className="text-xs font-bold text-brand-text block">{svc.name}</span>
-                                  <span className="text-[10px] text-gray-400">₹{svc.price.toLocaleString('en-IN')} / {svc.unit}</span>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => onRemoveServiceFromBundle(svc.name)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition"
-                                title="Remove item"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                            <div className="flex items-center gap-2.5">
-                              <CheckCircle2 size={16} className="text-brand-primary shrink-0" />
-                              <div>
-                                <span className="text-xs font-bold text-brand-text block">{vendor.name} Base Package</span>
-                                <span className="text-[10px] text-gray-400">Standard Service Rate</span>
-                              </div>
-                            </div>
-                            <span className="text-xs font-black text-brand-text">₹{vendor.basePrice.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* User Connection Details */}
-                      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 space-y-1">
-                        <span className="text-[10px] font-extrabold uppercase text-gray-400 block tracking-wider">User Connection Details</span>
-                        <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
-                          <CheckCircle2 size={14} />
-                          <span>Logged in as: {safeUserName}</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 font-medium pl-5">
-                          Phone: {safeUserPhone} | Email: {safeUserEmail}
-                        </p>
-                      </div>
-
-                      {/* Coupon Code Section */}
-                      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 space-y-2">
-                        <span className="text-[10px] font-extrabold uppercase text-gray-400 block tracking-wider">Have a Coupon?</span>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="E.G. WELCOME10, FREE99"
-                            value={couponInput}
-                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-mono uppercase font-bold outline-none focus:border-brand-primary"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (couponInput === 'WELCOME10' || couponInput === 'FREE99' || couponInput === 'PARVA10') {
-                                const disc = Math.round(calculatedBookingFee * 0.1);
-                                setCouponDiscount(disc);
-                                setCouponApplied(true);
-                                if (onShowNotification) onShowNotification(`🎉 Coupon ${couponInput} applied! Saved ₹${disc}`);
-                              } else {
-                                if (onShowNotification) onShowNotification('⚠️ Invalid coupon code. Try WELCOME10 or FREE99');
-                              }
-                            }}
-                            className="bg-brand-text text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-black transition active:scale-95"
-                          >
-                            Apply
-                          </button>
-                        </div>
-                        {couponApplied && (
-                          <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                            <CheckCircle2 size={12} /> Coupon active: Discount ₹{couponDiscount} applied!
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Financial Calculation Breakdown */}
-                      <div className="space-y-2 pt-2 border-t border-gray-200 text-xs">
-                        <div className="flex justify-between items-center text-gray-600 font-medium">
-                          <span>SERVICES EVENT VALUE:</span>
-                          <span className="font-bold text-gray-800">₹{servicesTotal.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-gray-600 font-medium">
-                          <span>DIRECT CONNECTION / BOOKING ADVANCE FEE ({currentFeePct}%):</span>
-                          <span className="font-bold text-gray-800">₹{calculatedBookingFee.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-gray-600 font-medium">
-                          <span>GST (18%):</span>
-                          <span className="font-bold text-gray-800">₹{gstAmount.toLocaleString('en-IN')}</span>
-                        </div>
-                        {couponDiscount > 0 && (
-                          <div className="flex justify-between items-center text-emerald-600 font-bold">
-                            <span>COUPON DISCOUNT:</span>
-                            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center text-sm font-black text-brand-primary-dark pt-2 border-t border-dashed border-gray-300">
-                          <span>TOTAL AMOUNT DUE:</span>
-                          <span className="text-base text-brand-primary">₹{finalPayableTotal.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-
-                      {/* Pay Connection Fee Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const paymentParams = {
-                            vendorId: vendor.id,
-                            vendorName: vendor.name,
-                            servicesTotal,
-                            bookingFeePercentage: currentFeePct,
-                            bookingFeeAmount: calculatedBookingFee,
-                            gstAmount,
-                            totalAmountDue: finalPayableTotal,
-                            selectedServices: bundledServices,
-                            bookedDate: selectedDate || new Date().toISOString().split('T')[0]
-                          };
-
-                          if (handlePayWithRazorpay) {
-                            handlePayWithRazorpay(paymentParams);
-                          } else {
-                            // Local instant booking fallback & receipt generator trigger
-                            setReceiptData({
-                              id: `PRV-REC-${Math.floor(100000 + Math.random() * 900000)}`,
-                              vendorName: vendor.name,
-                              vendorCategory: vendor.category,
-                              vendorLocation: vendor.location,
-                              userName: safeUserName,
-                              userPhone: safeUserPhone,
-                              userEmail: safeUserEmail,
-                              servicesTotal,
-                              bookingFeePct: currentFeePct,
-                              bookingFeeAmount: calculatedBookingFee,
-                              gstAmount,
-                              totalAmountDue: finalPayableTotal,
-                              paymentMethod: 'Razorpay Online',
-                              date: selectedDate || new Date().toLocaleDateString('en-IN'),
-                              services: bundledServices.length > 0 ? bundledServices : [{ name: `${vendor.name} Base Package`, price: vendor.basePrice }]
-                            });
-                            setShowReceiptModal(true);
-                            if (onShowNotification) onShowNotification("🎉 Booking confirmed & receipt generated!");
-                          }
-                        }}
-                        className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-sm py-4 rounded-2xl transition shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wider"
-                      >
-                        <span>Pay Booking Fee & Confirm</span>
-                        <ArrowRight size={18} />
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
 
