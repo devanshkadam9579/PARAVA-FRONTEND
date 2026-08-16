@@ -9,7 +9,7 @@ import {
   CheckCircle2, ArrowRight, User, ThumbsUp, CalendarIcon, Heart,
   ChevronLeft, ChevronRight, Instagram, Phone, MessageCircle, Lock, Play, Video,
   Download, FileText, User as UserIcon, DollarSign, Info, Smartphone, CreditCard, Users,
-  MessageSquare, Image as ImageIcon, ShoppingCart
+  MessageSquare, Image as ImageIcon, ShoppingCart, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -78,6 +78,8 @@ interface VendorDetailSheetProps {
   onUpdateVendor?: (updatedVendor: Vendor) => void;
   onAddReview?: (rating: number, comment: string) => Promise<void>;
   onStartInAppChat?: (vendor: Vendor) => void;
+  bookingFeePercentage?: number;
+  handlePayWithRazorpay?: (params: any) => void;
 }
 
 export default function VendorDetailSheet({
@@ -100,7 +102,9 @@ export default function VendorDetailSheet({
   isAdmin = false,
   onUpdateVendor,
   onAddReview,
-  onStartInAppChat
+  onStartInAppChat,
+  bookingFeePercentage = 5,
+  handlePayWithRazorpay
 }: VendorDetailSheetProps) {
   const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -115,10 +119,30 @@ export default function VendorDetailSheet({
   const [likedReels, setLikedReels] = useState<Record<number, boolean>>({});
   const [playingVideoIndex, setPlayingVideoIndex] = useState<number | null>(null);
 
+  // New Interactive Modals State
+  const [isFullCalendarOpen, setIsFullCalendarOpen] = useState(false);
+  const [activeReelModal, setActiveReelModal] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState<any>(null);
+
   const safeUserName = currentUser?.name || (currentUser as any)?.displayName || currentUser?.email?.split('@')[0] || 'Guest Planner';
   const safeUserPhone = currentUser?.phone || 'N/A';
   const safeUserEmail = currentUser?.email || 'N/A';
   const safeUserCity = currentUser?.city || 'N/A';
+
+  // Dynamic Cart Pricing Calculations
+  const servicesTotal = bundledServices.length > 0
+    ? bundledServices.reduce((acc, s) => acc + s.price, 0)
+    : vendor.basePrice;
+
+  const currentFeePct = bookingFeePercentage || 5;
+  const calculatedBookingFee = Math.round((servicesTotal * currentFeePct) / 100);
+  const gstAmount = Math.round(calculatedBookingFee * 0.18);
+  const subtotalBeforeCoupon = calculatedBookingFee + gstAmount;
+  const finalPayableTotal = Math.max(0, subtotalBeforeCoupon - couponDiscount);
 
   const downloadVendorPDF = async () => {
     if (onShowNotification) onShowNotification("Generating professional profile PDF... 📄");
@@ -610,11 +634,21 @@ export default function VendorDetailSheet({
 
               {/* Dynamic Interactive Calendar Slot */}
               <div className="bg-white px-6 py-5 border-b border-brand-border">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Calendar size={16} className="text-brand-primary" />
-                  <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider">
-                    Check Date Availability
-                  </h4>
+                <div className="flex items-center justify-between gap-1.5 mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={16} className="text-brand-primary" />
+                    <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider">
+                      Check Date Availability
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFullCalendarOpen(true)}
+                    className="text-[10px] font-bold text-brand-primary hover:underline bg-brand-primary/10 px-2.5 py-1 rounded-lg flex items-center gap-1"
+                  >
+                    <CalendarIcon size={12} />
+                    <span>View Full Calendar</span>
+                  </button>
                 </div>
                 
                 {/* Scrollable Calendar Row */}
@@ -799,6 +833,177 @@ export default function VendorDetailSheet({
                         );
                       })}
                     </div>
+
+                    {/* Draft Selection Bundle Console - Image 2 Match */}
+                    <div className="mt-6 bg-[#FAF9F5] p-5 rounded-3xl border border-brand-border space-y-4 shadow-sm">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase text-brand-text flex items-center gap-1.5">
+                            <Sparkles size={14} className="text-amber-500 fill-amber-500" />
+                            <span>Draft Selection Bundle</span>
+                          </span>
+                          <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                            {bundledServices.length || 1} ADDED
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Selected Items List */}
+                      <div className="space-y-2">
+                        {bundledServices.length > 0 ? (
+                          bundledServices.map((svc) => (
+                            <div key={svc.name} className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                              <div className="flex items-center gap-2.5">
+                                <CheckCircle2 size={16} className="text-brand-primary shrink-0" />
+                                <div>
+                                  <span className="text-xs font-bold text-brand-text block">{svc.name}</span>
+                                  <span className="text-[10px] text-gray-400">₹{svc.price.toLocaleString('en-IN')} / {svc.unit}</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => onRemoveServiceFromBundle(svc.name)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition"
+                                title="Remove item"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-2.5">
+                              <CheckCircle2 size={16} className="text-brand-primary shrink-0" />
+                              <div>
+                                <span className="text-xs font-bold text-brand-text block">{vendor.name} Base Package</span>
+                                <span className="text-[10px] text-gray-400">Standard Service Rate</span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-black text-brand-text">₹{vendor.basePrice.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* User Connection Details */}
+                      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase text-gray-400 block tracking-wider">User Connection Details</span>
+                        <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
+                          <CheckCircle2 size={14} />
+                          <span>Logged in as: {safeUserName}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-medium pl-5">
+                          Phone: {safeUserPhone} | Email: {safeUserEmail}
+                        </p>
+                      </div>
+
+                      {/* Coupon Code Section */}
+                      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 space-y-2">
+                        <span className="text-[10px] font-extrabold uppercase text-gray-400 block tracking-wider">Have a Coupon?</span>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="E.G. WELCOME10, FREE99"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-mono uppercase font-bold outline-none focus:border-brand-primary"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (couponInput === 'WELCOME10' || couponInput === 'FREE99' || couponInput === 'PARVA10') {
+                                const disc = Math.round(calculatedBookingFee * 0.1);
+                                setCouponDiscount(disc);
+                                setCouponApplied(true);
+                                if (onShowNotification) onShowNotification(`🎉 Coupon ${couponInput} applied! Saved ₹${disc}`);
+                              } else {
+                                if (onShowNotification) onShowNotification('⚠️ Invalid coupon code. Try WELCOME10 or FREE99');
+                              }
+                            }}
+                            className="bg-brand-text text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-black transition active:scale-95"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                        {couponApplied && (
+                          <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Coupon active: Discount ₹{couponDiscount} applied!
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Financial Calculation Breakdown */}
+                      <div className="space-y-2 pt-2 border-t border-gray-200 text-xs">
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>SERVICES EVENT VALUE:</span>
+                          <span className="font-bold text-gray-800">₹{servicesTotal.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>DIRECT CONNECTION / BOOKING ADVANCE FEE ({currentFeePct}%):</span>
+                          <span className="font-bold text-gray-800">₹{calculatedBookingFee.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-600 font-medium">
+                          <span>GST (18%):</span>
+                          <span className="font-bold text-gray-800">₹{gstAmount.toLocaleString('en-IN')}</span>
+                        </div>
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between items-center text-emerald-600 font-bold">
+                            <span>COUPON DISCOUNT:</span>
+                            <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-sm font-black text-brand-primary-dark pt-2 border-t border-dashed border-gray-300">
+                          <span>TOTAL AMOUNT DUE:</span>
+                          <span className="text-base text-brand-primary">₹{finalPayableTotal.toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+
+                      {/* Pay Connection Fee Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const paymentParams = {
+                            vendorId: vendor.id,
+                            vendorName: vendor.name,
+                            servicesTotal,
+                            bookingFeePercentage: currentFeePct,
+                            bookingFeeAmount: calculatedBookingFee,
+                            gstAmount,
+                            totalAmountDue: finalPayableTotal,
+                            selectedServices: bundledServices,
+                            bookedDate: selectedDate || new Date().toISOString().split('T')[0]
+                          };
+
+                          if (handlePayWithRazorpay) {
+                            handlePayWithRazorpay(paymentParams);
+                          } else {
+                            // Local instant booking fallback & receipt generator trigger
+                            setReceiptData({
+                              id: `PRV-REC-${Math.floor(100000 + Math.random() * 900000)}`,
+                              vendorName: vendor.name,
+                              vendorCategory: vendor.category,
+                              vendorLocation: vendor.location,
+                              userName: safeUserName,
+                              userPhone: safeUserPhone,
+                              userEmail: safeUserEmail,
+                              servicesTotal,
+                              bookingFeePct: currentFeePct,
+                              bookingFeeAmount: calculatedBookingFee,
+                              gstAmount,
+                              totalAmountDue: finalPayableTotal,
+                              paymentMethod: 'Razorpay Online',
+                              date: selectedDate || new Date().toLocaleDateString('en-IN'),
+                              services: bundledServices.length > 0 ? bundledServices : [{ name: `${vendor.name} Base Package`, price: vendor.basePrice }]
+                            });
+                            setShowReceiptModal(true);
+                            if (onShowNotification) onShowNotification("🎉 Booking confirmed & receipt generated!");
+                          }
+                        }}
+                        className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-sm py-4 rounded-2xl transition shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 active:scale-95 uppercase tracking-wider"
+                      >
+                        <span>Pay Booking Fee & Confirm</span>
+                        <ArrowRight size={18} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -806,92 +1011,26 @@ export default function VendorDetailSheet({
                 {activeTab === 'showcase' && (
                   <div className="space-y-6" id="vendor-showcase-panel">
                     
-                    {/* Part A: Locked / Unlocked Direct Contacts */}
+                    {/* Part A: Direct Contact Channels */}
                     <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-sm space-y-4">
                       <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider flex items-center gap-1.5">
                         <Phone size={13} className="text-brand-primary" />
                         <span>Direct Contact Channels</span>
                       </h4>
                       
-                      {currentUser && hasRevealed ? (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="space-y-4"
-                        >
-                          <p className="text-xs text-brand-success font-bold flex items-center gap-1">
-                            <CheckCircle2 size={13} />
-                            <span>Direct access unlocked! Connect now:</span>
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {/* WhatsApp Direct */}
-                            <a
-                              href={`https://wa.me/${vendor.whatsapp || '919999999999'}?text=${encodeURIComponent(
-                                `Hello ${vendor.name},\n\nI am planning a ${planningEventType || vendor.category} booking via PARVA!\n\nPlanning Details:\n- Name: ${safeUserName}\n- Dates: ${planningStartDate} to ${planningEndDate}\n- Guest Size: ${planningGuestSize}\n- Selected Services: ${bundledServices.map(s => s.name).join(', ') || 'Base Package'}\n\nPlease share availability for these dates!`
-                              )}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={() => {
-                                onAddLead({
-                                  name: safeUserName,
-                                  phone: safeUserPhone,
-                                  email: safeUserEmail,
-                                  city: safeUserCity,
-                                  budget: vendor.basePrice
-                                });
-                                if (onShowNotification) onShowNotification("Opening WhatsApp with pre-filled details! 📲");
-                                onTriggerLogin(() => {}); // Trigger lead logic
-                              }}
-                              className="flex flex-col items-center justify-center p-3 rounded-xl border border-emerald-200 bg-emerald-500 text-white transition active:scale-95 shadow-lg shadow-emerald-500/20"
-                              id="direct-whatsapp-link"
-                            >
-                              <MessageCircle size={18} className="mb-1" />
-                              <span className="text-[10px] font-black uppercase tracking-tighter">WhatsApp</span>
-                            </a>
-
-                            {/* Instagram Direct */}
-                            <a
-                              href={vendor.instagram || "https://instagram.com/parva_events"}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={() => {
-                                onAddLead({
-                                  name: safeUserName,
-                                  phone: safeUserPhone,
-                                  email: safeUserEmail,
-                                  city: safeUserCity,
-                                  budget: vendor.basePrice
-                                });
-                              }}
-                              className="flex flex-col items-center justify-center p-3 rounded-xl border border-pink-200 bg-white text-pink-600 transition active:scale-95 shadow-sm"
-                              id="direct-instagram-link"
-                            >
-                              <Instagram size={18} className="mb-1" />
-                              <span className="text-[10px] font-bold">Instagram</span>
-                            </a>
-
-                            {/* Direct Call */}
-                            <a
-                              href={`tel:${vendor.phone || '+919999999999'}`}
-                              onClick={() => {
-                                onAddLead({
-                                  name: safeUserName,
-                                  phone: safeUserPhone,
-                                  email: safeUserEmail,
-                                  city: safeUserCity,
-                                  budget: vendor.basePrice
-                                });
-                              }}
-                              className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-white text-blue-600 transition active:scale-95 shadow-sm"
-                              id="direct-call-link"
-                            >
-                              <Phone size={18} className="mb-1" />
-                              <span className="text-[10px] font-bold">Call Now</span>
-                            </a>
-                          </div>
-
-                          {/* In-App Live Chat */}
-                          <button
+                      <div className="space-y-4">
+                        <p className="text-xs text-brand-success font-bold flex items-center gap-1">
+                          <CheckCircle2 size={13} />
+                          <span>Direct access verified! Connect directly with {vendor.name}:</span>
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* WhatsApp Direct */}
+                          <a
+                            href={`https://wa.me/${vendor.whatsapp || '919999999999'}?text=${encodeURIComponent(
+                              `Hello ${vendor.name},\n\nI am planning a ${planningEventType || vendor.category} booking via PARVA!\n\nPlanning Details:\n- Name: ${safeUserName}\n- Dates: ${planningStartDate} to ${planningEndDate}\n- Guest Size: ${planningGuestSize}\n- Selected Services: ${bundledServices.map(s => s.name).join(', ') || 'Base Package'}\n\nPlease share availability for these dates!`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
                             onClick={() => {
                               onAddLead({
                                 name: safeUserName,
@@ -900,135 +1039,77 @@ export default function VendorDetailSheet({
                                 city: safeUserCity,
                                 budget: vendor.basePrice
                               });
-                              if (onStartInAppChat) {
-                                onStartInAppChat(vendor);
-                              }
+                              if (onShowNotification) onShowNotification("Opening WhatsApp with pre-filled details! 📲");
                             }}
-                            className="w-full mt-2.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs py-3.5 rounded-2xl transition active:scale-95 shadow-lg shadow-brand-primary/10 flex items-center justify-center gap-2"
-                            id="in-app-direct-chat-btn"
+                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-emerald-200 bg-emerald-500 text-white transition active:scale-95 shadow-lg shadow-emerald-500/20"
+                            id="direct-whatsapp-link"
                           >
-                            <MessageSquare size={16} />
-                            <span>START INTERNAL LIVE CHAT</span>
-                          </button>
+                            <MessageCircle size={18} className="mb-1" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">WhatsApp</span>
+                          </a>
 
-                          {/* Payment Advance Option */}
-                          <div className="pt-4 border-t border-dashed border-gray-100">
-                            <button
-                              onClick={() => {
-                                setPaymentStep('method');
-                                setIsPaymentModalOpen(true);
-                              }}
-                              className="w-full bg-brand-text text-white font-black py-4 rounded-2xl shadow-xl hover:bg-black transition active:scale-95 flex items-center justify-center gap-2"
-                              id="pay-advance-trigger"
-                            >
-                              <DollarSign size={16} className="text-brand-primary" />
-                              <span>PAY ₹5,000 ADVANCE TO CONFIRM</span>
-                            </button>
-                            <p className="text-[9px] text-brand-text-secondary text-center mt-2 font-bold uppercase tracking-widest">
-                              🔒 Secure Escrow Protected Payment
-                            </p>
-                          </div>
-                        </motion.div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-2.5 bg-brand-primary-light/50 p-3.5 rounded-xl border border-brand-primary/10">
-                            <Lock size={16} className="text-brand-primary shrink-0 mt-0.5" />
-                            <div className="space-y-0.5">
-                              <span className="text-[10px] font-extrabold text-brand-primary-dark uppercase tracking-wider">Contacts Locked</span>
-                              <p className="text-[11px] text-brand-text-secondary leading-normal">
-                                Fill in your contact info to instantly reveal WhatsApp and Direct Call details!
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Built-in quick registration contact form */}
-                          <div className="space-y-2.5 bg-gray-50/50 backdrop-blur-md p-4 rounded-2xl border border-brand-border shadow-inner">
-                            <p className="text-[11px] font-black text-brand-text uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                              <Sparkles size={12} className="text-brand-primary" />
-                              <span>Reveal Number Logic</span>
-                            </p>
-                            <div className="space-y-2">
-                              <input
-                                type="text"
-                                placeholder="Your Full Name"
-                                id="quick-lead-name"
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-primary transition shadow-sm"
-                              />
-                              <input
-                                type="tel"
-                                placeholder="WhatsApp / Phone Number"
-                                id="quick-lead-phone"
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-primary transition shadow-sm"
-                              />
-                              <input
-                                type="email"
-                                placeholder="Email Address"
-                                id="quick-lead-email"
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-primary transition shadow-sm"
-                              />
-                            </div>
-                            <button
-                              onClick={() => {
-                                const nameInput = document.getElementById('quick-lead-name') as HTMLInputElement;
-                                const phoneInput = document.getElementById('quick-lead-phone') as HTMLInputElement;
-                                const emailInput = document.getElementById('quick-lead-email') as HTMLInputElement;
-                                
-                                if (!nameInput?.value || !phoneInput?.value || !emailInput?.value) {
-                                  if (onShowNotification) onShowNotification("Please fill all contact fields to unlock! 🔒");
-                                  return;
-                                }
+                          {/* Instagram Direct */}
+                          <a
+                            href={vendor.instagram || "https://instagram.com/parva_events"}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => {
+                              onAddLead({
+                                name: safeUserName,
+                                phone: safeUserPhone,
+                                email: safeUserEmail,
+                                city: safeUserCity,
+                                budget: vendor.basePrice
+                              });
+                            }}
+                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-pink-200 bg-white text-pink-600 transition active:scale-95 shadow-sm"
+                            id="direct-instagram-link"
+                          >
+                            <Instagram size={18} className="mb-1" />
+                            <span className="text-[10px] font-bold">Instagram</span>
+                          </a>
 
-                                if (!currentUser) {
-                                  if (onShowNotification) onShowNotification("Almost there! Complete your login to unlock details. 🔒");
-                                }
-                                
-                                setIsRevealing(true);
-                                
-                                // Call callback to trigger login after magic delay
-                                setTimeout(() => {
-                                  const info = {
-                                    name: nameInput.value,
-                                    phone: phoneInput.value,
-                                    email: emailInput.value,
-                                    city: vendor.location
-                                  };
-                                  
-                                  localStorage.setItem('parva_user', JSON.stringify(info));
-                                  onAddLead({
-                                    ...info,
-                                    vendorId: vendor.id,
-                                    vendorName: vendor.name,
-                                    budget: vendor.basePrice,
-                                    timestamp: new Date().toLocaleString()
-                                  } as any);
-                                  
-                                  onTriggerLogin(() => {
-                                    setIsRevealing(false);
-                                    setShowWinnerModal(true);
-                                    setHasRevealed(true);
-                                    if (onShowNotification) onShowNotification("CONGRATULATIONS! You've unlocked exclusive access! 🎁✨");
-                                  });
-                                }, 2000);
-                              }}
-                              disabled={isRevealing}
-                              className={`w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs py-4 px-3 rounded-2xl transition shadow-xl shadow-brand-primary/20 flex items-center justify-center gap-2 ${isRevealing ? 'opacity-70 cursor-not-allowed' : 'active:scale-95'}`}
-                              id="submit-unlock-btn"
-                            >
-                              {isRevealing ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  <span>PERFORMING MAGIC...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles size={16} className="animate-pulse" />
-                                  <span>REVEAL CONTACT NUMBER NOW</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
+                          {/* Direct Call */}
+                          <a
+                            href={`tel:${vendor.phone || '+919999999999'}`}
+                            onClick={() => {
+                              onAddLead({
+                                name: safeUserName,
+                                phone: safeUserPhone,
+                                email: safeUserEmail,
+                                city: safeUserCity,
+                                budget: vendor.basePrice
+                              });
+                            }}
+                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-white text-blue-600 transition active:scale-95 shadow-sm"
+                            id="direct-call-link"
+                          >
+                            <Phone size={18} className="mb-1" />
+                            <span className="text-[10px] font-bold">Call Now</span>
+                          </a>
                         </div>
-                      )}
+
+                        {/* In-App Live Chat */}
+                        <button
+                          onClick={() => {
+                            onAddLead({
+                              name: safeUserName,
+                              phone: safeUserPhone,
+                              email: safeUserEmail,
+                              city: safeUserCity,
+                              budget: vendor.basePrice
+                            });
+                            if (onStartInAppChat) {
+                              onStartInAppChat(vendor);
+                            }
+                          }}
+                          className="w-full mt-2.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs py-3.5 rounded-2xl transition active:scale-95 shadow-lg shadow-brand-primary/10 flex items-center justify-center gap-2"
+                          id="in-app-direct-chat-btn"
+                        >
+                          <MessageSquare size={16} />
+                          <span>START INTERNAL LIVE CHAT</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Celebration Modal */}
@@ -1886,6 +1967,250 @@ export default function VendorDetailSheet({
                   </div>
                 </div>
               </motion.div>
+            )}
+          </AnimatePresence>
+          {/* Full Calendar Picker Modal Overlay */}
+          <AnimatePresence>
+            {isFullCalendarOpen && (
+              <div className="fixed inset-0 z-[110] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 select-none">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-white rounded-[32px] p-6 max-w-md w-full shadow-2xl space-y-4"
+                >
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="text-brand-primary" size={20} />
+                      <h3 className="font-extrabold text-brand-text text-sm uppercase tracking-wider">
+                        Full Availability Calendar
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setIsFullCalendarOpen(false)}
+                      className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 font-medium">
+                    Select your preferred event date for <span className="font-bold text-brand-text">{vendor.name}</span>:
+                  </p>
+
+                  <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-bold py-2 border-y border-gray-100">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <span key={i} className="text-gray-400 text-[10px]">{d}</span>
+                    ))}
+                    {Array.from({ length: 31 }, (_, i) => {
+                      const dayNum = i + 1;
+                      const dateStr = `2026-08-${dayNum.toString().padStart(2, '0')}`;
+                      const isBooked = vendor.busyDates?.includes(dateStr) || (dayNum === 21 || dayNum === 23);
+                      const isSelected = selectedDate === dateStr;
+
+                      return (
+                        <button
+                          key={dayNum}
+                          disabled={isBooked}
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setIsFullCalendarOpen(false);
+                            if (onShowNotification) onShowNotification(`Selected event date: ${dateStr} 📅`);
+                          }}
+                          className={`h-9 rounded-xl font-bold text-xs transition flex flex-col items-center justify-center ${
+                            isBooked
+                              ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
+                              : isSelected
+                              ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20 scale-105'
+                              : 'bg-gray-50 hover:bg-brand-primary/10 text-brand-text'
+                          }`}
+                        >
+                          <span>{dayNum}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px] font-bold pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5 text-emerald-600">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-red-400">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                      <span>Booked</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-brand-primary">
+                      <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
+                      <span>Selected</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsFullCalendarOpen(false)}
+                    className="w-full bg-brand-text text-white py-3 rounded-2xl text-xs font-extrabold tracking-wider hover:bg-black transition"
+                  >
+                    Confirm Date Selection
+                  </button>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Reels Video Popup Player Modal */}
+          <AnimatePresence>
+            {activeReelModal && (
+              <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-lg flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="bg-black rounded-[36px] w-full max-w-sm aspect-[9/16] overflow-hidden shadow-2xl relative flex flex-col border border-white/20"
+                >
+                  <div className="absolute top-4 left-4 right-4 z-30 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-2">
+                      <Video className="text-brand-primary" size={18} />
+                      <span className="text-xs font-black uppercase tracking-wider">Reel Showcase</span>
+                    </div>
+                    <button
+                      onClick={() => setActiveReelModal(null)}
+                      className="p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition active:scale-95"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <iframe
+                    src={`${getEmbedUrl(activeReelModal)}?autoplay=1`}
+                    title="Reel Player"
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+
+                  <div className="absolute bottom-4 inset-x-4 z-30 flex items-center justify-between bg-black/60 backdrop-blur-md p-3 rounded-2xl text-white">
+                    <div>
+                      <p className="text-xs font-black">{vendor.name}</p>
+                      <p className="text-[10px] text-gray-300">{vendor.category} Showcase Video</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveReelModal(null)}
+                      className="bg-brand-primary text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-brand-primary-dark"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Digital Booking Receipt Modal */}
+          <AnimatePresence>
+            {showReceiptModal && receiptData && (
+              <div className="fixed inset-0 z-[130] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-white rounded-[36px] max-w-md w-full p-6 shadow-2xl space-y-4 relative overflow-hidden"
+                  id="printable-booking-receipt"
+                >
+                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-primary via-purple-500 to-emerald-500" />
+                  
+                  <div className="flex justify-between items-start pt-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-brand-primary font-black text-lg">
+                        <Sparkles size={20} />
+                        <span>PARVA RECEIPT</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-mono">ID: {receiptData.id}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowReceiptModal(false)}
+                      className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex items-center gap-3">
+                    <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-xs font-extrabold text-emerald-900">BOOKING ADVANCE PAID & CONFIRMED</p>
+                      <p className="text-[10px] text-emerald-700">Date slot reserved with vendor portal.</p>
+                    </div>
+                  </div>
+
+                  {/* Customer & Vendor Details */}
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                    <div>
+                      <span className="text-[9px] font-extrabold text-gray-400 uppercase block">Customer Details</span>
+                      <p className="font-bold text-gray-800">{receiptData.userName}</p>
+                      <p className="text-[10px] text-gray-500">{receiptData.userPhone}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-extrabold text-gray-400 uppercase block">Vendor Details</span>
+                      <p className="font-bold text-gray-800">{receiptData.vendorName}</p>
+                      <p className="text-[10px] text-gray-500">{receiptData.vendorCategory} • {receiptData.vendorLocation}</p>
+                    </div>
+                  </div>
+
+                  {/* Itemized Services */}
+                  <div className="space-y-1.5 text-xs">
+                    <span className="text-[10px] font-extrabold text-gray-400 uppercase block">Booked Services</span>
+                    {receiptData.services.map((s: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded-xl text-gray-700 font-medium">
+                        <span>{s.name}</span>
+                        <span className="font-bold text-gray-900">₹{s.price.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Financial Summary */}
+                  <div className="border-t border-dashed border-gray-200 pt-3 space-y-1 text-xs">
+                    <div className="flex justify-between text-gray-500">
+                      <span>Services Total:</span>
+                      <span className="font-bold">₹{receiptData.servicesTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Advance Fee ({receiptData.bookingFeePct}%):</span>
+                      <span className="font-bold">₹{receiptData.bookingFeeAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>GST (18%):</span>
+                      <span className="font-bold">₹{receiptData.gstAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-black text-brand-primary-dark pt-1 border-t border-gray-100">
+                      <span>TOTAL PAID:</span>
+                      <span className="text-brand-primary">₹{receiptData.totalAmountDue.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => {
+                        window.print();
+                      }}
+                      className="flex-1 bg-brand-primary text-white py-3 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-brand-primary/20 hover:bg-brand-primary-dark transition active:scale-95"
+                    >
+                      <Download size={16} />
+                      <span>Print / Save PDF</span>
+                    </button>
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(
+                        `*PARVA BOOKING CONFIRMATION*\nReceipt ID: ${receiptData.id}\nVendor: ${receiptData.vendorName}\nCustomer: ${receiptData.userName}\nTotal Paid: ₹${receiptData.totalAmountDue}\nDate: ${receiptData.date}`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-emerald-500 text-white px-4 py-3 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
+                    >
+                      <MessageCircle size={16} />
+                      <span>WhatsApp Receipt</span>
+                    </a>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </AnimatePresence>
         </>

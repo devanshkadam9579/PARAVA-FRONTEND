@@ -774,6 +774,24 @@ export default function App() {
   const [adminsList, setAdminsList] = useState<any[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [bookingFeePercentage, setBookingFeePercentage] = useState<number>(5);
+
+  // Sync settings/global from Firestore
+  useEffect(() => {
+    async function fetchGlobalSettings() {
+      try {
+        const db = getDb();
+        const { doc, getDoc } = await import('firebase/firestore');
+        const snap = await getDoc(doc(db, 'settings', 'global'));
+        if (snap.exists() && snap.data()?.bookingFeePercentage) {
+          setBookingFeePercentage(snap.data().bookingFeePercentage);
+        }
+      } catch (err) {
+        console.warn("Using default booking fee percentage 5%", err);
+      }
+    }
+    fetchGlobalSettings();
+  }, []);
 
   // Logged-in Vendor Edit States
   const [vendorEditName, setVendorEditName] = useState('');
@@ -3745,11 +3763,10 @@ export default function App() {
 
             {bookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
-                <DotLottieReact 
-                  src="https://lottie.host/8c067d5e-ef15-4fa7-889a-0e6d5e16ec3f/W3dOpxG1fF.lottie" 
-                  loop 
-                  autoplay 
-                  className="w-48 h-48 mb-2"
+                <img 
+                  src="/active_bookings_empty.svg" 
+                  alt="No active bookings" 
+                  className="w-48 h-48 mb-2 object-contain"
                 />
                 <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
                 <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
@@ -4837,6 +4854,13 @@ export default function App() {
           planningStartDate={planningStartDate}
           planningEndDate={planningEndDate}
           planningGuestSize={planningGuestSize}
+          bookingFeePercentage={bookingFeePercentage}
+          handlePayWithRazorpay={(params: any) => {
+            setRazorpayAmount(params.totalAmountDue);
+            setRazorpayPurpose('connection');
+            setPendingCheckoutBooking(params);
+            setIsRazorpayOpen(true);
+          }}
         />
       )}
 

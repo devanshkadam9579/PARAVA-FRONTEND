@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="100%" height="100%">
+  <!-- Background Seat / Chair -->
+  <path d="M 180 85 C 180 85, 330 85, 340 180 C 350 270, 390 350, 370 450 L 330 450 L 320 300 C 270 290, 200 280, 180 280 Z" fill="#FFFDF8" stroke="#1A202C" stroke-width="4" stroke-linejoin="round"/>
+  <line x1="330" y1="200" x2="380" y2="205" stroke="#1A202C" stroke-width="4"/>
+  <line x1="320" y1="330" x2="370" y2="335" stroke="#1A202C" stroke-width="4"/>
+  <path d="M 230 450 L 230 400 C 250 370, 280 340, 300 320 L 300 450 Z" fill="#FFFDF8" stroke="#1A202C" stroke-width="4"/>
+
+  <!-- Character Legs & Pants (Vibrant Purple) -->
+  <!-- Right leg crossed -->
+  <path d="M 235 200 C 275 220, 310 270, 315 285 C 295 360, 285 435, 285 435 L 195 435 C 195 435, 200 325, 205 280 C 170 275, 120 270, 80 310 L 55 365 L 125 410 L 175 350 Z" fill="#A855F7" stroke="#A855F7"/>
+  <path d="M 145 200 Q 240 205 315 285 Q 260 380 285 435 L 205 435 Q 200 325 210 285 Q 120 275 80 310 L 40 365 L 110 410 L 175 350 Z" fill="#9333EA" stroke="#1A202C" stroke-width="4" stroke-linejoin="round"/>
+  
+  <!-- Right shoe -->
+  <path d="M 265 435 L 325 435 C 335 435, 340 450, 335 465 C 330 475, 310 480, 290 480 C 270 480, 265 465, 265 435 Z" fill="#7E22CE" stroke="#1A202C" stroke-width="4"/>
+  <line x1="285" y1="445" x2="305" y2="465" stroke="#FFF" stroke-width="3"/>
+  <line x1="295" y1="440" x2="315" y2="460" stroke="#FFF" stroke-width="3"/>
+
+  <!-- Left shoe -->
+  <path d="M 5 355 C 5 335, 20 330, 45 330 C 60 330, 70 345, 75 365 C 75 385, 60 405, 40 405 C 20 405, 5 385, 5 355 Z" fill="#7E22CE" stroke="#1A202C" stroke-width="4"/>
+  <line x1="25" y1="345" x2="45" y2="385" stroke="#FFF" stroke-width="3"/>
+  <line x1="35" y1="340" x2="55" y2="380" stroke="#FFF" stroke-width="3"/>
+
+  <!-- Torso & Black Shirt -->
+  <path d="M 165 80 Q 280 80 365 150 Q 320 250 165 200 Z" fill="#18181B" stroke="#1A202C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M 160 160 L 320 280 C 270 290, 200 280, 160 200 Z" fill="#18181B" stroke="#1A202C" stroke-width="4"/>
+
+  <!-- Tablet / Device held in hand -->
+  <rect x="150" y="85" width="100" height="110" rx="12" fill="#FFFDF8" stroke="#1A202C" stroke-width="4" transform="rotate(-15 200 140)"/>
+  <rect x="180" y="90" width="30" height="10" rx="5" fill="#1A202C" transform="rotate(-15 200 140)"/>
+
+  <!-- Hands / Arms -->
+  <path d="M 145 75 Q 100 100 150 145" fill="none" stroke="#1A202C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 140 105 Q 110 130 160 165" fill="none" stroke="#1A202C" stroke-width="4" stroke-linecap="round"/>
+  
+  <path d="M 255 105 Q 310 140 250 185" fill="none" stroke="#1A202C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 235 125 Q 285 160 230 195" fill="none" stroke="#1A202C" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Head & Purple Cap -->
+  <!-- Head -->
+  <path d="M 215 30 Q 275 30 270 70 Q 230 85 210 70 Z" fill="#FFFDF8" stroke="#1A202C" stroke-width="4"/>
+  <!-- Cap -->
+  <path d="M 195 20 C 200 0, 275 0, 275 30 L 195 30 Z" fill="#7E22CE" stroke="#1A202C" stroke-width="4"/>
+  <path d="M 180 30 L 255 30 C 255 30, 240 38, 180 35 Z" fill="#7E22CE" stroke="#1A202C" stroke-width="4"/>
+
+  <!-- Facial features (Smiling eyes) -->
+  <path d="M 225 35 Q 235 30 240 38" fill="none" stroke="#1A202C" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 228 50 Q 240 60 248 48" fill="none" stroke="#1A202C" stroke-width="3" stroke-linecap="round"/>
+  <!-- Ear -->
+  <circle cx="265" cy="40" r="6" fill="#FFFDF8" stroke="#1A202C" stroke-width="3"/>
+</svg>
