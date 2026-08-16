@@ -342,10 +342,11 @@ export default function App() {
     return localStorage.getItem('parva_premium_status') === 'true';
   });
 
-  // Dynamic Vendors, Categories, Promos State
+  // Dynamic Vendors, Categories, Promos, Settings State
   const [vendors, setVendors] = useState<Vendor[]>(VENDORS);
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [appLogo, setAppLogo] = useState('https://i.postimg.cc/mgk6dNNd/parva-logo.png');
+  const [paymentsEnabled, setPaymentsEnabled] = useState<boolean>(true);
 
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
 
@@ -479,6 +480,16 @@ export default function App() {
       console.warn("Settings sync error:", error);
     });
 
+    const unsubscribeGlobalSettings = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const enabled = data.paymentsEnabled ?? data.paymentEnabled ?? true;
+        setPaymentsEnabled(enabled);
+      }
+    }, (error) => {
+      console.warn("Global settings sync error:", error);
+    });
+
     // Listen for Connections collection
     const unsubscribeConnections = onSnapshot(collection(db, 'connections'), (snapshot) => {
       const connsData = snapshot.docs.map(doc => doc.data());
@@ -511,7 +522,17 @@ export default function App() {
           console.warn("Failed to seed categories:", e);
         }
       } else {
-        const catsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const catsData = snapshot.docs.map(doc => {
+          const d = doc.data();
+          const defaultImg = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=400';
+          return {
+            id: doc.id,
+            name: d.name || 'Category',
+            icon: d.icon || d.iconName || 'Sparkles',
+            iconName: d.iconName || d.icon || 'Sparkles',
+            image: d.image || (typeof d.icon === 'string' && d.icon.startsWith('http') ? d.icon : defaultImg)
+          };
+        });
         setCategoriesList(catsData as any);
       }
     }, (error) => {
@@ -525,6 +546,7 @@ export default function App() {
       unsubscribeBookings();
       unsubscribeLeads();
       unsubscribeSettings();
+      unsubscribeGlobalSettings();
       unsubscribeChats();
       unsubscribeCategories();
       unsubscribeConnections();
@@ -1048,6 +1070,41 @@ export default function App() {
     amount?: number;
     bookingData?: any;
   }) => {
+    if (!paymentsEnabled) {
+      showNotification('⚡ Payments Gateway is turned OFF by Admin - Free Access Granted!');
+      if (params.type === 'connection' && params.vendorId && currentUser?.uid) {
+        try {
+          const db = getDb();
+          const { doc, setDoc } = await import('firebase/firestore');
+          const connId = `${currentUser.uid}_${params.vendorId}`;
+          await setDoc(doc(db, 'connections', connId), {
+            id: connId,
+            userId: currentUser.uid,
+            vendorId: params.vendorId,
+            unlocked: true,
+            timestamp: new Date().toISOString()
+          });
+          setUnlockedConnections(prev => [...prev, params.vendorId!]);
+        } catch (e) {
+          console.error('Error unlocking connection when payments disabled:', e);
+        }
+      } else if (params.type === 'booking' && params.bookingData) {
+        try {
+          const db = getDb();
+          const { doc, setDoc } = await import('firebase/firestore');
+          const finalBooking = {
+            ...params.bookingData,
+            status: 'Confirmed',
+            paymentStatus: 'Paid (Bypassed)'
+          };
+          await setDoc(doc(db, 'bookings', params.bookingData.id), finalBooking);
+        } catch (e) {
+          console.error('Error saving booking when payments disabled:', e);
+        }
+      }
+      return;
+    }
+
     const loaded = await loadRazorpayScript();
     if (!loaded) {
       showNotification('❌ Failed to load Razorpay SDK. Please check your internet connection.');

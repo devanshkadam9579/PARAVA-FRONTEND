@@ -54,6 +54,7 @@ export interface Vendor {
   phone?: string;
   founderName?: string;
   founderImage?: string;
+  founderBio?: string;
   experience?: string;
   busyDates?: string[];
   latitude?: number;
