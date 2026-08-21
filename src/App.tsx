@@ -32,6 +32,7 @@ import SplashCarousel from './components/SplashCarousel';
 import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
 import SharedPlanView from './components/SharedPlanView';
+import ParvaLogin from './components/LoginScreen';
 import { Share2 } from 'lucide-react';
 
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -372,6 +373,8 @@ export default function App() {
   const [loginsCount, setLoginsCount] = useState<number>(() => {
     return Number(localStorage.getItem('parva_logins_count') || '14');
   });
+
+  const [showFeralLogin, setShowFeralLogin] = useState(true);
 
   // Real-time synchronization for all Firestore collections
   useEffect(() => {
@@ -2040,6 +2043,21 @@ export default function App() {
   }
 
   if (!currentUser) {
+    if (showFeralLogin) {
+      return (
+        <ParvaLogin 
+          onGoogleLogin={() => handleGoogleLogin('user')}
+          onEmail={() => {
+            setLoginRole('user');
+            setShowFeralLogin(false);
+          }}
+          onVendorLogin={() => {
+             setLoginRole('vendor');
+             setShowFeralLogin(false);
+          }}
+        />
+      );
+    }
     return (
       <div className="min-h-screen bg-brand-bg flex flex-col max-w-md mx-auto shadow-2xl relative border-x border-brand-border overflow-y-auto" id="parva-login-container">
         <Helmet>
