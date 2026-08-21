@@ -3342,56 +3342,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Advanced Planning Funnel integrated into Explore Header */}
-              <div className="bg-white/80 rounded-2xl p-4 border border-white/60 shadow-inner space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-brand-primary">
-                    <Calendar size={16} />
-                    <h4 className="text-[10px] font-black uppercase tracking-widest">Select Event Period</h4>
-                  </div>
-                  <span className="text-[9px] font-bold text-brand-text-secondary">Instant Availability Check</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
-                    <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Starts</p>
-                    <input 
-                      type="date"
-                      value={planningStartDate}
-                      onChange={(e) => setPlanningStartDate(e.target.value)}
-                      className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer"
-                    />
-                  </div>
-                  <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
-                    <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Ends</p>
-                    <input 
-                      type="date"
-                      value={planningEndDate}
-                      onChange={(e) => setPlanningEndDate(e.target.value)}
-                      className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer"
-                    />
-                  </div>
-                </div>
 
-                <div className="pt-2 border-t border-gray-100/60">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <div className="flex items-center gap-1.5 text-brand-text-secondary">
-                      <Users size={12} />
-                      <p className="text-[9px] font-black uppercase tracking-wider">Estimated Guest Size</p>
-                    </div>
-                    <span className="text-xs font-black text-brand-primary">{planningGuestSize} Guests</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="10" 
-                    max="2000" 
-                    step="10"
-                    value={planningGuestSize}
-                    onChange={(e) => setPlanningGuestSize(Number(e.target.value))}
-                    className="w-full accent-brand-primary h-1.5"
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Quick Pill Categories for filtering */}
@@ -3439,6 +3390,55 @@ export default function App() {
               
               {showFilters && (
                 <div className="pt-4 mt-4 border-t border-dashed border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                  
+                  {/* Event Period */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-brand-primary">
+                      <Calendar size={16} />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest">Select Event Period</h4>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
+                      <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Starts</p>
+                      <input 
+                        type="date"
+                        value={planningStartDate}
+                        onChange={(e) => setPlanningStartDate(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer min-w-0"
+                      />
+                    </div>
+                    <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
+                      <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Ends</p>
+                      <input 
+                        type="date"
+                        value={planningEndDate}
+                        onChange={(e) => setPlanningEndDate(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer min-w-0"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Estimated Guest Size */}
+                  <div className="pt-2 border-t border-dashed border-gray-100">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[11px] font-semibold text-brand-text-secondary uppercase tracking-wider">Guest Size</span>
+                      <span className="font-bold text-brand-primary">{planningGuestSize} Guests</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="2000" 
+                      step="10"
+                      value={planningGuestSize}
+                      onChange={(e) => setPlanningGuestSize(Number(e.target.value))}
+                      className="w-full accent-brand-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                  
+                  <div className="w-full h-px border-t border-dashed border-gray-100 my-2"></div>
+                  
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-semibold text-brand-text-secondary uppercase tracking-wider">Starting Price Cap</span>
                     <span className="font-bold text-brand-primary">₹{priceRange >= 100000 ? `${(priceRange / 100000).toFixed(1)} Lakh` : priceRange.toLocaleString('en-IN')}</span>
