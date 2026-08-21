@@ -458,7 +458,7 @@ export default function VendorDetailSheet({
                 className="relative aspect-[16/10] bg-gray-200 cursor-pointer group overflow-hidden"
                 id="vendor-hero-image-container"
               >
-                <img
+                <img loading="lazy"
                   src={(vendor.images && vendor.images.length > 0 && vendor.images[activeImageIndex]) ? vendor.images[activeImageIndex] : 'https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=600'}
                   alt={vendor.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
@@ -694,7 +694,7 @@ export default function VendorDetailSheet({
 
               {/* Segmented Tabs Control */}
               <div className="bg-white border-b border-brand-border flex overflow-x-auto scrollbar-none">
-                {(['services', 'showcase', 'about', 'reviews'] as const).map((tab) => (
+                {(['services', 'about', 'reviews'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -707,8 +707,6 @@ export default function VendorDetailSheet({
                   >
                     {tab === 'services' 
                       ? 'Services' 
-                      : tab === 'showcase' 
-                      ? 'Reels & Pricing'
                       : tab === 'reviews' 
                       ? `Reviews (${vendor.reviewCount})` 
                       : 'About'}
@@ -742,7 +740,7 @@ export default function VendorDetailSheet({
                             {/* Service Image Section */}
                             <div className="h-32 bg-gray-100 relative w-full overflow-hidden">
                               {svc.image ? (
-                                <img src={svc.image} alt={svc.name} className="w-full h-full object-cover" />
+                                <img loading="lazy" src={svc.image} alt={svc.name} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                                   <ImageIcon size={32} />
@@ -861,355 +859,9 @@ export default function VendorDetailSheet({
                   </div>
                 )}
 
-                {/* Showcase & Reels Tab */}
                 {activeTab === 'showcase' && (
                   <div className="space-y-6" id="vendor-showcase-panel">
                     
-                    {/* Part A: Direct Contact Channels */}
-                    <div className="bg-white p-5 rounded-2xl border border-brand-border shadow-sm space-y-4">
-                      <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider flex items-center gap-1.5">
-                        <Phone size={13} className="text-brand-primary" />
-                        <span>Direct Contact Channels</span>
-                      </h4>
-                      
-                      <div className="space-y-4">
-                        <p className="text-xs text-brand-success font-bold flex items-center gap-1">
-                          <CheckCircle2 size={13} />
-                          <span>Direct access verified! Connect directly with {vendor.name}:</span>
-                        </p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {/* WhatsApp Direct */}
-                          <a
-                            href={`https://wa.me/${vendor.whatsapp || '919999999999'}?text=${encodeURIComponent(
-                              `Hello ${vendor.name},\n\nI am planning a ${planningEventType || vendor.category} booking via PARVA!\n\nPlanning Details:\n- Name: ${safeUserName}\n- Dates: ${planningStartDate} to ${planningEndDate}\n- Guest Size: ${planningGuestSize}\n- Selected Services: ${bundledServices.map(s => s.name).join(', ') || 'Base Package'}\n\nPlease share availability for these dates!`
-                            )}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={() => {
-                              onAddLead({
-                                name: safeUserName,
-                                phone: safeUserPhone,
-                                email: safeUserEmail,
-                                city: safeUserCity,
-                                budget: vendor.basePrice
-                              });
-                              if (onShowNotification) onShowNotification("Opening WhatsApp with pre-filled details! 📲");
-                            }}
-                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-emerald-200 bg-emerald-500 text-white transition active:scale-95 shadow-lg shadow-emerald-500/20"
-                            id="direct-whatsapp-link"
-                          >
-                            <MessageCircle size={18} className="mb-1" />
-                            <span className="text-[10px] font-black uppercase tracking-tighter">WhatsApp</span>
-                          </a>
-
-                          {/* Instagram Direct */}
-                          <a
-                            href={vendor.instagram || "https://instagram.com/parva_events"}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={() => {
-                              onAddLead({
-                                name: safeUserName,
-                                phone: safeUserPhone,
-                                email: safeUserEmail,
-                                city: safeUserCity,
-                                budget: vendor.basePrice
-                              });
-                            }}
-                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-pink-200 bg-white text-pink-600 transition active:scale-95 shadow-sm"
-                            id="direct-instagram-link"
-                          >
-                            <Instagram size={18} className="mb-1" />
-                            <span className="text-[10px] font-bold">Instagram</span>
-                          </a>
-
-                          {/* Direct Call */}
-                          <a
-                            href={`tel:${vendor.phone || '+919999999999'}`}
-                            onClick={() => {
-                              onAddLead({
-                                name: safeUserName,
-                                phone: safeUserPhone,
-                                email: safeUserEmail,
-                                city: safeUserCity,
-                                budget: vendor.basePrice
-                              });
-                            }}
-                            className="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-200 bg-white text-blue-600 transition active:scale-95 shadow-sm"
-                            id="direct-call-link"
-                          >
-                            <Phone size={18} className="mb-1" />
-                            <span className="text-[10px] font-bold">Call Now</span>
-                          </a>
-                        </div>
-
-                        {/* In-App Live Chat */}
-                        <button
-                          onClick={() => {
-                            onAddLead({
-                              name: safeUserName,
-                              phone: safeUserPhone,
-                              email: safeUserEmail,
-                              city: safeUserCity,
-                              budget: vendor.basePrice
-                            });
-                            if (onStartInAppChat) {
-                              onStartInAppChat(vendor);
-                            }
-                          }}
-                          className="w-full mt-2.5 bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs py-3.5 rounded-2xl transition active:scale-95 shadow-lg shadow-brand-primary/10 flex items-center justify-center gap-2"
-                          id="in-app-direct-chat-btn"
-                        >
-                          <MessageSquare size={16} />
-                          <span>START INTERNAL LIVE CHAT</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Celebration Modal */}
-                    <AnimatePresence>
-                      {showWinnerModal && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-                          <motion.div
-                            initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
-                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            className="bg-white rounded-[40px] p-8 max-w-sm w-full text-center relative overflow-hidden shadow-2xl"
-                          >
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-brand-primary to-emerald-400" />
-                            <div className="w-24 h-24 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                              <Sparkles size={48} className="text-brand-primary animate-bounce" />
-                            </div>
-                            <h2 className="text-3xl font-black text-brand-text mb-2 uppercase tracking-tighter">YOU WON!</h2>
-                            <p className="text-brand-text-secondary font-bold text-xs mb-6 leading-relaxed">
-                              Verified contact access has been <span className="text-brand-primary font-black underline">UNLOCKED</span> for this vendor. You can now chat directly on WhatsApp!
-                            </p>
-                            
-                            <div className="space-y-2 mb-8">
-                              <button
-                                onClick={() => {
-                                  const waUrl = `https://wa.me/${vendor.whatsapp || '919999999999'}?text=${encodeURIComponent(`Hello ${vendor.name}, I found your profile on PARVA and I am interested in your services for my upcoming event!`)}`;
-                                  window.open(waUrl, '_blank');
-                                  setShowWinnerModal(false);
-                                }}
-                                className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95"
-                              >
-                                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.067 2.877 1.215 3.076.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.659 1.432 5.63 1.433h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                                </svg>
-                                <span>CHAT ON WHATSAPP</span>
-                              </button>
-                              <button
-                                onClick={() => setShowWinnerModal(false)}
-                                className="w-full bg-brand-primary text-white font-black py-3.5 rounded-2xl shadow-lg shadow-brand-primary/20 active:scale-95 transition"
-                              >
-                                VIEW FULL PROFILE
-                              </button>
-                            </div>
-                            {/* Confetti particles simulated with dots */}
-                            {[...Array(12)].map((_, i) => (
-                              <motion.div
-                                key={i}
-                                initial={{ y: 0, x: 0 }}
-                                animate={{ 
-                                  y: [0, -100, 100], 
-                                  x: [0, (i % 2 === 0 ? 1 : -1) * (i * 20)],
-                                  opacity: [0, 1, 0] 
-                                }}
-                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.1 }}
-                                className={`absolute w-2 h-2 rounded-full ${i % 3 === 0 ? 'bg-yellow-400' : i % 3 === 1 ? 'bg-emerald-400' : 'bg-brand-primary'}`}
-                                style={{ top: '50%', left: '50%' }}
-                              />
-                            ))}
-                          </motion.div>
-                        </div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Payment Modal */}
-                    <AnimatePresence>
-                      {isPaymentModalOpen && (
-                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
-                          <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl flex flex-col"
-                          >
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-brand-bg/30">
-                              <h3 className="font-black text-brand-text text-sm uppercase tracking-widest">Secure Checkout</h3>
-                              <button onClick={() => setIsPaymentModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                                <X size={18} />
-                              </button>
-                            </div>
-
-                            <div className="p-8 flex-1">
-                              {paymentStep === 'method' && (
-                                <div className="space-y-6">
-                                  <div className="text-center">
-                                    <div className="inline-flex items-center gap-1.5 bg-brand-primary-light text-brand-primary-dark font-black text-[9px] uppercase px-3 py-1.5 rounded-full tracking-widest mb-4">
-                                      <ShieldCheck size={11} />
-                                      <span>Verified Booking Lock</span>
-                                    </div>
-                                    <p className="text-[10px] text-brand-text-secondary font-black uppercase tracking-widest mb-1">Direct Connection Fee</p>
-                                    <h4 className="text-4xl font-black text-brand-text tracking-tighter">₹5,000</h4>
-                                    <p className="text-[11px] text-brand-text-secondary font-medium mt-2 leading-relaxed px-4">
-                                      This one-time connection fee locks your date with <b>{vendor.name}</b> and grants you 24/7 direct access. This amount is 100% adjustable against your final bill.
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-3">
-                                    <button
-                                      onClick={() => {
-                                        setPaymentStep('processing');
-                                        setTimeout(() => {
-                                          setPaymentStep('success');
-                                        }, 2500);
-                                      }}
-                                      className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-brand-primary-light rounded-xl flex items-center justify-center text-brand-primary">
-                                          <Smartphone size={20} />
-                                        </div>
-                                        <div className="text-left">
-                                          <p className="text-xs font-black text-brand-text">UPI / Google Pay</p>
-                                          <p className="text-[10px] text-brand-text-secondary font-bold">Fastest & Secure</p>
-                                        </div>
-                                      </div>
-                                      <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
-                                    </button>
-
-                                    <button
-                                      onClick={() => {
-                                        setPaymentStep('processing');
-                                        setTimeout(() => {
-                                          setPaymentStep('success');
-                                        }, 2500);
-                                      }}
-                                      className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-brand-primary-light rounded-xl flex items-center justify-center text-brand-primary">
-                                          <CreditCard size={20} />
-                                        </div>
-                                        <div className="text-left">
-                                          <p className="text-xs font-black text-brand-text">Credit / Debit Card</p>
-                                          <p className="text-[10px] text-brand-text-secondary font-bold">Safe & Encrypted</p>
-                                        </div>
-                                      </div>
-                                      <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {paymentStep === 'processing' && (
-                                <div className="py-12 flex flex-col items-center justify-center space-y-6">
-                                  <div className="w-16 h-16 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-                                  <div className="text-center">
-                                    <h4 className="text-lg font-black text-brand-text">Processing Payment</h4>
-                                    <p className="text-xs text-brand-text-secondary font-bold">Please do not refresh or go back...</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {paymentStep === 'success' && (
-                                <div className="py-8 space-y-6 text-center">
-                                  <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-xl shadow-emerald-500/20">
-                                    <Check size={40} strokeWidth={3} />
-                                  </div>
-                                  <div>
-                                    <h4 className="text-2xl font-black text-brand-text">BOOKING CONFIRMED!</h4>
-                                    <p className="text-xs text-brand-text-secondary font-bold mt-1 leading-relaxed px-4">
-                                      Your advance payment of ₹5,000 has been received successfully.
-                                    </p>
-                                  </div>
-                                  <div className="space-y-3 pt-4">
-                                    <button
-                                      onClick={downloadReceiptPDF}
-                                      className="w-full bg-brand-primary text-white font-black py-4 rounded-2xl shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 active:scale-95 transition"
-                                    >
-                                      <FileText size={18} />
-                                      <span>DOWNLOAD RECEIPT</span>
-                                    </button>
-                                    <button
-                                      onClick={() => setIsPaymentModalOpen(false)}
-                                      className="w-full bg-gray-100 text-brand-text font-black py-3 rounded-xl hover:bg-gray-200 transition"
-                                    >
-                                      BACK TO PROFILE
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="p-4 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-100">
-                              <ShieldCheck size={14} className="text-emerald-600" />
-                              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">PCI-DSS COMPLIANT • 256-BIT SSL</span>
-                            </div>
-                          </motion.div>
-                        </div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Part B: Real-Time Precision Budget Breakdown */}
-                    <div className="bg-[#FCFBF8] p-5 rounded-2xl border border-brand-border space-y-4">
-                      <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                        <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider">
-                          📊 Budget Breakdown Consideration
-                        </h4>
-                        <span className="text-[10px] font-bold bg-brand-primary-light text-brand-primary-dark px-2 py-0.5 rounded-full">
-                          {vendor.category} Price Plan
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2.5 text-xs">
-                        <div className="flex justify-between items-center text-brand-text-secondary">
-                          <span>Base Vendor Charge ({vendor.category === 'Catering' ? 'Per Plate' : 'Daily flat'}):</span>
-                          <span className="font-semibold text-brand-text">₹{vendor.basePrice.toLocaleString('en-IN')}</span>
-                        </div>
-                        
-                        {vendor.category === 'Catering' && (
-                          <div className="flex justify-between items-center text-brand-text-secondary">
-                            <span>Guest Volume Multiplier ({planningGuestSize} Guests):</span>
-                            <span className="font-semibold text-brand-text">₹{(vendor.basePrice * planningGuestSize).toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between items-center text-brand-text-secondary border-t border-gray-100/60 pt-2">
-                          <span>Services Coordination Setup Fee:</span>
-                          <span className="font-semibold text-brand-text">₹2,500</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-brand-text-secondary">
-                          <span>Taxes & GST Consideration (18%):</span>
-                          <span className="font-semibold text-brand-text">
-                            ₹{Math.round(
-                              ((vendor.category === 'Catering' ? vendor.basePrice * planningGuestSize : vendor.basePrice) + 2500) * 0.18
-                            ).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-brand-success font-semibold border-t border-dashed border-gray-200 pt-2.5">
-                          <span>Parva Bundle Discount Savings:</span>
-                          <span>-₹3,500</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-sm font-extrabold text-brand-primary-dark pt-2.5 border-t border-brand-border">
-                          <span>Estimated Total Cost:</span>
-                          <span>
-                            ₹{Math.round(
-                              (vendor.category === 'Catering' ? vendor.basePrice * planningGuestSize : vendor.basePrice) + 
-                              2500 + 
-                              (((vendor.category === 'Catering' ? vendor.basePrice * planningGuestSize : vendor.basePrice) + 2500) * 0.18) - 
-                              3500
-                            ).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Part C: Reels & Video Shorts Showcase */}
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
@@ -1398,7 +1050,7 @@ export default function VendorDetailSheet({
                           </h4>
                           <div className="flex items-center gap-4">
                             {vendor.founderImage ? (
-                              <img src={vendor.founderImage} alt={vendor.founderName} className="w-16 h-16 rounded-full object-cover border-2 border-brand-primary/20" />
+                              <img loading="lazy" src={vendor.founderImage} alt={vendor.founderName} className="w-16 h-16 rounded-full object-cover border-2 border-brand-primary/20" />
                             ) : (
                               <div className="w-16 h-16 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary text-xl font-bold">
                                 {vendor.founderName?.charAt(0) || 'F'}
@@ -1513,7 +1165,7 @@ export default function VendorDetailSheet({
                         </h4>
                         <div className="flex items-center gap-4 bg-brand-bg/50 p-4 rounded-2xl border border-brand-border">
                           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-brand-primary shadow-sm">
-                            <img 
+                            <img loading="lazy" 
                               src={vendor.founderImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200"} 
                               alt={vendor.founderName}
                               className="w-full h-full object-cover"
@@ -1629,7 +1281,7 @@ export default function VendorDetailSheet({
                       <div key={rev.id} className="bg-white p-4 rounded-2xl border border-brand-border space-y-2">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
-                            <img
+                            <img loading="lazy"
                               src={rev.userAvatar}
                               alt={rev.userName}
                               className="w-8 h-8 rounded-full object-cover"
@@ -1664,36 +1316,230 @@ export default function VendorDetailSheet({
             <div className="absolute bottom-0 inset-x-0 bg-white border-t border-brand-border p-4 shadow-xl flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] text-brand-text-secondary uppercase tracking-wider font-semibold">
-                  Selected Price
+                  {bundledServices.length > 0 ? 'Bundle Total' : 'Base Price'}
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="font-extrabold text-lg text-brand-primary-dark">
-                    ₹{vendor.basePrice.toLocaleString('en-IN')}
+                    ₹{(bundledServices.length > 0 ? servicesTotal : vendor.basePrice).toLocaleString('en-IN')}
                   </span>
-                  <span className="text-[10px] text-brand-text-secondary">base</span>
+                  <span className="text-[10px] text-brand-text-secondary">{bundledServices.length > 0 ? 'selected' : 'base'}</span>
                 </div>
               </div>
 
-              {/* Dynamic Add All to Bundle */}
-              <button
-                onClick={() => {
-                  // Add first service as representative or trigger bundle closure
-                  if (vendor.services.length > 0) {
-                    const firstService = vendor.services[0];
-                    if (!bundledServices.some((s) => s.name === firstService.name)) {
-                      onAddServiceToBundle(firstService);
-                    }
-                  }
-                  onClose();
-                }}
-                className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white text-sm font-semibold py-3 px-4 rounded-xl transition shadow-md shadow-brand-primary/20 flex items-center justify-center gap-1.5"
-                id="sticky-bundle-add-btn"
-              >
-                <span>Add & View Bundle Console</span>
-                <ArrowRight size={15} />
-              </button>
+              {/* Dynamic Action Button */}
+              {bundledServices.length > 0 ? (
+                <button
+                  onClick={() => {
+                    onClose();
+                  }}
+                  className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white text-sm font-semibold py-3 px-4 rounded-xl transition shadow-md shadow-brand-primary/20 flex items-center justify-center gap-1.5"
+                  id="sticky-bundle-add-btn"
+                >
+                  <span>Review & Book ({bundledServices.length})</span>
+                  <ArrowRight size={15} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setActiveTab('services');
+                  }}
+                  className="flex-1 bg-brand-text hover:bg-gray-800 text-white text-sm font-semibold py-3 px-4 rounded-xl transition shadow-md shadow-black/20 flex items-center justify-center gap-1.5"
+                >
+                  <span>Select Services</span>
+                  <ShoppingCart size={15} />
+                </button>
+              )}
             </div>
           </motion.div>
+
+                              {/* Celebration Modal */}
+                    <AnimatePresence>
+                      {showWinnerModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+                          <motion.div
+                            initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            exit={{ scale: 0.5, opacity: 0 }}
+                            className="bg-white rounded-[40px] p-8 max-w-sm w-full text-center relative overflow-hidden shadow-2xl"
+                          >
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-brand-primary to-emerald-400" />
+                            <div className="w-24 h-24 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                              <Sparkles size={48} className="text-brand-primary animate-bounce" />
+                            </div>
+                            <h2 className="text-3xl font-black text-brand-text mb-2 uppercase tracking-tighter">YOU WON!</h2>
+                            <p className="text-brand-text-secondary font-bold text-xs mb-6 leading-relaxed">
+                              Verified contact access has been <span className="text-brand-primary font-black underline">UNLOCKED</span> for this vendor. You can now chat directly on WhatsApp!
+                            </p>
+                            
+                            <div className="space-y-2 mb-8">
+                              <button
+                                onClick={() => {
+                                  const waUrl = `https://wa.me/${vendor.whatsapp || '919999999999'}?text=${encodeURIComponent(`Hello ${vendor.name}, I found your profile on PARVA and I am interested in your services for my upcoming event!`)}`;
+                                  window.open(waUrl, '_blank');
+                                  setShowWinnerModal(false);
+                                }}
+                                className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95"
+                              >
+                                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.067 2.877 1.215 3.076.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.659 1.432 5.63 1.433h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                </svg>
+                                <span>CHAT ON WHATSAPP</span>
+                              </button>
+                              <button
+                                onClick={() => setShowWinnerModal(false)}
+                                className="w-full bg-brand-primary text-white font-black py-3.5 rounded-2xl shadow-lg shadow-brand-primary/20 active:scale-95 transition"
+                              >
+                                VIEW FULL PROFILE
+                              </button>
+                            </div>
+                            {/* Confetti particles simulated with dots */}
+                            {[...Array(12)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                initial={{ y: 0, x: 0 }}
+                                animate={{ 
+                                  y: [0, -100, 100], 
+                                  x: [0, (i % 2 === 0 ? 1 : -1) * (i * 20)],
+                                  opacity: [0, 1, 0] 
+                                }}
+                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.1 }}
+                                className={`absolute w-2 h-2 rounded-full ${i % 3 === 0 ? 'bg-yellow-400' : i % 3 === 1 ? 'bg-emerald-400' : 'bg-brand-primary'}`}
+                                style={{ top: '50%', left: '50%' }}
+                              />
+                            ))}
+                          </motion.div>
+                        </div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Payment Modal */}
+                    <AnimatePresence>
+                      {isPaymentModalOpen && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+                          <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl flex flex-col"
+                          >
+                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-brand-bg/30">
+                              <h3 className="font-black text-brand-text text-sm uppercase tracking-widest">Secure Checkout</h3>
+                              <button onClick={() => setIsPaymentModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                <X size={18} />
+                              </button>
+                            </div>
+
+                            <div className="p-8 flex-1">
+                              {paymentStep === 'method' && (
+                                <div className="space-y-6">
+                                  <div className="text-center">
+                                    <div className="inline-flex items-center gap-1.5 bg-brand-primary-light text-brand-primary-dark font-black text-[9px] uppercase px-3 py-1.5 rounded-full tracking-widest mb-4">
+                                      <ShieldCheck size={11} />
+                                      <span>Verified Booking Lock</span>
+                                    </div>
+                                    <p className="text-[10px] text-brand-text-secondary font-black uppercase tracking-widest mb-1">Direct Connection Fee</p>
+                                    <h4 className="text-4xl font-black text-brand-text tracking-tighter">₹5,000</h4>
+                                    <p className="text-[11px] text-brand-text-secondary font-medium mt-2 leading-relaxed px-4">
+                                      This one-time connection fee locks your date with <b>{vendor.name}</b> and grants you 24/7 direct access. This amount is 100% adjustable against your final bill.
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-3">
+                                    <button
+                                      onClick={() => {
+                                        setPaymentStep('processing');
+                                        setTimeout(() => {
+                                          setPaymentStep('success');
+                                        }, 2500);
+                                      }}
+                                      className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-brand-primary-light rounded-xl flex items-center justify-center text-brand-primary">
+                                          <Smartphone size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                          <p className="text-xs font-black text-brand-text">UPI / Google Pay</p>
+                                          <p className="text-[10px] text-brand-text-secondary font-bold">Fastest & Secure</p>
+                                        </div>
+                                      </div>
+                                      <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        setPaymentStep('processing');
+                                        setTimeout(() => {
+                                          setPaymentStep('success');
+                                        }, 2500);
+                                      }}
+                                      className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-brand-primary-light rounded-xl flex items-center justify-center text-brand-primary">
+                                          <CreditCard size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                          <p className="text-xs font-black text-brand-text">Credit / Debit Card</p>
+                                          <p className="text-[10px] text-brand-text-secondary font-bold">Safe & Encrypted</p>
+                                        </div>
+                                      </div>
+                                      <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {paymentStep === 'processing' && (
+                                <div className="py-12 flex flex-col items-center justify-center space-y-6">
+                                  <div className="w-16 h-16 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+                                  <div className="text-center">
+                                    <h4 className="text-lg font-black text-brand-text">Processing Payment</h4>
+                                    <p className="text-xs text-brand-text-secondary font-bold">Please do not refresh or go back...</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {paymentStep === 'success' && (
+                                <div className="py-8 space-y-6 text-center">
+                                  <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-xl shadow-emerald-500/20">
+                                    <Check size={40} strokeWidth={3} />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-2xl font-black text-brand-text">BOOKING CONFIRMED!</h4>
+                                    <p className="text-xs text-brand-text-secondary font-bold mt-1 leading-relaxed px-4">
+                                      Your advance payment of ₹5,000 has been received successfully.
+                                    </p>
+                                  </div>
+                                  <div className="space-y-3 pt-4">
+                                    <button
+                                      onClick={downloadReceiptPDF}
+                                      className="w-full bg-brand-primary text-white font-black py-4 rounded-2xl shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 active:scale-95 transition"
+                                    >
+                                      <FileText size={18} />
+                                      <span>DOWNLOAD RECEIPT</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setIsPaymentModalOpen(false)}
+                                      className="w-full bg-gray-100 text-brand-text font-black py-3 rounded-xl hover:bg-gray-200 transition"
+                                    >
+                                      BACK TO PROFILE
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="p-4 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-100">
+                              <ShieldCheck size={14} className="text-emerald-600" />
+                              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">PCI-DSS COMPLIANT • 256-BIT SSL</span>
+                            </div>
+                          </motion.div>
+                        </div>
+                      )}
+                    </AnimatePresence>
+
+                    
 
           {/* Full-Screen Swipeable Gallery overlay */}
           <AnimatePresence>
@@ -1810,7 +1656,7 @@ export default function VendorDetailSheet({
                         }`}
                         id={`gallery-thumb-${idx}`}
                       >
-                        <img
+                        <img loading="lazy"
                           src={img}
                           alt={`thumbnail ${idx + 1}`}
                           className="w-full h-full object-cover select-none pointer-events-none"

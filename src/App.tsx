@@ -518,15 +518,7 @@ export default function App() {
     // Listen for Categories collection
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), async (snapshot) => {
       if (snapshot.empty) {
-        // Seed initial categories if empty
-        try {
-          const { doc, setDoc } = await import('firebase/firestore');
-          for (const cat of QUICK_CATEGORIES) {
-            await setDoc(doc(getDb(), 'categories', cat.name.replace(/\s+/g, '-')), cat);
-          }
-        } catch (e) {
-          console.warn("Failed to seed categories:", e);
-        }
+        setCategoriesList([]);
       } else {
         const catsData = snapshot.docs.map(doc => {
           const d = doc.data();
@@ -2491,9 +2483,13 @@ export default function App() {
                                   onChange={(e) => setWizardCategory(e.target.value)}
                                   className="w-full bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-semibold outline-none"
                                 >
-                                  {['Banquet Hall', 'Decorator', 'Photographer', 'DJ', 'Catering', 'Makeup Artist', 'Cake & Desserts', 'Fun & Entertainment', 'Event Planner'].map(c => (
-                                    <option key={c} value={c}>{c}</option>
-                                  ))}
+                                  {categoriesList.length > 0 ? (
+                                    categoriesList.map(c => (
+                                      <option key={c.name} value={c.name}>{c.name}</option>
+                                    ))
+                                  ) : (
+                                    <option value="Venues">Venues</option>
+                                  )}
                                 </select>
                               </div>
                               <div>
@@ -3166,7 +3162,7 @@ export default function App() {
                     key={promo.id || idx}
                     className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === safeHeroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   >
-                    <img 
+                    <img loading="lazy" 
                       src={promo.image} 
                       className="w-full h-full object-cover mix-blend-darken opacity-90"
                       alt={promo.title || 'Offer'}
@@ -3768,7 +3764,7 @@ export default function App() {
 
             {bookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
-                <img 
+                <img loading="lazy" 
                   src="/active_bookings_empty.svg" 
                   alt="No active bookings" 
                   className="w-48 h-48 mb-2 object-contain"
@@ -3949,7 +3945,7 @@ export default function App() {
                         >
                           <X size={18} />
                         </button>
-                        <img
+                        <img loading="lazy"
                           src={thread.vendor.images[0]}
                           alt={thread.vendor.name}
                           className="w-8 h-8 rounded-full object-cover"
@@ -4072,7 +4068,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="relative">
-                          <img
+                          <img loading="lazy"
                             src={thread.vendor.images[0]}
                             alt={thread.vendor.name}
                             className="w-11 h-11 rounded-full object-cover border border-gray-100"
@@ -4283,7 +4279,7 @@ export default function App() {
                                 placeholder="https://images.unsplash.com/..."
                               />
                               {vendorEditFounderImage && (
-                                <img 
+                                <img loading="lazy" 
                                   src={vendorEditFounderImage} 
                                   className="w-8 h-8 rounded-full object-cover border border-brand-border shrink-0" 
                                   alt="Founder Profile Preview"
@@ -4368,7 +4364,7 @@ export default function App() {
                           <div className="grid grid-cols-3 gap-2">
                             {(vendors.find(v => v.id === currentUser.vendorId)?.images || []).map((imgUrl, i) => (
                               <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-brand-border bg-gray-50">
-                                <img src={imgUrl} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600'; }} />
+                                <img loading="lazy" src={imgUrl} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600'; }} />
                                 <button
                                   onClick={async () => {
                                     try {
