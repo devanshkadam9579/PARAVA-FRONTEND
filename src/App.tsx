@@ -605,6 +605,7 @@ export default function App() {
   }, []);
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   // Debounce search query input to improve filtering performance
