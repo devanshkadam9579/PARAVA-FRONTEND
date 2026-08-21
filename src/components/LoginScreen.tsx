@@ -4,28 +4,25 @@ import './login.css'
 
 const SOFT_EASE = [0.22, 1, 0.3, 1] as const
 
-import { useState } from 'react'
-
-export default function ParvaLogin({ onGoogleLogin, onEmailSubmit }: { onGoogleLogin?: () => void; onEmailSubmit?: (email: string, pass: string, role: string) => void; }) {
+export default function ParvaLogin({ onGoogleLogin, onEmail, onVendorLogin }: { onGoogleLogin?: () => void; onEmail?: () => void; onVendorLogin?: () => void; }) {
   const hostRef = useRef<HTMLDivElement>(null)
   useLiquidGlass(hostRef)
   return (
     <div ref={hostRef} className="scene-host tide" style={{ position: 'relative', width: '100%', minHeight: '100vh', borderRadius: 0, overflow: 'hidden', background: '#eff4f8', display: 'flex', flexDirection: 'column' }}>
-      <LoginScreen playKey={0} onGoogleLogin={onGoogleLogin} onEmailSubmit={onEmailSubmit} />
+      <LoginScreen playKey={0} onGoogleLogin={onGoogleLogin} onEmail={onEmail} onVendorLogin={onVendorLogin} />
     </div>
   )
 }
 
-function LoginScreen({ playKey, onGoogleLogin, onEmailSubmit }: { playKey: string | number; onGoogleLogin?: () => void; onEmailSubmit?: (e: string, p: string, r: string) => void; }) {
+function LoginScreen({ playKey, onGoogleLogin, onEmail, onVendorLogin }: { playKey: string | number; onGoogleLogin?: () => void; onEmail?: () => void; onVendorLogin?: () => void; }) {
   const soft = SOFT_EASE
-  const [activeMode, setActiveMode] = useState<'main' | 'email' | 'vendor'>('main')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-
   return (
     <div key={String(playKey)} className="lo" style={{ width: '100%', height: '100%', minHeight: '100vh', borderRadius: 0, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, background: 'transparent' }}>
+      {/* huge warm glow welling up from the bottom, the Fuse signature */}
       <motion.div className="lo-glow" initial={{ opacity: 0, y: 90 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 1.1, ease: soft }} aria-hidden="true" />
       <div className="lo-copy" style={{ marginTop: '20vh' }}>
+        {/* the mark leads the copy stack — one anchored group over the glow,
+            not an island floating in the empty sky */}
         <motion.div
           className="lo-brand glass"
           initial={{ opacity: 0, scale: 0.6, y: 12 }}
@@ -48,62 +45,21 @@ function LoginScreen({ playKey, onGoogleLogin, onEmailSubmit }: { playKey: strin
         transition={{ opacity: { delay: 0.62, duration: 0.16 }, default: { delay: 0.62, duration: 0.6, ease: soft } }}
         style={{ marginTop: 'auto', marginBottom: '24px' }}
       >
-        {activeMode === 'main' ? (
-          <>
-            <motion.button type="button" className="lo-btn lo-btn-google" onClick={onGoogleLogin} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.72, duration: 0.45, ease: soft }}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" fill="#4285F4" />
-                <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" fill="#34A853" />
-                <path d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" fill="#FBBC05" />
-                <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" fill="#EA4335" />
-              </svg>
-              Continue with Google
-            </motion.button>
-            <motion.button type="button" className="lo-email" onClick={() => setActiveMode('email')} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.88, duration: 0.4 }}>
-              Continue with email
-            </motion.button>
-            <motion.button type="button" className="lo-email" onClick={() => setActiveMode('vendor')} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.90, duration: 0.4 }} style={{ marginTop: '0px' }}>
-              Vendor Login
-            </motion.button>
-          </>
-        ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-3 w-full">
-            <h4 style={{ color: '#10172A', fontSize: '14px', fontWeight: 800, textAlign: 'center', marginBottom: '8px' }}>
-              {activeMode === 'vendor' ? 'Vendor Secure Login' : 'User Email Login'}
-            </h4>
-            <input 
-              type="email" 
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'white', fontSize: '14px', outline: 'none' }}
-            />
-            <input 
-              type="password" 
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', background: 'white', fontSize: '14px', outline: 'none' }}
-            />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button 
-                type="button" 
-                onClick={() => setActiveMode('main')}
-                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(0,0,0,0.1)', color: '#64748B', fontWeight: 700 }}
-              >
-                Back
-              </button>
-              <button 
-                type="button" 
-                onClick={() => onEmailSubmit?.(email, password, activeMode === 'vendor' ? 'vendor' : 'user')}
-                style={{ flex: 2, padding: '12px', borderRadius: '12px', background: '#FF4081', border: 'none', color: 'white', fontWeight: 800, boxShadow: '0 4px 12px rgba(255, 64, 129, 0.3)' }}
-              >
-                Sign In
-              </button>
-            </div>
-          </motion.div>
-        )}
-        
+        <motion.button type="button" className="lo-btn lo-btn-google" onClick={onGoogleLogin} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.72, duration: 0.45, ease: soft }}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" fill="#4285F4" />
+            <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" fill="#34A853" />
+            <path d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" fill="#FBBC05" />
+            <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" fill="#EA4335" />
+          </svg>
+          Continue with Google
+        </motion.button>
+        <motion.button type="button" className="lo-email" onClick={onEmail} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.88, duration: 0.4 }}>
+          Continue with email
+        </motion.button>
+        <motion.button type="button" className="lo-email" onClick={onVendorLogin} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.90, duration: 0.4 }} style={{ marginTop: '0px' }}>
+          Vendor Login
+        </motion.button>
         <motion.p className="lo-terms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.98, duration: 0.45 }}>
           By continuing you agree to our Terms and Privacy Policy.
         </motion.p>
