@@ -3358,18 +3358,18 @@ export default function App() {
               >
                 All Services
               </button>
-              {['Banquet Hall', 'Decorator', 'Photographer', 'DJ', 'Catering', 'Makeup Artist', 'Cake & Desserts', 'Fun & Entertainment'].map((cat) => (
+              {categoriesList.map((catObj) => (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedExploreCategory(cat)}
+                  key={catObj.id}
+                  onClick={() => setSelectedExploreCategory(catObj.name)}
                   className={`px-4 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition ${
-                    selectedExploreCategory.toLowerCase() === cat.toLowerCase()
+                    selectedExploreCategory.toLowerCase() === catObj.name.toLowerCase()
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'bg-white border border-brand-border text-brand-text hover:bg-gray-50'
                   }`}
-                  id={`cat-pill-${cat.toLowerCase().replace(/\s+/g, '-')}`}
+                  id={`cat-pill-${catObj.name.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  {cat}
+                  {catObj.name}
                 </button>
               ))}
             </div>
