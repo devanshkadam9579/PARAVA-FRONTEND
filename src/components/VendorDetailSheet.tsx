@@ -1312,45 +1312,7 @@ export default function VendorDetailSheet({
               </div>
             </div>
 
-            {/* Bottom Sticky Action Bar */}
-            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-brand-border p-4 shadow-xl flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] text-brand-text-secondary uppercase tracking-wider font-semibold">
-                  {bundledServices.length > 0 ? 'Bundle Total' : 'Base Price'}
-                </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="font-extrabold text-lg text-brand-primary-dark">
-                    ₹{(bundledServices.length > 0 ? servicesTotal : vendor.basePrice).toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[10px] text-brand-text-secondary">{bundledServices.length > 0 ? 'selected' : 'base'}</span>
-                </div>
-              </div>
-
-              {/* Dynamic Action Button */}
-              {bundledServices.length > 0 ? (
-                <button
-                  onClick={() => {
-                    onClose();
-                  }}
-                  className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white text-sm font-semibold py-3 px-4 rounded-xl transition shadow-md shadow-brand-primary/20 flex items-center justify-center gap-1.5"
-                  id="sticky-bundle-add-btn"
-                >
-                  <span>Review & Book ({bundledServices.length})</span>
-                  <ArrowRight size={15} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setActiveTab('services');
-                  }}
-                  className="flex-1 bg-brand-text hover:bg-gray-800 text-white text-sm font-semibold py-3 px-4 rounded-xl transition shadow-md shadow-black/20 flex items-center justify-center gap-1.5"
-                >
-                  <span>Select Services</span>
-                  <ShoppingCart size={15} />
-                </button>
-              )}
-            </div>
-          </motion.div>
+            </motion.div>
 
                               {/* Celebration Modal */}
                     <AnimatePresence>

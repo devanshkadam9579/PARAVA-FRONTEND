@@ -352,6 +352,7 @@ export default function App() {
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
 
   const [promosList, setPromosList] = useState<any[]>(HERO_PROMOS);
+  const [couponsList, setCouponsList] = useState<any[]>([]);
   const [unlockedConnections, setUnlockedConnections] = useState<string[]>([]);
 
   // Leads list for CSV extraction
@@ -437,6 +438,13 @@ export default function App() {
       setIsLoadingVendors(false);
     });
 
+    
+    // Listen for Coupons collection
+    const unsubscribeCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
+      const couponsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCouponsList(couponsData);
+    });
+    
     // Listen for Promos collection
     const unsubscribePromos = onSnapshot(collection(db, 'promos'), (snapshot) => {
       const promosData = snapshot.docs.map(doc => ({ 
@@ -540,6 +548,7 @@ export default function App() {
     return () => {
       unsubscribeVendors();
       unsubscribePromos();
+      unsubscribeCoupons();
       unsubscribeAdmins();
       unsubscribeBookings();
       unsubscribeLeads();
@@ -1460,27 +1469,36 @@ export default function App() {
   };
 
   // Coupon application handler
+  // Coupon application handler
   const handleApplyCoupon = () => {
     const code = couponCode.trim().toUpperCase();
-    if (code === 'WELCOME10') {
+    if (!code) return;
+    
+    const validCoupon = couponsList.find(c => c.code === code && c.active);
+    
+    if (validCoupon) {
       setCouponApplied(true);
-      setCouponDiscount(10);
-      setCouponMessage('🎟️ Coupon "WELCOME10" applied! ₹10 flat discount on connection fee.');
-      showNotification('🎟️ Coupon applied successfully!');
-    } else if (code === 'FREE99' || code === 'PARVA100') {
-      setCouponApplied(true);
-      setCouponDiscount(99);
-      setCouponMessage('🎟️ Coupon "FREE99" applied! Connection fee is now 100% FREE!');
-      showNotification('🎉 Connection fee is now free!');
-    } else if (code === 'PARVA50') {
-      setCouponApplied(true);
-      setCouponDiscount(50);
-      setCouponMessage('🎟️ Coupon "PARVA50" applied! ₹50 flat discount on connection fee.');
+      const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+      const currentFeePct = bookingFeePercentage || 5;
+      const calculatedBookingFee = Math.round(servicesTotal * (currentFeePct / 100));
+      
+      let discountAmt = 0;
+      if (validCoupon.discountType === 'percentage') {
+        discountAmt = Math.round(calculatedBookingFee * (validCoupon.discountValue / 100));
+      } else {
+        discountAmt = validCoupon.discountValue;
+      }
+      
+      // Ensure coupon doesn't exceed advance fee
+      discountAmt = Math.min(discountAmt, calculatedBookingFee);
+      
+      setCouponDiscount(discountAmt);
+      setCouponMessage(`🎟️ Coupon "${validCoupon.code}" applied! ₹${discountAmt.toLocaleString('en-IN')} off booking advance.`);
       showNotification('🎟️ Coupon applied successfully!');
     } else {
       setCouponApplied(false);
       setCouponDiscount(0);
-      setCouponMessage('❌ Invalid coupon code. Try WELCOME10, PARVA50 or FREE99!');
+      setCouponMessage('❌ Invalid or expired coupon code.');
     }
   };
 
