@@ -108,7 +108,20 @@ export default function VendorDetailSheet({
   handlePayWithRazorpay,
   onNavigateToBookings
 }: VendorDetailSheetProps) {
-  const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
+  
+  // Handle native back button to close sheet instead of exiting app
+  useEffect(() => {
+    window.history.pushState({ vendorSheetOpen: true }, '');
+    const handlePopState = () => {
+      onClose();
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [onClose]);
+
+const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -1633,90 +1646,7 @@ export default function VendorDetailSheet({
           </AnimatePresence>
           {/* Full Calendar Picker Modal Overlay */}
           <AnimatePresence>
-            {isFullCalendarOpen && (
-              <div className="fixed inset-0 z-[110] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 select-none">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-[32px] p-6 max-w-md w-full shadow-2xl space-y-4"
-                >
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="text-brand-primary" size={20} />
-                      <h3 className="font-extrabold text-brand-text text-sm uppercase tracking-wider">
-                        Full Availability Calendar
-                      </h3>
-                    </div>
-                    <button
-                      onClick={() => setIsFullCalendarOpen(false)}
-                      className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-gray-500 font-medium">
-                    Select your preferred event date for <span className="font-bold text-brand-text">{vendor.name}</span>:
-                  </p>
-
-                  <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-bold py-2 border-y border-gray-100">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                      <span key={i} className="text-gray-400 text-[10px]">{d}</span>
-                    ))}
-                    {Array.from({ length: 31 }, (_, i) => {
-                      const dayNum = i + 1;
-                      const dateStr = `2026-08-${dayNum.toString().padStart(2, '0')}`;
-                      const isBooked = vendor.busyDates?.includes(dateStr) || (dayNum === 21 || dayNum === 23);
-                      const isSelected = selectedDate === dateStr;
-
-                      return (
-                        <button
-                          key={dayNum}
-                          disabled={isBooked}
-                          onClick={() => {
-                            setSelectedDate(dateStr);
-                            setIsFullCalendarOpen(false);
-                            if (onShowNotification) onShowNotification(`Selected event date: ${dateStr} 📅`);
-                          }}
-                          className={`h-9 rounded-xl font-bold text-xs transition flex flex-col items-center justify-center ${
-                            isBooked
-                              ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
-                              : isSelected
-                              ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20 scale-105'
-                              : 'bg-gray-50 hover:bg-brand-primary/10 text-brand-text'
-                          }`}
-                        >
-                          <span>{dayNum}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-between items-center text-[10px] font-bold pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5 text-emerald-600">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                      <span>Available</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-red-400">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                      <span>Booked</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-brand-primary">
-                      <div className="w-2.5 h-2.5 rounded-full bg-brand-primary" />
-                      <span>Selected</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsFullCalendarOpen(false)}
-                    className="w-full bg-brand-text text-white py-3 rounded-2xl text-xs font-extrabold tracking-wider hover:bg-black transition"
-                  >
-                    Confirm Date Selection
-                  </button>
-                </motion.div>
-              </div>
-            )}
+            
           </AnimatePresence>
 
           {/* Reels Video Popup Player Modal */}

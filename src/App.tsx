@@ -255,7 +255,17 @@ const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhos
 
 export default function App() {
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile'>(() => {
+    return (sessionStorage.getItem('parva_activeTab') as any) || 'home';
+  useEffect(() => {
+    sessionStorage.setItem('parva_activeTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('parva_bundledItems', JSON.stringify(bundledItems));
+  }, [bundledItems]);
+
+  });
   const [currentCity, setCurrentCity] = useState('Kolhapur');
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
@@ -748,7 +758,10 @@ export default function App() {
   const [wishlist, setWishlist] = useState<string[]>(['v1', 'v3']);
 
   // Bundling State
-  const [bundledItems, setBundledItems] = useState<{ vendor: Vendor; service: VendorServiceItem }[]>([]);
+  const [bundledItems, setBundledItems] = useState<{ vendor: Vendor; service: VendorServiceItem }[]>(() => {
+    const saved = sessionStorage.getItem('parva_bundledItems');
+    return saved ? JSON.parse(saved) : [];
+  });
   // Bookings State
   const [bookings, setBookings] = useState<Booking[]>([]);
 
@@ -3116,7 +3129,7 @@ export default function App() {
                         setActiveTab('explore');
                       }
                     }}
-                    className="w-full bg-white/60 backdrop-blur-md border border-white/60 hover:border-brand-primary focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 outline-none py-4 pl-4 pr-12 rounded-[20px] text-sm font-bold text-brand-text shadow-lg shadow-black/[0.02] placeholder-gray-400 transition-all"
+                    className="w-full bg-white border border-gray-100 hover:border-gray-200 focus:border-gray-300 focus:ring-0 outline-none py-3.5 pl-6 pr-12 rounded-full text-sm font-bold text-gray-700 shadow-[0_2px_12px_rgba(0,0,0,0.03)] placeholder-gray-400 transition-all"
                     id="home-search-input"
                   />
                   <button
@@ -3317,14 +3330,14 @@ export default function App() {
         {activeTab === 'explore' && (
           <div className="space-y-5" id="explore-view-container">
             {/* Unified Planning & Search Header */}
-            <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-[32px] p-4 shadow-xl shadow-brand-primary/5 space-y-4">
+            <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-[32px] p-3 shadow-xl shadow-brand-primary/5 space-y-4">
               <div className="relative z-50">
                 <input
                   type="text"
                   placeholder="Find Hall, DJ, Catering..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-brand-border outline-none py-4 pl-4 pr-12 rounded-[20px] text-sm font-black text-brand-text shadow-sm focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+                  className="w-full bg-white border border-gray-100 outline-none py-3.5 pl-6 pr-12 rounded-full text-sm font-bold text-gray-700 shadow-[0_2px_12px_rgba(0,0,0,0.03)] focus:border-gray-200 focus:ring-0 transition-all"
                   id="explore-search-input"
                 />
                 <button
@@ -3769,9 +3782,9 @@ export default function App() {
             {bookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
                 <img loading="lazy" 
-                  src="/active_bookings_empty.svg" 
+                  src="/no-bookings.jpg" 
                   alt="No active bookings" 
-                  className="w-48 h-48 mb-2 object-contain"
+                  className="w-full h-auto max-w-[280px] mx-auto mb-4 object-contain mix-blend-multiply"
                 />
                 <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
                 <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
