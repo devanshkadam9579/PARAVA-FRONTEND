@@ -10,6 +10,7 @@ import { CITIES } from '../data';
 
 interface LocationSelectorProps {
   currentCity: string;
+  citiesList?: string[];
   onSelectCity: (city: string) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +18,7 @@ interface LocationSelectorProps {
 
 export default function LocationSelector({
   currentCity,
+  citiesList = [],
   onSelectCity,
   isOpen,
   onClose
@@ -115,7 +117,7 @@ export default function LocationSelector({
 
               {/* Cities Grid */}
               <div className="grid grid-cols-2 gap-3">
-                {CITIES.map((city) => {
+                {(citiesList.length > 0 ? citiesList : CITIES).map((city) => {
                   const isSelected = currentCity === city || (city === 'Mumbai' && currentCity.includes('GPS'));
                   return (
                     <button

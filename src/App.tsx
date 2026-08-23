@@ -360,6 +360,7 @@ export default function App() {
   const [paymentsEnabled, setPaymentsEnabled] = useState<boolean>(true);
 
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
+  const [citiesList, setCitiesList] = useState<string[]>(citiesList);
 
   const [promosList, setPromosList] = useState<any[]>(HERO_PROMOS);
   const [couponsList, setCouponsList] = useState<any[]>([]);
@@ -566,6 +567,7 @@ export default function App() {
       unsubscribeGlobalSettings();
       unsubscribeChats();
       unsubscribeCategories();
+      unsubscribeCities();
       unsubscribeConnections();
     };
   }, []);
@@ -2319,7 +2321,7 @@ export default function App() {
                               onChange={(e) => setLoginCity(e.target.value)}
                               className="w-full bg-[#FCFBF8] border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-primary focus:bg-white transition"
                             >
-                              {['Mumbai', 'Delhi NCR', 'Bangalore', 'Pune', 'Kolhapur'].map(c => (
+                              {citiesList.map(c => (
                                 <option key={c} value={c}>{c}</option>
                               ))}
                             </select>
@@ -2516,7 +2518,7 @@ export default function App() {
                                   onChange={(e) => setWizardCity(e.target.value)}
                                   className="w-full bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-semibold outline-none"
                                 >
-                                  {['Mumbai', 'Delhi NCR', 'Bangalore', 'Pune', 'Kolhapur'].map(c => (
+                                  {citiesList.map(c => (
                                     <option key={c} value={c}>{c}</option>
                                   ))}
                                 </select>
@@ -2921,6 +2923,15 @@ export default function App() {
 
   const isDashboardExpanded = (isAdmin || isMasterAdmin) && activeTab === 'profile' && adminSubTab === 'dashboard';
 
+  
+  // Compute active categories in current city
+  const activeCategoriesInCity = categoriesList.filter(cat => 
+    vendors.some(v => 
+      (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && 
+      (v.category || '').toLowerCase() === cat.name.toLowerCase()
+    )
+  );
+
   return (
     <div className={`min-h-screen bg-brand-bg flex flex-col mx-auto shadow-2xl relative border-x border-brand-border overflow-hidden pb-24 transition-all duration-500 ${
       isDashboardExpanded ? 'max-w-6xl w-full' : 'max-w-md w-full'
@@ -3146,7 +3157,7 @@ export default function App() {
                 {searchQuery.length > 0 && activeTab === 'home' && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto z-50">
                     {vendors
-                      .filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase())))
                       .slice(0, 5)
                       .map(v => (
                         <div 
@@ -3161,7 +3172,7 @@ export default function App() {
                           <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md font-bold">Select</span>
                         </div>
                       ))}
-                    {vendors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    {vendors.filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
                       <div className="p-4 text-center text-xs text-gray-500">No vendors found matching "{searchQuery}"</div>
                     )}
                   </div>
@@ -3210,7 +3221,7 @@ export default function App() {
                 <span className="text-sm text-brand-primary font-semibold hover:underline cursor-pointer">View All</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
-                {categoriesList.map((cat) => (
+                {(activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList).map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => {
@@ -3351,7 +3362,7 @@ export default function App() {
                 {searchQuery.length > 0 && activeTab === 'explore' && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto z-50">
                     {vendors
-                      .filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase())))
                       .slice(0, 5)
                       .map(v => (
                         <div 
@@ -3366,7 +3377,7 @@ export default function App() {
                           <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md font-bold">Select</span>
                         </div>
                       ))}
-                    {vendors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    {vendors.filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
                       <div className="p-4 text-center text-xs text-gray-500">No vendors found matching "{searchQuery}"</div>
                     )}
                   </div>
@@ -3389,7 +3400,7 @@ export default function App() {
               >
                 All Services
               </button>
-              {categoriesList.map((catObj) => (
+              {(activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList).map((catObj) => (
                 <button
                   key={catObj.id}
                   onClick={() => setSelectedExploreCategory(catObj.name)}
