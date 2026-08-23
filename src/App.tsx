@@ -556,6 +556,21 @@ export default function App() {
       console.warn("Categories sync error:", error);
     });
 
+    // Listen for Cities collection
+    const unsubscribeCities = onSnapshot(collection(db, 'cities'), (snapshot) => {
+      try {
+        const citiesData = snapshot.docs
+          .map(doc => doc.data())
+          .filter(data => data.active !== false)
+          .map(data => data.name);
+        if (citiesData.length > 0) {
+          setCitiesList(citiesData);
+        }
+      } catch (error) {
+        console.warn("Cities sync error:", error);
+      }
+    });
+
     return () => {
       unsubscribeVendors();
       unsubscribePromos();
