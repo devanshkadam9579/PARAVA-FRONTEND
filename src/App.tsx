@@ -360,7 +360,7 @@ export default function App() {
   const [paymentsEnabled, setPaymentsEnabled] = useState<boolean>(true);
 
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
-  const [citiesList, setCitiesList] = useState<string[]>(citiesList);
+  const [citiesList, setCitiesList] = useState<string[]>(['Mumbai', 'Delhi NCR', 'Bangalore', 'Pune', 'Kolhapur']);
 
   const [promosList, setPromosList] = useState<any[]>(HERO_PROMOS);
   const [couponsList, setCouponsList] = useState<any[]>([]);
