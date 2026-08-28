@@ -148,20 +148,19 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
   const safeUserEmail = currentUser?.email || 'N/A';
   const safeUserCity = currentUser?.city || 'N/A';
 
-  // Dynamic Catering Multi-Tier Plate Selection & Guest Pricing Calculations
+  // Dynamic Catering Real Service & Guest Multiplier Calculations
   const isCatering = vendor.category === 'Catering';
   const [cateringGuestCount, setCateringGuestCount] = useState<number>(planningGuestSize || 150);
-  const [selectedPlateTier, setSelectedPlateTier] = useState<'standard' | 'deluxe' | 'royal'>('standard');
 
-  const cateringPlateTiers = [
-    { id: 'standard', name: '🍲 Standard Veg Feast', rate: vendor.basePrice || 450, desc: '3 Starters, 2 Gravies, Dal, Rice, 2 Breads, 1 Sweet' },
-    { id: 'deluxe', name: '🍛 Deluxe Royal Spread (Veg & Non-Veg)', rate: Math.round((vendor.basePrice || 450) * 1.35), desc: '5 Starters, Biryani, Mutton/Chicken Gravy, Paneer, 2 Sweets' },
-    { id: 'royal', name: '👑 Grand Maharaja Platinum Buffet', rate: Math.round((vendor.basePrice || 450) * 1.8), desc: 'Live Counters, Mocktails, Exotic Salads, Multi-Cuisine Main Course, Ice Cream Bar' }
-  ];
+  // Available real services for catering
+  const cateringServices = (vendor.services && vendor.services.length > 0)
+    ? vendor.services
+    : [{ id: 'base_menu', name: 'Standard Full Catering Menu', price: vendor.basePrice || 450, unit: 'per plate', description: 'Complete starters, main course, bread, rice and dessert' }];
 
-  const activePlateRate = isCatering
-    ? (cateringPlateTiers.find(t => t.id === selectedPlateTier)?.rate || vendor.basePrice)
-    : vendor.basePrice;
+  const [selectedCateringServiceId, setSelectedCateringServiceId] = useState<string>(cateringServices[0]?.id || 'base_menu');
+
+  const activeCateringService = cateringServices.find(s => s.id === selectedCateringServiceId) || cateringServices[0];
+  const activePlateRate = isCatering ? (activeCateringService?.price || vendor.basePrice || 450) : vendor.basePrice;
 
   const rawServicePrice = bundledServices.length > 0
     ? bundledServices.reduce((acc, s) => acc + s.price, 0)
@@ -663,41 +662,43 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                 </div>
               </div>
 
-              {/* Catering Multi-Tier Plate Selector & Dynamic Guest Multiplier */}
+              {/* Catering Menu Selection & Guest Count Multiplier */}
               {isCatering && (
                 <div className="bg-amber-50/90 border border-amber-200/90 p-4 rounded-2xl mx-6 mt-4 space-y-3.5 shadow-2xs">
                   <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
                     <div>
                       <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
                         <span>🍽️</span>
-                        <span>Select Plate Package & Guest Size</span>
+                        <span>Select Catering Menu & Enter Guests</span>
                       </h4>
-                      <p className="text-[10px] text-amber-800 font-medium">Choose menu tier & enter number of guests</p>
+                      <p className="text-[10px] text-amber-800 font-medium">Select package and adjust guest count</p>
                     </div>
                     <span className="bg-amber-200/80 text-amber-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
                       Catering Multiplier
                     </span>
                   </div>
 
-                  {/* 1. Plate Tiers Selection */}
+                  {/* 1. Real Catering Services from Vendor */}
                   <div className="space-y-1.5">
-                    {cateringPlateTiers.map((tier) => (
+                    {cateringServices.map((service) => (
                       <button
-                        key={tier.id}
+                        key={service.id}
                         type="button"
-                        onClick={() => setSelectedPlateTier(tier.id as any)}
+                        onClick={() => setSelectedCateringServiceId(service.id)}
                         className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
-                          selectedPlateTier === tier.id
+                          selectedCateringServiceId === service.id
                             ? 'bg-white border-brand-primary shadow-sm text-gray-900 ring-1 ring-brand-primary'
                             : 'bg-white/60 border-amber-100 text-gray-700 hover:bg-white'
                         }`}
                       >
                         <div className="min-w-0 pr-2">
-                          <p className="font-extrabold text-xs text-gray-900">{tier.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">{tier.desc}</p>
+                          <p className="font-extrabold text-xs text-gray-900">{service.name}</p>
+                          {service.description && (
+                            <p className="text-[10px] text-gray-500 truncate">{service.description}</p>
+                          )}
                         </div>
                         <span className="font-black text-xs text-brand-primary shrink-0 bg-brand-primary/10 px-2 py-1 rounded-lg">
-                          ₹{tier.rate.toLocaleString('en-IN')}/plt
+                          ₹{service.price.toLocaleString('en-IN')}/plate
                         </span>
                       </button>
                     ))}

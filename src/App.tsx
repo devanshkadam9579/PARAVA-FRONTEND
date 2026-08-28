@@ -376,12 +376,24 @@ export default function App() {
   });
 
   // Dynamic Vendors, Categories, Promos, Settings State
-  const [vendors, setVendors] = useState<Vendor[]>(VENDORS);
+  const [vendors, setVendors] = useState<Vendor[]>(() => {
+    try {
+      const cached = localStorage.getItem('parva_cached_vendors');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return VENDORS;
+  });
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [appLogo, setAppLogo] = useState('https://i.postimg.cc/mgk6dNNd/parva-logo.png');
   const [paymentsEnabled, setPaymentsEnabled] = useState<boolean>(true);
 
-  const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(QUICK_CATEGORIES);
+  const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(() => {
+    try {
+      const cached = localStorage.getItem('parva_cached_categories');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return QUICK_CATEGORIES;
+  });
   const [citiesList, setCitiesList] = useState<string[]>(['Mumbai', 'Delhi NCR', 'Bangalore', 'Pune', 'Kolhapur']);
 
   const [promosList, setPromosList] = useState<any[]>(HERO_PROMOS);
@@ -1006,6 +1018,20 @@ export default function App() {
     }
     fetchGlobalSettings();
   }, []);
+
+  // User login method and Google phone capture state
+  const [userLoginMethod, setUserLoginMethod] = useState<'phone' | 'google' | 'email'>('phone');
+  const [phoneLoginName, setPhoneLoginName] = useState('');
+  const [phoneLoginNumber, setPhoneLoginNumber] = useState('');
+  const [googleLoginName, setGoogleLoginName] = useState('');
+  const [googleLoginPhone, setGoogleLoginPhone] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [editProfileAddress, setEditProfileAddress] = useState('');
+  const [editProfilePhone, setEditProfilePhone] = useState('');
+  const [editProfileName, setEditProfileName] = useState('');
 
   // Logged-in Vendor Edit States
   const [vendorEditName, setVendorEditName] = useState('');
