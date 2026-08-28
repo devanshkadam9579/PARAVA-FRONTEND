@@ -752,6 +752,13 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Filter Modal & Dynamic Sorting State
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
+  const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
+  const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
+  const [activeSortOption, setActiveSortOption] = useState<string>('Distance');
+
   const [selectedExploreCategory, setSelectedExploreCategory] = useState<string>('all');
   const [exploreOccasion, setExploreOccasion] = useState<string>('All');
   const [priceRange, setPriceRange] = useState<number>(200000);
