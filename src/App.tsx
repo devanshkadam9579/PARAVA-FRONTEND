@@ -3148,7 +3148,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 2. DYNAMIC MAIN VIEWPORT */}
-      <main className="flex-1 bg-brand-bg px-5 py-4 overflow-x-hidden">
+      <main className="flex-1 bg-brand-bg px-4 pt-3 pb-32 overflow-x-hidden">
         
         {/* ==================== TAB: HOME ==================== */}
         {activeTab === 'home' && (

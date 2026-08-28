@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Heart, Star, ShieldCheck, MapPin, Sparkles } from 'lucide-react';
+import { Heart, Star, ShieldCheck, MapPin, Sparkles, Clock, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Vendor } from '../types';
 
@@ -36,7 +36,6 @@ export default function VendorCard({
   onChooseForPlanner,
   userCoords
 }: VendorCardProps): any {
-  // Simple layout variables
   const isHorizontal = layout === 'horizontal';
 
   // Geolocation-based Haversine Distance helper
@@ -55,31 +54,25 @@ export default function VendorCard({
       const distanceVal = R * c;
       return `${distanceVal.toFixed(1)} km`;
     }
-    return vendor.distance || '1.5 km';
+    return vendor.distance ? vendor.distance.replace('away', '').trim() : '1.5 km';
   };
 
-  // Capacity calculations for Banquet Halls
   const maxCapacity = vendor.id === 'v1' ? 1200 : vendor.id === 'v7' ? 450 : 1000;
   const isOverCapacity = vendor.category === 'Banquet Hall' && (planningGuestSize || 0) > maxCapacity;
-
-  // Catering dynamic total
-  const cateringTotal = vendor.category === 'Catering' && planningGuestSize
-    ? vendor.basePrice * planningGuestSize
-    : null;
 
   return (
     <div className={isHorizontal ? 'w-[280px] shrink-0' : 'w-full'}>
       <motion.div
         whileTap={{ scale: 0.98 }}
         onClick={() => onSelect(vendor)}
-        className={`bg-white/40 backdrop-blur-xl border border-white/60 overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-500 flex flex-col h-full rounded-[32px] shadow-xl shadow-brand-primary/5 ${
+        className={`bg-white border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col h-full rounded-2xl shadow-sm ${
           isSelectedInPlanner 
-            ? 'border-brand-success ring-4 ring-brand-success/20 scale-[1.01]' 
-            : 'border-white/60'
+            ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-[1.01]' 
+            : 'hover:border-gray-200'
         }`}
         id={`vendor-card-${vendor.id}`}
       >
-        {/* Cover Image & Badges */}
+        {/* Cover Image & Overlays */}
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
           <img
             src={(vendor.images && vendor.images.length > 0 && vendor.images[0]) ? vendor.images[0] : 'https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=600'}
@@ -95,41 +88,42 @@ export default function VendorCard({
           {/* Wishlist Button */}
           <button
             onClick={(e) => onToggleWishlist(vendor.id, e)}
-            className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-white/60 backdrop-blur-sm text-brand-text hover:text-brand-primary active:scale-90 transition shadow-sm border border-white/20"
-            title="Add to wishlist"
+            className="absolute top-2.5 right-2.5 z-10 p-2 rounded-full bg-white/80 backdrop-blur-md text-gray-700 hover:text-brand-primary active:scale-90 transition-all shadow-sm border border-white/40"
+            title="Save to wishlist"
             id={`wishlist-btn-${vendor.id}`}
           >
             <Heart
-              size={16}
-              className={`transition-colors ${isWishlisted ? 'fill-brand-primary text-brand-primary' : 'text-gray-400'}`}
+              size={17}
+              className={`transition-colors ${isWishlisted ? 'fill-brand-primary text-brand-primary' : 'text-gray-700'}`}
+              strokeWidth={2}
             />
           </button>
 
-          {/* Badges */}
-          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+          {/* Badges on Image (High Contrast) */}
+          <div className="absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5 z-10">
             {vendor.verified && (
-              <div className="flex items-center gap-1 bg-brand-primary-dark/95 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-md shadow-sm">
-                <ShieldCheck size={12} className="text-white" />
+              <div className="flex items-center gap-1 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                <ShieldCheck size={11} className="text-white" />
                 <span>VERIFIED</span>
               </div>
             )}
-            <div className="bg-white/95 text-brand-text text-[10px] font-bold px-2 py-0.5 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-sm">
-              <Star size={11} className="text-brand-warning fill-brand-warning" />
-              <span>{vendor.rating}</span>
+            <div className="bg-white text-gray-900 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+              <Star size={12} className="text-amber-500 fill-amber-500" />
+              <span>{vendor.rating ? vendor.rating.toFixed(1) : '4.8'}</span>
             </div>
           </div>
 
-          {/* Category Pill top left */}
-          <span className="absolute top-3 left-3 text-[10px] font-bold text-white uppercase bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-lg tracking-wider">
+          {/* Category Tag top left */}
+          <span className="absolute top-2.5 left-2.5 text-[10px] font-bold text-white uppercase bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md tracking-wider">
             {vendor.category}
           </span>
 
-          {/* Plan Match Overlay indicator if planning parameters are active */}
+          {/* Planning availability pill */}
           {planningDate && (
-            <div className={`absolute top-12 left-3 text-[9px] font-extrabold px-2 py-1 rounded-md shadow-md flex items-center gap-1 ${
+            <div className={`absolute top-10 left-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-md flex items-center gap-1.5 ${
               isAvailable 
-                ? 'bg-brand-success text-white' 
-                : 'bg-brand-danger text-white'
+                ? 'bg-emerald-700 text-white' 
+                : 'bg-rose-700 text-white'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-white animate-pulse' : 'bg-white'}`} />
               <span>{isAvailable ? 'AVAILABLE ON DATE' : 'FULLY BOOKED'}</span>
@@ -137,136 +131,95 @@ export default function VendorCard({
           )}
         </div>
 
-        {/* Details Area */}
-        <div className="p-4 flex flex-col justify-between flex-1">
+        {/* Details Area with Generous Whitespace */}
+        <div className="p-3.5 flex flex-col justify-between flex-1">
           <div>
-            {/* Header row */}
-            <div className="flex justify-between items-start gap-1 mb-1">
-              <h4 className="font-semibold text-brand-text text-sm line-clamp-1 leading-tight flex-1">
+            {/* Header: Title & High-Contrast Trust Score */}
+            <div className="flex justify-between items-start gap-2 mb-2">
+              <h4 className="font-bold text-gray-900 text-[15px] line-clamp-1 leading-snug flex-1">
                 {vendor.name}
               </h4>
-              <div className="flex items-center gap-1 text-brand-success font-semibold text-[10px] bg-brand-success/10 px-1.5 py-0.5 rounded shrink-0">
-                <Sparkles size={10} />
-                <span>{vendor.trustScore}% Score</span>
-              </div>
+              {vendor.trustScore && (
+                <div className="flex items-center gap-1 bg-emerald-700 text-white font-bold text-[10px] px-2 py-0.5 rounded-md shrink-0 shadow-xs">
+                  <Sparkles size={10} className="text-emerald-200" />
+                  <span>{vendor.trustScore}% Score</span>
+                </div>
+              )}
             </div>
 
-            <p className="text-xs text-brand-text-secondary line-clamp-1 mb-2">
-              {vendor.tagline}
-            </p>
-
-            {vendor.category === 'Event Planner' && (vendor.founderName || vendor.experience) && (
-              <div className="flex gap-2 text-[10px] mb-2 bg-indigo-50/50 text-indigo-700 font-medium px-2 py-1 rounded-lg border border-indigo-100/60 w-fit">
-                {vendor.founderName && <span>Founder: <strong>{vendor.founderName}</strong></span>}
-                {vendor.founderName && vendor.experience && <span className="text-indigo-300">|</span>}
-                {vendor.experience && <span>Exp: <strong>{vendor.experience}</strong></span>}
-              </div>
-            )}
-
-            {/* Location & Response Time */}
-            <div className="flex items-center justify-between text-[11px] text-brand-text-secondary mb-2.5 border-b border-gray-50 pb-2">
+            {/* Critical Metadata: High-Contrast & Larger Legible Typography */}
+            <div className="flex items-center gap-3 text-xs text-gray-700 font-medium mb-3 pb-2.5 border-b border-gray-100">
               <div className="flex items-center gap-1">
-                <MapPin size={11} className="text-brand-primary" />
-                <span>{getDistanceDisplay()}</span>
+                <MapPin size={13} className="text-brand-primary shrink-0" />
+                <span className="font-semibold text-gray-800">{getDistanceDisplay()}</span>
               </div>
-              <div className="flex items-center gap-1 text-brand-primary font-medium">
-                <Sparkles size={11} className="animate-pulse" />
-                <span>⚡ {vendor.responseTime} response</span>
+              <span className="text-gray-300">•</span>
+              <div className="flex items-center gap-1 text-gray-700">
+                <Clock size={13} className="text-gray-500 shrink-0" />
+                <span>{vendor.responseTime || '< 15 mins'} response</span>
               </div>
             </div>
 
-            {/* Live Interactive Matcher Feedback row */}
+            {/* Live Interactive Matcher Feedback row if planner date is set */}
             {planningDate && (
-              <div className="bg-gray-50/70 border border-gray-100 p-2.5 rounded-xl mb-3 space-y-1">
+              <div className="bg-gray-50 border border-gray-100 p-2.5 rounded-xl mb-3 space-y-1 text-xs">
                 {vendor.category === 'Banquet Hall' && (
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-brand-text-secondary font-medium">Capacity Match:</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-medium">Capacity:</span>
                     {isOverCapacity ? (
-                      <span className="text-brand-danger font-bold flex items-center gap-0.5">
-                        ⚠️ Over Capacity (Max {maxCapacity})
+                      <span className="text-rose-700 font-bold">
+                        Over Capacity (Max {maxCapacity})
                       </span>
                     ) : (
-                      <span className="text-brand-success-dark font-semibold">
-                        ✓ Fits {planningGuestSize} Guests (Max {maxCapacity})
+                      <span className="text-emerald-700 font-semibold">
+                        Fits {planningGuestSize} Guests (Max {maxCapacity})
                       </span>
                     )}
                   </div>
                 )}
-
-                {vendor.category === 'Catering' && cateringTotal && (
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-brand-text-secondary font-medium">Dynamic Total ({planningGuestSize} guests):</span>
-                    <span className="text-brand-primary-dark font-extrabold text-xs">
-                      ₹{cateringTotal >= 100000 
-                        ? `${(cateringTotal / 100000).toFixed(2)} Lakh` 
-                        : cateringTotal.toLocaleString('en-IN')
-                      }
-                    </span>
-                  </div>
-                )}
-
-                {vendor.category !== 'Banquet Hall' && vendor.category !== 'Catering' && (
-                  <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-brand-text-secondary font-medium">Availability Match:</span>
-                    <span className={isAvailable ? "text-brand-success-dark font-semibold" : "text-brand-danger font-semibold"}>
-                      {isAvailable ? "✓ Instant Match Active" : "✗ Booked on Date"}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Pricing row */}
-          <div className="flex items-baseline justify-between mt-auto">
-            <p className="text-[10px] text-gray-500 uppercase font-medium tracking-wider">
-              {vendor.category === 'Catering' ? 'Meal Starts At' : vendor.category === 'Event Planner' ? 'Consultation Base' : 'Venue Base Price'}
-            </p>
-            <div className="text-right">
-              <span className="font-bold text-lg text-brand-primary">
-                ₹{vendor.basePrice >= 100000 
-                  ? `${(vendor.basePrice / 100000).toFixed(1)}L` 
-                  : vendor.basePrice.toLocaleString('en-IN')
-                }
+          {/* Unified, Grouped Pricing Row (No disconnect) */}
+          <div className="flex items-center justify-between mt-auto pt-1">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-gray-500">
+                {vendor.category === 'Catering' ? 'Meal Starts At' : vendor.category === 'Event Planner' ? 'Consultation Base' : 'Venue Base Price'}
               </span>
-              <span className="text-[10px] text-gray-500 font-medium ml-0.5">
-                /{vendor.category === 'Catering' ? 'plate' : vendor.category === 'Event Planner' ? 'event' : 'day'}
-              </span>
-            </div>
-          </div>
-
-          {/* Interactive planner drawer action */}
-          {planningDate && onChooseForPlanner && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onChooseForPlanner(vendor, e);
-              }}
-              disabled={!isAvailable}
-              className={`w-full text-xs font-bold py-2.5 px-3 mt-3.5 rounded-xl transition-all duration-200 border flex items-center justify-center gap-1.5 ${
-                isSelectedInPlanner
-                  ? 'bg-brand-success/10 border-brand-success text-brand-success-dark font-extrabold'
-                  : !isAvailable
-                  ? 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-brand-primary/5 border-brand-primary/10 hover:bg-brand-primary hover:text-white hover:border-brand-primary text-brand-primary hover:shadow-md'
-              }`}
-              id={`planner-slot-select-${vendor.id}`}
-            >
-              {isSelectedInPlanner ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-success animate-pulse shrink-0" />
-                  <span>Selected in Plan</span>
-                </>
-              ) : (
-                <span>
-                  {!isAvailable 
-                    ? 'Unavailable on Selected Date' 
-                    : `+ Choose as ${vendor.category === 'Banquet Hall' ? 'Hall' : vendor.category === 'Catering' ? 'Caterer' : vendor.category === 'DJ' ? 'DJ' : 'Decorator'}`
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-base font-extrabold text-gray-900">
+                  ₹{vendor.basePrice >= 100000 
+                    ? `${(vendor.basePrice / 100000).toFixed(1)}L` 
+                    : vendor.basePrice.toLocaleString('en-IN')
                   }
                 </span>
-              )}
-            </button>
-          )}
+                <span className="text-xs text-gray-500 font-medium">
+                  /{vendor.category === 'Catering' ? 'plate' : vendor.category === 'Event Planner' ? 'event' : 'day'}
+                </span>
+              </div>
+            </div>
+
+            {/* Select in plan action if planner active */}
+            {planningDate && onChooseForPlanner && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChooseForPlanner(vendor, e);
+                }}
+                disabled={!isAvailable}
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
+                  isSelectedInPlanner
+                    ? 'bg-emerald-700 text-white shadow-sm'
+                    : !isAvailable
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-brand-primary text-white hover:bg-brand-primary-dark shadow-sm active:scale-95'
+                }`}
+              >
+                {isSelectedInPlanner ? 'Selected' : '+ Choose'}
+              </button>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>
