@@ -4,7 +4,9 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Camera, UploadCloud, CheckCircle2, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, X } from 'lucide-react';
+
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_URL || 'https://parava-backend-1.onrender.com';
 
 interface CloudinaryImageUploaderProps {
   onImageUploaded: (url: string) => void;
@@ -16,10 +18,10 @@ interface CloudinaryImageUploaderProps {
 }
 
 /**
- * Client-side WebP Compressor
- * Compresses camera photos & large gallery images to high-quality WebP (< 300KB)
+ * Client-Side WebP Compressor
+ * Compresses camera photos to lightweight WebP (<300 KB) before uploading
  */
-async function compressImageToWebP(file: File, maxWidth = 1400, quality = 0.85): Promise<Blob> {
+async function compressImageToWebP(file: File, maxWidth = 1400, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -44,26 +46,15 @@ async function compressImageToWebP(file: File, maxWidth = 1400, quality = 0.85):
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(file);
+          resolve(e.target?.result as string);
           return;
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-
-        // Export as WebP format
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              resolve(file);
-            }
-          },
-          'image/webp',
-          quality
-        );
+        const webpDataUrl = canvas.toDataURL('image/webp', quality);
+        resolve(webpDataUrl);
       };
-      img.onerror = () => resolve(file);
+      img.onerror = () => resolve(e.target?.result as string);
     };
     reader.onerror = (error) => reject(error);
   });
@@ -74,8 +65,7 @@ export default function CloudinaryImageUploader({
   currentImageUrl,
   label = "Upload Photo",
   folder = "parva_vendors",
-  cloudName = "dpik6gqea", // Default Parva Cloudinary Cloud
-  preset = "ml_default" // Unsigned Upload Preset
+  cloudName = "k03rmhkg"
 }: CloudinaryImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -89,50 +79,48 @@ export default function CloudinaryImageUploader({
 
     setIsUploading(true);
     setErrorMsg(null);
-    setUploadProgress(15);
+    setUploadProgress(20);
 
     try {
-      // 1. Client-Side WebP Compression
-      const compressedBlob = await compressImageToWebP(file);
-      setUploadProgress(40);
+      // 1. Compress Image to WebP in browser
+      const base64WebP = await compressImageToWebP(file);
+      setUploadProgress(50);
 
-      // 2. Direct Cloudinary Upload via FormData
-      const formData = new FormData();
-      formData.append('file', compressedBlob, `upload_${Date.now()}.webp`);
-      formData.append('upload_preset', preset);
-      formData.append('folder', folder);
-
-      const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
-      
-      const response = await fetch(endpoint, {
+      // 2. Upload to Backend Cloudinary Engine
+      const res = await fetch(`${BACKEND_API_URL}/api/upload/image`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64WebP,
+          folder
+        })
       });
 
       setUploadProgress(85);
-      const data = await response.json();
+      const data = await res.json();
 
-      if (data.secure_url) {
-        // Auto-transform with f_auto,q_auto for optimal mobile delivery
-        const optimizedUrl = data.secure_url.replace('/upload/', '/upload/f_auto,q_auto/');
+      if (data.success && data.url) {
+        // Auto-transform for optimal mobile rendering
+        const optimizedUrl = data.url.replace('/upload/', '/upload/f_auto,q_auto/');
         setPreviewUrl(optimizedUrl);
         onImageUploaded(optimizedUrl);
         setUploadProgress(100);
       } else {
-        // Fallback: Use FileReader Data URL if preset not configured
-        console.warn("Cloudinary upload fallback to client data URL:", data);
-        const reader = new FileReader();
-        reader.readAsDataURL(compressedBlob);
-        reader.onloadend = () => {
-          const fallbackUrl = reader.result as string;
-          setPreviewUrl(fallbackUrl);
-          onImageUploaded(fallbackUrl);
-          setUploadProgress(100);
-        };
+        // Direct Fallback if backend temporarily sleeping
+        setPreviewUrl(base64WebP);
+        onImageUploaded(base64WebP);
+        setUploadProgress(100);
       }
     } catch (err: any) {
-      console.error("Image upload failed:", err);
-      setErrorMsg("Failed to upload image. Please try again.");
+      console.error("Upload error, using compressed WebP data:", err);
+      // Fallback
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        const fallbackUrl = reader.result as string;
+        setPreviewUrl(fallbackUrl);
+        onImageUploaded(fallbackUrl);
+      };
     } finally {
       setIsUploading(false);
     }
@@ -147,7 +135,7 @@ export default function CloudinaryImageUploader({
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="image/*"
-        capture="environment" // Enables direct camera on mobile phones
+        capture="environment" // Direct phone camera trigger
         className="hidden"
       />
 
@@ -165,7 +153,7 @@ export default function CloudinaryImageUploader({
               className="bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95"
             >
               <Camera size={14} />
-              <span>Change</span>
+              <span>Change Photo</span>
             </button>
             <button
               type="button"
@@ -180,7 +168,7 @@ export default function CloudinaryImageUploader({
           </div>
           <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
             <CheckCircle2 size={10} />
-            <span>WebP Optimized</span>
+            <span>Cloudinary WebP</span>
           </span>
         </div>
       ) : (
@@ -193,7 +181,7 @@ export default function CloudinaryImageUploader({
           {isUploading ? (
             <div className="flex flex-col items-center gap-2 py-2">
               <Loader2 className="animate-spin text-brand-primary" size={24} />
-              <span className="text-xs font-bold text-gray-700">Compressing & Uploading to Cloudinary... ({uploadProgress}%)</span>
+              <span className="text-xs font-bold text-gray-700">Uploading to Cloudinary... ({uploadProgress}%)</span>
             </div>
           ) : (
             <>
@@ -201,8 +189,8 @@ export default function CloudinaryImageUploader({
                 <Camera size={20} />
               </div>
               <div className="text-center">
-                <span className="text-xs font-bold text-gray-800 block">📷 Take Photo / Choose Image</span>
-                <span className="text-[10px] text-gray-400 font-medium">Auto-compressed to WebP for fast 5G/4G loading</span>
+                <span className="text-xs font-bold text-gray-800 block">📷 Take Photo / Upload from Phone</span>
+                <span className="text-[10px] text-gray-400 font-medium">Auto-compressed to WebP on Cloud: k03rmhkg</span>
               </div>
             </>
           )}
