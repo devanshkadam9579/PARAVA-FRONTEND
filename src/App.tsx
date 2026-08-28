@@ -25,6 +25,7 @@ import { VENDORS, QUICK_CATEGORIES, HERO_PROMOS, INITIAL_CHAT_MESSAGES, CITIES, 
 
 // Component imports
 import LocationSelector from './components/LocationSelector';
+import FilterModal from './components/FilterModal';
 import AnimatedSearchBar from './components/AnimatedSearchBar';
 import NotificationCenterModal, { AppNotification } from './components/NotificationCenterModal';
 import VoiceSearchModal from './components/VoiceSearchModal';
@@ -2144,6 +2145,19 @@ export default function App() {
     const matchesPrice = (vendor.basePrice || 0) <= priceRange;
     const matchesOccasion = exploreOccasion === 'All' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
 
+    // Custom Modal Filters
+    const matchesMinPrice = activeFilterMinPrice === null || (vendor.basePrice || 0) >= activeFilterMinPrice;
+    const matchesMaxPrice = activeFilterMaxPrice === null || (vendor.basePrice || 0) <= activeFilterMaxPrice;
+    const matchesTypes = activeFilterTypes.length === 0 || activeFilterTypes.some(t => {
+      const typeLower = t.toLowerCase();
+      return (
+        (vendor.features || []).some(f => f.toLowerCase().includes(typeLower)) ||
+        (vendor.category || '').toLowerCase().includes(typeLower) ||
+        (vendor.tagline || '').toLowerCase().includes(typeLower) ||
+        (vendor.description || '').toLowerCase().includes(typeLower)
+      );
+    });
+
     // Filter by date availability
     const matchesAvailability = isVendorAvailable(vendor.id, planningStartDate, planningEndDate, vendors);
     
@@ -2154,24 +2168,22 @@ export default function App() {
     const matchesGuestSize = vendor.category !== 'Banquet Hall' || 
       (!vendor.capacity || planningGuestSize <= vendor.capacity);
 
-    return matchesCity && matchesSuitability && matchesSearch && matchesCategory && matchesPrice && matchesAvailability && matchesOccasion && matchesBudget && matchesGuestSize && vendor.approved !== false;
+    return matchesCity && matchesSuitability && matchesSearch && matchesCategory && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesTypes && matchesAvailability && matchesOccasion && matchesBudget && matchesGuestSize && vendor.approved !== false;
   }).sort((a, b) => {
-    if (sortBy === 'rating') return b.rating - a.rating;
-    if (sortBy === 'trust') return b.trustScore - a.trustScore;
-    if (sortBy === 'priceAsc') return a.basePrice - b.basePrice;
-    if (sortBy === 'priceDesc') return b.basePrice - a.basePrice;
-    if (sortBy === 'distance') {
-      let distA = parseFloat(a.distance) || 0;
-      let distB = parseFloat(b.distance) || 0;
-      if (userCoords && a.latitude && a.longitude) {
-        distA = calculateHaversineDistance(userCoords.lat, userCoords.lng, a.latitude, a.longitude);
-      }
-      if (userCoords && b.latitude && b.longitude) {
-        distB = calculateHaversineDistance(userCoords.lat, userCoords.lng, b.latitude, b.longitude);
-      }
-      return distA - distB;
+    if (activeSortOption === 'Rating - High to Low' || sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+    if (activeSortOption === 'Price - Low to High' || sortBy === 'priceAsc') return (a.basePrice || 0) - (b.basePrice || 0);
+    if (activeSortOption === 'Price - High to Low' || sortBy === 'priceDesc') return (b.basePrice || 0) - (a.basePrice || 0);
+    if (activeSortOption === 'Most Booked' || sortBy === 'trust') return (b.bookingsCount || b.trustScore || 0) - (a.bookingsCount || a.trustScore || 0);
+    
+    let distA = parseFloat(a.distance) || 0;
+    let distB = parseFloat(b.distance) || 0;
+    if (userCoords && a.latitude && a.longitude) {
+      distA = calculateHaversineDistance(userCoords.lat, userCoords.lng, a.latitude, a.longitude);
     }
-    return 0;
+    if (userCoords && b.latitude && b.longitude) {
+      distB = calculateHaversineDistance(userCoords.lat, userCoords.lng, b.latitude, b.longitude);
+    }
+    return distA - distB;
   });
 
   const safeHeroIndex = heroIndex >= promosList.length ? 0 : heroIndex;
@@ -3427,6 +3439,40 @@ export default function App() {
         {/* ==================== TAB: EXPLORE ==================== */}
         {activeTab === 'explore' && (
           <div className="space-y-5" id="explore-view-container">
+            {/* Active Filters Summary Bar */}
+            {(activeFilterMinPrice !== null || activeFilterMaxPrice !== null || activeFilterTypes.length > 0 || activeSortOption !== 'Distance') && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-gray-800">Active Filters:</span>
+                  {activeSortOption !== 'Distance' && (
+                    <span className="bg-white border border-gray-200 text-xs font-semibold text-gray-700 px-2.5 py-0.5 rounded-full shadow-2xs">
+                      Sort: {activeSortOption}
+                    </span>
+                  )}
+                  {(activeFilterMinPrice !== null || activeFilterMaxPrice !== null) && (
+                    <span className="bg-white border border-gray-200 text-xs font-semibold text-gray-700 px-2.5 py-0.5 rounded-full shadow-2xs">
+                      ₹{activeFilterMinPrice || 0} - ₹{activeFilterMaxPrice ? activeFilterMaxPrice.toLocaleString('en-IN') : 'Any'}
+                    </span>
+                  )}
+                  {activeFilterTypes.map(t => (
+                    <span key={t} className="bg-white border border-gray-200 text-xs font-semibold text-gray-700 px-2.5 py-0.5 rounded-full shadow-2xs">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveFilterMinPrice(null);
+                    setActiveFilterMaxPrice(null);
+                    setActiveFilterTypes([]);
+                    setActiveSortOption('Distance');
+                  }}
+                  className="text-xs font-bold text-brand-primary hover:underline"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
             {/* Continuous Animated Category Search Bar */}
             <div className="relative z-40">
               <AnimatedSearchBar
@@ -4843,6 +4889,20 @@ export default function App() {
       </nav>
 
       {/* 4. DIALOGS & MODAL DRAWER PORTALS */}
+      {/* Filter and Sorting Modal */}
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={(filters) => {
+          setActiveSortOption(filters.sort || 'Distance');
+          setActiveFilterMinPrice(filters.min ? Number(filters.min) : null);
+          setActiveFilterMaxPrice(filters.max ? Number(filters.max) : null);
+          setActiveFilterTypes(filters.types || []);
+          setActiveTab('explore');
+          showNotification('Filters applied successfully');
+        }}
+      />
+
       <NotificationCenterModal
         isOpen={isNotificationCenterOpen}
         onClose={() => setIsNotificationCenterOpen(false)}
