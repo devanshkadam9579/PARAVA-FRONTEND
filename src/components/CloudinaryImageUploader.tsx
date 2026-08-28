@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Camera, CheckCircle2, Loader2, X } from 'lucide-react';
+import { Camera, Video, CheckCircle2, Loader2, X, UploadCloud, Play } from 'lucide-react';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_URL || 'https://parava-backend-1.onrender.com';
 
@@ -15,6 +15,7 @@ interface CloudinaryImageUploaderProps {
   folder?: string;
   preset?: string;
   cloudName?: string;
+  allowVideo?: boolean;
 }
 
 /**
@@ -63,13 +64,15 @@ async function compressImageToWebP(file: File, maxWidth = 1400, quality = 0.85):
 export default function CloudinaryImageUploader({
   onImageUploaded,
   currentImageUrl,
-  label = "Upload Photo",
+  label = "Upload Photo or Video",
   folder = "parva_vendors",
-  cloudName = "k03rmhkg"
+  cloudName = "k03rmhkg",
+  allowVideo = true
 }: CloudinaryImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
+  const [isVideo, setIsVideo] = useState<boolean>(currentImageUrl?.endsWith('.mp4') || currentImageUrl?.includes('/video/') || false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,18 +84,34 @@ export default function CloudinaryImageUploader({
     setErrorMsg(null);
     setUploadProgress(20);
 
-    try {
-      // 1. Compress Image to WebP in browser
-      const base64WebP = await compressImageToWebP(file);
-      setUploadProgress(50);
+    const fileIsVideo = file.type.startsWith('video/');
+    setIsVideo(fileIsVideo);
 
-      // 2. Upload to Backend Cloudinary Engine
+    try {
+      let uploadPayload: string;
+
+      if (!fileIsVideo) {
+        // Compress Image to WebP in browser
+        uploadPayload = await compressImageToWebP(file);
+        setUploadProgress(50);
+      } else {
+        // Read Video as Data URL
+        uploadPayload = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.readAsDataURL(file);
+        });
+        setUploadProgress(40);
+      }
+
+      // Upload to Backend Cloudinary Engine
       const res = await fetch(`${BACKEND_API_URL}/api/upload/image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: base64WebP,
-          folder
+          image: uploadPayload,
+          folder,
+          resource_type: fileIsVideo ? 'video' : 'image'
         })
       });
 
@@ -100,20 +119,20 @@ export default function CloudinaryImageUploader({
       const data = await res.json();
 
       if (data.success && data.url) {
-        // Auto-transform for optimal mobile rendering
-        const optimizedUrl = data.url.replace('/upload/', '/upload/f_auto,q_auto/');
+        const optimizedUrl = fileIsVideo 
+          ? data.url 
+          : data.url.replace('/upload/', '/upload/f_auto,q_auto/');
         setPreviewUrl(optimizedUrl);
         onImageUploaded(optimizedUrl);
         setUploadProgress(100);
       } else {
-        // Direct Fallback if backend temporarily sleeping
-        setPreviewUrl(base64WebP);
-        onImageUploaded(base64WebP);
+        // Direct fallback
+        setPreviewUrl(uploadPayload);
+        onImageUploaded(uploadPayload);
         setUploadProgress(100);
       }
     } catch (err: any) {
-      console.error("Upload error, using compressed WebP data:", err);
-      // Fallback
+      console.error("Upload error, using local data URL fallback:", err);
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onloadend = () => {
@@ -134,18 +153,27 @@ export default function CloudinaryImageUploader({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/*"
+        accept={allowVideo ? "image/*,video/*" : "image/*"}
         capture="environment" // Direct phone camera trigger
         className="hidden"
       />
 
       {previewUrl ? (
-        <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 group">
-          <img
-            src={previewUrl}
-            alt="Uploaded Preview"
-            className="w-full h-full object-cover"
-          />
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-900 group">
+          {isVideo ? (
+            <video
+              src={previewUrl}
+              controls
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={previewUrl}
+              alt="Uploaded Preview"
+              className="w-full h-full object-cover"
+            />
+          )}
+          
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <button
               type="button"
@@ -153,7 +181,7 @@ export default function CloudinaryImageUploader({
               className="bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95"
             >
               <Camera size={14} />
-              <span>Change Photo</span>
+              <span>Change</span>
             </button>
             <button
               type="button"
@@ -168,7 +196,7 @@ export default function CloudinaryImageUploader({
           </div>
           <span className="absolute bottom-2 left-2 bg-emerald-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
             <CheckCircle2 size={10} />
-            <span>Cloudinary WebP</span>
+            <span>Cloudinary {isVideo ? 'Video' : 'WebP'}</span>
           </span>
         </div>
       ) : (
@@ -185,12 +213,13 @@ export default function CloudinaryImageUploader({
             </div>
           ) : (
             <>
-              <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center">
-                <Camera size={20} />
+              <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center gap-1">
+                <Camera size={18} />
+                {allowVideo && <Video size={16} />}
               </div>
               <div className="text-center">
-                <span className="text-xs font-bold text-gray-800 block">📷 Take Photo / Upload from Phone</span>
-                <span className="text-[10px] text-gray-400 font-medium">Auto-compressed to WebP on Cloud: k03rmhkg</span>
+                <span className="text-xs font-bold text-gray-800 block">📷 Take Photo / Video or Upload from Gallery</span>
+                <span className="text-[10px] text-gray-400 font-medium">Auto-synced to Cloudinary CDN (k03rmhkg)</span>
               </div>
             </>
           )}

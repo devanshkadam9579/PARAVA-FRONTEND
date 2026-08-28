@@ -148,15 +148,26 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
   const safeUserEmail = currentUser?.email || 'N/A';
   const safeUserCity = currentUser?.city || 'N/A';
 
-  // Dynamic Catering Guest Multiplier & Cart Pricing Calculations
+  // Dynamic Catering Multi-Tier Plate Selection & Guest Pricing Calculations
   const isCatering = vendor.category === 'Catering';
   const [cateringGuestCount, setCateringGuestCount] = useState<number>(planningGuestSize || 150);
+  const [selectedPlateTier, setSelectedPlateTier] = useState<'standard' | 'deluxe' | 'royal'>('standard');
+
+  const cateringPlateTiers = [
+    { id: 'standard', name: '🍲 Standard Veg Feast', rate: vendor.basePrice || 450, desc: '3 Starters, 2 Gravies, Dal, Rice, 2 Breads, 1 Sweet' },
+    { id: 'deluxe', name: '🍛 Deluxe Royal Spread (Veg & Non-Veg)', rate: Math.round((vendor.basePrice || 450) * 1.35), desc: '5 Starters, Biryani, Mutton/Chicken Gravy, Paneer, 2 Sweets' },
+    { id: 'royal', name: '👑 Grand Maharaja Platinum Buffet', rate: Math.round((vendor.basePrice || 450) * 1.8), desc: 'Live Counters, Mocktails, Exotic Salads, Multi-Cuisine Main Course, Ice Cream Bar' }
+  ];
+
+  const activePlateRate = isCatering
+    ? (cateringPlateTiers.find(t => t.id === selectedPlateTier)?.rate || vendor.basePrice)
+    : vendor.basePrice;
 
   const rawServicePrice = bundledServices.length > 0
     ? bundledServices.reduce((acc, s) => acc + s.price, 0)
-    : vendor.basePrice;
+    : activePlateRate;
 
-  const servicesTotal = isCatering ? (rawServicePrice * cateringGuestCount) : rawServicePrice;
+  const servicesTotal = isCatering ? (activePlateRate * cateringGuestCount) : rawServicePrice;
 
   const currentFeePct = bookingFeePercentage || 5;
   const calculatedBookingFee = Math.round((servicesTotal * currentFeePct) / 100);
@@ -652,20 +663,49 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                 </div>
               </div>
 
-              {/* Catering Dynamic Guest Multiplier Box with Direct Text Input */}
+              {/* Catering Multi-Tier Plate Selector & Dynamic Guest Multiplier */}
               {isCatering && (
-                <div className="bg-amber-50/90 border border-amber-200/80 p-4 rounded-2xl mx-6 mt-4 space-y-3 shadow-2xs">
-                  <div className="flex justify-between items-start gap-2">
+                <div className="bg-amber-50/90 border border-amber-200/90 p-4 rounded-2xl mx-6 mt-4 space-y-3.5 shadow-2xs">
+                  <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
                     <div>
                       <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
                         <span>🍽️</span>
-                        <span>Catering Guest Size Multiplier</span>
+                        <span>Select Plate Package & Guest Size</span>
                       </h4>
-                      <p className="text-[10px] text-amber-800 font-semibold mt-0.5">
-                        Base Rate: ₹{vendor.basePrice.toLocaleString('en-IN')} / plate
-                      </p>
+                      <p className="text-[10px] text-amber-800 font-medium">Choose menu tier & enter number of guests</p>
                     </div>
+                    <span className="bg-amber-200/80 text-amber-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                      Catering Multiplier
+                    </span>
+                  </div>
 
+                  {/* 1. Plate Tiers Selection */}
+                  <div className="space-y-1.5">
+                    {cateringPlateTiers.map((tier) => (
+                      <button
+                        key={tier.id}
+                        type="button"
+                        onClick={() => setSelectedPlateTier(tier.id as any)}
+                        className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
+                          selectedPlateTier === tier.id
+                            ? 'bg-white border-brand-primary shadow-sm text-gray-900 ring-1 ring-brand-primary'
+                            : 'bg-white/60 border-amber-100 text-gray-700 hover:bg-white'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-extrabold text-xs text-gray-900">{tier.name}</p>
+                          <p className="text-[10px] text-gray-500 truncate">{tier.desc}</p>
+                        </div>
+                        <span className="font-black text-xs text-brand-primary shrink-0 bg-brand-primary/10 px-2 py-1 rounded-lg">
+                          ₹{tier.rate.toLocaleString('en-IN')}/plt
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 2. Number of Guests Direct Input & Stepper */}
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-[11px] font-bold text-amber-950">Number of Guests:</span>
                     <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
                       <button
                         type="button"
@@ -695,11 +735,12 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                     </div>
                   </div>
 
+                  {/* 3. Final Multiplied Calculation Banner */}
                   <div className="flex justify-between items-center pt-2.5 border-t border-amber-200/70 text-xs">
                     <span className="text-amber-900 font-bold">
-                      Calculation: ₹{vendor.basePrice.toLocaleString('en-IN')} × {cateringGuestCount} Guests =
+                      ₹{activePlateRate.toLocaleString('en-IN')} × {cateringGuestCount} Guests =
                     </span>
-                    <span className="font-extrabold text-brand-primary text-sm">
+                    <span className="font-black text-brand-primary text-sm">
                       ₹{servicesTotal.toLocaleString('en-IN')}
                     </span>
                   </div>
