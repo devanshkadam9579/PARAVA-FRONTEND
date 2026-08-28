@@ -26,6 +26,7 @@ import { VENDORS, QUICK_CATEGORIES, HERO_PROMOS, INITIAL_CHAT_MESSAGES, CITIES, 
 // Component imports
 import LocationSelector from './components/LocationSelector';
 import FilterModal from './components/FilterModal';
+import CloudinaryImageUploader from './components/CloudinaryImageUploader';
 import AnimatedSearchBar from './components/AnimatedSearchBar';
 import NotificationCenterModal, { AppNotification } from './components/NotificationCenterModal';
 import VoiceSearchModal from './components/VoiceSearchModal';
@@ -5245,38 +5246,28 @@ export default function App() {
                             ))}
                           </div>
 
-                          {/* Add image form */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Paste new portfolio image URL link"
-                              value={vendorNewImage}
-                              onChange={(e) => setVendorNewImage(e.target.value)}
-                              className="flex-1 bg-gray-50 border border-brand-border rounded-lg px-2.5 py-1.5 outline-none font-semibold focus:bg-white text-xs"
-                            />
-                            <button
-                              onClick={async () => {
-                                if (!vendorNewImage) return;
+                          {/* Direct Phone Camera / Cloudinary Uploader */}
+                          <div className="pt-2">
+                            <CloudinaryImageUploader
+                              label="📷 Take Phone Photo or Upload Portfolio Image"
+                              onImageUploaded={async (uploadedUrl) => {
+                                if (!uploadedUrl) return;
                                 try {
                                   const v = vendors.find(item => item.id === currentUser.vendorId);
                                   if (v) {
-                                    const updatedImgs = [...(v.images || []), vendorNewImage];
+                                    const updatedImgs = [...(v.images || []), uploadedUrl];
                                     const db = getDb();
                                     await setDoc(doc(db, 'vendors', currentUser.vendorId), {
                                       ...v,
                                       images: updatedImgs
                                     });
-                                    setVendorNewImage('');
-                                    showNotification('📸 Portfolio image added successfully!');
+                                    showNotification('📸 Portfolio image uploaded & compressed to WebP!');
                                   }
                                 } catch (err) {
                                   console.error(err);
                                 }
                               }}
-                              className="bg-brand-primary text-white font-bold px-4 py-1.5 rounded-lg hover:bg-brand-primary-dark transition text-xs shrink-0"
-                            >
-                              Add Image
-                            </button>
+                            />
                           </div>
                         </div>
                       </div>

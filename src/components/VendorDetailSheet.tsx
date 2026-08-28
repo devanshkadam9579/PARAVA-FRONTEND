@@ -148,10 +148,15 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
   const safeUserEmail = currentUser?.email || 'N/A';
   const safeUserCity = currentUser?.city || 'N/A';
 
-  // Dynamic Cart Pricing Calculations
-  const servicesTotal = bundledServices.length > 0
+  // Dynamic Catering Guest Multiplier & Cart Pricing Calculations
+  const isCatering = vendor.category === 'Catering';
+  const [cateringGuestCount, setCateringGuestCount] = useState<number>(planningGuestSize || 150);
+
+  const rawServicePrice = bundledServices.length > 0
     ? bundledServices.reduce((acc, s) => acc + s.price, 0)
     : vendor.basePrice;
+
+  const servicesTotal = isCatering ? (rawServicePrice * cateringGuestCount) : rawServicePrice;
 
   const currentFeePct = bookingFeePercentage || 5;
   const calculatedBookingFee = Math.round((servicesTotal * currentFeePct) / 100);
@@ -646,6 +651,49 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                   </div>
                 </div>
               </div>
+
+              {/* Catering Dynamic Guest Multiplier Box */}
+              {isCatering && (
+                <div className="bg-amber-50/90 border border-amber-200/80 p-4 rounded-2xl mx-6 mt-4 space-y-2.5 shadow-2xs">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
+                        <span>🍽️</span>
+                        <span>Catering Guest Size Multiplier</span>
+                      </h4>
+                      <p className="text-[10px] text-amber-800 font-semibold mt-0.5">
+                        Base Rate: ₹{vendor.basePrice.toLocaleString('en-IN')} / plate
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setCateringGuestCount(prev => Math.max(25, prev - 25))}
+                        className="font-black text-amber-900 text-sm px-1 hover:text-brand-primary"
+                      >
+                        -
+                      </button>
+                      <span className="font-black text-xs text-amber-950 font-mono min-w-[60px] text-center">
+                        {cateringGuestCount} Guests
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCateringGuestCount(prev => prev + 25)}
+                        className="font-black text-amber-900 text-sm px-1 hover:text-brand-primary"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-amber-200/60 text-xs">
+                    <span className="text-amber-900 font-bold">Estimated Catering Total:</span>
+                    <span className="font-extrabold text-brand-primary text-sm">
+                      ₹{servicesTotal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Dynamic Interactive Calendar Slot */}
               <div className="bg-white px-6 py-5 border-b border-brand-border">
