@@ -25,6 +25,7 @@ import { VENDORS, QUICK_CATEGORIES, HERO_PROMOS, INITIAL_CHAT_MESSAGES, CITIES, 
 
 // Component imports
 import LocationSelector from './components/LocationSelector';
+import AnimatedSearchBar from './components/AnimatedSearchBar';
 import NotificationCenterModal, { AppNotification } from './components/NotificationCenterModal';
 import VoiceSearchModal from './components/VoiceSearchModal';
 import VendorCard from './components/VendorCard';
@@ -3152,60 +3153,23 @@ export default function App() {
         {/* ==================== TAB: HOME ==================== */}
         {activeTab === 'home' && (
           <div className="space-y-6" id="home-view-container">
-            {/* Search area with Voice Search */}
-            <div className="space-y-3">
-              <div className="relative flex flex-col z-50">
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    placeholder="Search for Wedding, Birthday, etc."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => {
-                      if (!searchQuery) {
-                        setActiveTab('explore');
-                      }
-                    }}
-                    className="w-full bg-white border border-gray-100 hover:border-gray-200 focus:border-gray-300 focus:ring-0 outline-none py-3.5 pl-6 pr-12 rounded-full text-sm font-bold text-gray-700 shadow-[0_2px_12px_rgba(0,0,0,0.03)] placeholder-gray-400 transition-all"
-                    id="home-search-input"
-                  />
-                  <button
-                    onClick={() => setIsVoiceOpen(true)}
-                    className="absolute right-3.5 p-2 rounded-full hover:bg-gray-100 text-brand-primary transition"
-                    title="Voice Search"
-                    id="home-mic-btn"
-                  >
-                    <Mic size={20} />
-                  </button>
-                </div>
-                
-                {/* Search Suggestions Dropdown */}
-                {searchQuery.length > 0 && activeTab === 'home' && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto z-50">
-                    {vendors
-                      .filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase())))
-                      .slice(0, 5)
-                      .map(v => (
-                        <div 
-                          key={v.id} 
-                          onClick={() => { setSearchQuery(v.name); handleVendorSelect(v); }}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-0 transition"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-gray-800">{v.name}</p>
-                            <p className="text-[10px] text-gray-500 uppercase">{v.category}</p>
-                          </div>
-                          <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md font-bold">Select</span>
-                        </div>
-                      ))}
-                    {vendors.filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
-                      <div className="p-4 text-center text-xs text-gray-500">No vendors found matching "{searchQuery}"</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-
+            {/* Continuous Animated Category Search Bar */}
+            <div className="relative z-40">
+              <AnimatedSearchBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                categories={activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList}
+                vendors={vendors}
+                currentCity={currentCity}
+                onSelectVendor={(v) => handleVendorSelect(v)}
+                onSelectCategory={(catName) => {
+                  setSelectedExploreCategory(catName);
+                  setActiveTab('explore');
+                }}
+                onOpenVoiceSearch={() => setIsVoiceOpen(true)}
+                onOpenFilters={() => setIsFilterModalOpen(true)}
+                activeFilterCount={(activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeSortOption !== 'Distance' ? 1 : 0)}
+              />
             </div>
 
             {/* Real-time Hero Carousel from Firestore */}
@@ -3366,51 +3330,20 @@ export default function App() {
         {/* ==================== TAB: EXPLORE ==================== */}
         {activeTab === 'explore' && (
           <div className="space-y-5" id="explore-view-container">
-            {/* Unified Planning & Search Header */}
-            <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-[32px] p-3 shadow-xl shadow-brand-primary/5 space-y-4">
-              <div className="relative z-50">
-                <input
-                  type="text"
-                  placeholder="Find Hall, DJ, Catering..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-gray-100 outline-none py-3.5 pl-6 pr-12 rounded-full text-sm font-bold text-gray-700 shadow-[0_2px_12px_rgba(0,0,0,0.03)] focus:border-gray-200 focus:ring-0 transition-all"
-                  id="explore-search-input"
-                />
-                <button
-                  onClick={() => setIsVoiceOpen(true)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-brand-primary"
-                >
-                  <Mic size={20} />
-                </button>
-
-                {/* Search Suggestions Dropdown */}
-                {searchQuery.length > 0 && activeTab === 'explore' && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto z-50">
-                    {vendors
-                      .filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase())))
-                      .slice(0, 5)
-                      .map(v => (
-                        <div 
-                          key={v.id} 
-                          onClick={() => { setSearchQuery(v.name); handleVendorSelect(v); }}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-0 transition"
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-gray-800">{v.name}</p>
-                            <p className="text-[10px] text-gray-500 uppercase">{v.category}</p>
-                          </div>
-                          <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md font-bold">Select</span>
-                        </div>
-                      ))}
-                    {vendors.filter(v => (v.location || '').toLowerCase().includes((currentCity || '').toLowerCase()) && (v.name.toLowerCase().includes(searchQuery.toLowerCase()) || (v.category || '').toLowerCase().includes(searchQuery.toLowerCase()))).length === 0 && (
-                      <div className="p-4 text-center text-xs text-gray-500">No vendors found matching "{searchQuery}"</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-
+            {/* Continuous Animated Category Search Bar */}
+            <div className="relative z-40">
+              <AnimatedSearchBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                categories={activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList}
+                vendors={vendors}
+                currentCity={currentCity}
+                onSelectVendor={(v) => handleVendorSelect(v)}
+                onSelectCategory={(catName) => setSelectedExploreCategory(catName)}
+                onOpenVoiceSearch={() => setIsVoiceOpen(true)}
+                onOpenFilters={() => setIsFilterModalOpen(true)}
+                activeFilterCount={(activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeSortOption !== 'Distance' ? 1 : 0)}
+              />
             </div>
 
             {/* Quick Pill Categories for filtering */}
