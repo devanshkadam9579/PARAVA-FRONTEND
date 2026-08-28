@@ -1022,7 +1022,15 @@ export default function App() {
   const [vendorEditFounderImage, setVendorEditFounderImage] = useState('');
   const [vendorSubTab, setVendorSubTab] = useState<'catalogue' | 'dates_leads'>('catalogue');
 
-  const [adminSubTab, setAdminSubTab] = useState<'dashboard' | 'onboard' | 'categories' | 'leads' | 'approval'>('dashboard');
+  const [adminSubTab, setAdminSubTab] = useState<'dashboard' | 'onboard' | 'categories' | 'leads' | 'approval' | 'email_logs' | 'settings'>('dashboard');
+  const [adminEmailLogs, setAdminEmailLogs] = useState<any[]>([]);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('devanshkadam2@gmail.com');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [adminCommissionPct, setAdminCommissionPct] = useState<number>(10);
+  const [adminFixedFee, setAdminFixedFee] = useState<number>(0);
+  const [adminSupportEmail, setAdminSupportEmail] = useState('support@parvaevents.com');
+  const [adminTermsVersion, setAdminTermsVersion] = useState('1.2');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [adminDashboardStats, setAdminDashboardStats] = useState<any>(null);
 
   useEffect(() => {
@@ -1385,7 +1393,13 @@ export default function App() {
                 commissionAmount,
                 gstAmount,
                 connectionFee,
-                totalAmount: amount
+                totalAmount: amount,
+                bookingData: params.bookingData || null,
+                customerData: {
+                  name: currentUser?.name || 'Valued Customer',
+                  email: currentUser?.email || 'customer@gmail.com',
+                  phone: currentUser?.phone || 'N/A'
+                }
               })
             });
 
@@ -4420,7 +4434,550 @@ export default function App() {
               {/* ACCOUNT LOGGED IN VIEW */}
               <div className="space-y-6">
                 
-                {currentUser?.role === 'vendor' ? (
+                {(isAdmin || isMasterAdmin) ? (
+                  /* 👑 Comprehensive Master Admin & Email Automation Hub */
+                  <div className="space-y-6" id="admin-master-hub">
+                    {/* Admin Header Banner */}
+                    <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[28px] p-6 text-white shadow-xl relative overflow-hidden">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">Master Control Gateway</span>
+                          </div>
+                          <h3 className="text-lg font-black tracking-tight">{currentUser.name}</h3>
+                          <p className="text-xs text-gray-300">System Administrator • Full Database & Resend Access</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCurrentUser(null);
+                            setIsAdmin(false);
+                            setIsMasterAdmin(false);
+                            localStorage.removeItem('parva_user');
+                            showNotification('Admin logged out safely.');
+                          }}
+                          className="text-xs bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1.5 rounded-xl transition"
+                        >
+                          🚪 Logout
+                        </button>
+                      </div>
+
+                      {/* Admin Subtabs Navigation */}
+                      <div className="flex gap-1.5 overflow-x-auto pt-5 pb-1 no-scrollbar border-t border-white/10 mt-4">
+                        {[
+                          { id: 'dashboard', label: '📊 Metrics' },
+                          { id: 'email_logs', label: '📧 Email & Resend Logs' },
+                          { id: 'settings', label: '⚙️ Commission' },
+                          { id: 'broadcast', label: '📢 Live Push' },
+                          { id: 'onboard', label: '➕ Add Vendor' },
+                          { id: 'categories', label: '✨ Categories' },
+                          { id: 'approval', label: `🛡️ Approvals (${vendors.filter(v => !v.approved).length})` },
+                          { id: 'leads', label: '📋 Leads CSV' }
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setAdminSubTab(tab.id as any)}
+                            className={`px-3 py-2 rounded-xl text-xs font-black whitespace-nowrap transition uppercase tracking-wider ${
+                              adminSubTab === tab.id
+                                ? 'bg-brand-primary text-white shadow-md'
+                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* SUB-TAB 1: DASHBOARD METRICS */}
+                    {adminSubTab === 'dashboard' && (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-400 block">Total Revenue</span>
+                            <span className="text-lg font-black text-gray-900">₹{Number(adminDashboardStats?.stats?.totalRevenue || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-400 block">Platform Commission</span>
+                            <span className="text-lg font-black text-brand-primary">₹{Number(adminDashboardStats?.stats?.totalCommission || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-400 block">Total Bookings</span>
+                            <span className="text-lg font-black text-emerald-600">{adminDashboardStats?.stats?.totalBookings || bookings.length}</span>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+                            <span className="text-[10px] font-extrabold uppercase text-gray-400 block">Active Vendors</span>
+                            <span className="text-lg font-black text-indigo-600">{vendors.filter(v => v.approved !== false).length}</span>
+                          </div>
+                        </div>
+
+                        {/* Recent Transactions Table */}
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
+                          <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Recent Payment Transactions</h4>
+                          {(adminDashboardStats?.recentTransactions || []).length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-4">No verified payment transactions logged yet.</p>
+                          ) : (
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                              {(adminDashboardStats?.recentTransactions || []).map((txn: any) => (
+                                <div key={txn.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center text-xs">
+                                  <div>
+                                    <p className="font-bold text-gray-900">{txn.orderId || txn.id}</p>
+                                    <p className="text-[10px] text-gray-500">{new Date(txn.timestamp).toLocaleString('en-IN')}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="font-extrabold text-emerald-600">₹{Number(txn.totalAmount || 0).toLocaleString('en-IN')}</span>
+                                    <span className="block text-[9px] text-gray-400">Commission: ₹{txn.platformCommission || txn.commissionAmount || 0}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 2: EMAIL AUTOMATIONS & RESEND LOGS */}
+                    {adminSubTab === 'email_logs' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        {/* Header & Test Dispatcher Card */}
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                                ✉️
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-bold text-gray-900">Resend Automated Email Engine</h4>
+                                <p className="text-[11px] text-gray-500">Official transactional confirmations, receipts, and payout statements</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full uppercase">
+                              Active & Verified
+                            </span>
+                          </div>
+
+                          {/* Quick Live Test Dispatcher */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-2.5">
+                            <h5 className="font-bold text-gray-800 text-xs">Send Test Transactional Email</h5>
+                            <div className="flex gap-2">
+                              <input
+                                type="email"
+                                value={testEmailRecipient}
+                                onChange={(e) => setTestEmailRecipient(e.target.value)}
+                                placeholder="Enter email address"
+                                className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none focus:border-brand-primary"
+                              />
+                              <button
+                                type="button"
+                                disabled={isSendingTestEmail}
+                                onClick={async () => {
+                                  if (!testEmailRecipient) return;
+                                  setIsSendingTestEmail(true);
+                                  try {
+                                    const res = await fetch(`${BACKEND_API_URL}/api/email/test`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ to: testEmailRecipient })
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      showNotification('🎉 Test email dispatched successfully via Resend!');
+                                      fetch(`${BACKEND_API_URL}/api/admin/email-logs`)
+                                        .then(r => r.json())
+                                        .then(d => { if (d.success) setAdminEmailLogs(d.logs || []); });
+                                    } else {
+                                      showNotification(`❌ Failed: ${data.error}`);
+                                    }
+                                  } catch (e) {
+                                    showNotification('❌ Error sending test email.');
+                                  } finally {
+                                    setIsSendingTestEmail(false);
+                                  }
+                                }}
+                                className="bg-brand-primary hover:bg-brand-primary-dark disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm active:scale-95 shrink-0"
+                              >
+                                {isSendingTestEmail ? 'Sending...' : 'Send Test'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Live Email Events Audit Table */}
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
+                          <div className="flex justify-between items-center border-b border-gray-100 pb-2.5">
+                            <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider">
+                              Email Delivery Audit Trail ({adminEmailLogs.length})
+                            </h4>
+                            <button
+                              onClick={() => {
+                                fetch(`${BACKEND_API_URL}/api/admin/email-logs`)
+                                  .then(r => r.json())
+                                  .then(d => { if (d.success) setAdminEmailLogs(d.logs || []); });
+                              }}
+                              className="text-[11px] font-bold text-brand-primary hover:underline"
+                            >
+                              Refresh Logs
+                            </button>
+                          </div>
+
+                          {adminEmailLogs.length === 0 ? (
+                            <div className="py-8 text-center text-gray-400">
+                              No automated email events logged yet. New bookings and test emails will appear here live.
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                              {adminEmailLogs.map((log) => (
+                                <div key={log.id} className="bg-gray-50 border border-gray-100 rounded-2xl p-3 space-y-1.5 hover:border-gray-200 transition">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <div>
+                                      <span className="font-bold text-gray-900 block">{log.eventType}</span>
+                                      <span className="text-[10px] text-gray-500 font-mono">To: {log.recipient} • Ref: #{log.bookingId || 'N/A'}</span>
+                                    </div>
+                                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                      log.status === 'sent' 
+                                        ? 'bg-emerald-100 text-emerald-800' 
+                                        : log.status === 'failed'
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}>
+                                      {log.status}
+                                    </span>
+                                  </div>
+
+                                  {log.sentAt && (
+                                    <p className="text-[9px] text-gray-400">Sent: {new Date(log.sentAt).toLocaleString('en-IN')}</p>
+                                  )}
+
+                                  {log.error && (
+                                    <div className="bg-rose-50 border border-rose-200 p-2 rounded-xl text-[10px] text-rose-700">
+                                      Error: {log.error}
+                                    </div>
+                                  )}
+
+                                  {log.providerMessageId && (
+                                    <p className="text-[8px] text-gray-400 font-mono truncate">Resend ID: {log.providerMessageId}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 3: COMMISSION & POLICY SETTINGS */}
+                    {adminSubTab === 'settings' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900">Platform Commission & Policy Configurations</h4>
+                              <p className="text-[11px] text-gray-500">Configure marketplace commission rates, legal policy versions, and support emails</p>
+                            </div>
+                            <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2.5 py-1 rounded-full uppercase">
+                              Settings
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="font-bold text-gray-700 block mb-1">Platform Commission Rate (%)</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={50}
+                                  value={adminCommissionPct}
+                                  onChange={(e) => setAdminCommissionPct(Number(e.target.value))}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                                />
+                                <span className="text-[9px] text-gray-400 mt-0.5 block">Default is 10% on gross booking value</span>
+                              </div>
+
+                              <div>
+                                <label className="font-bold text-gray-700 block mb-1">Fixed Service Fee (₹)</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={adminFixedFee}
+                                  onChange={(e) => setAdminFixedFee(Number(e.target.value))}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                                />
+                                <span className="text-[9px] text-gray-400 mt-0.5 block">Additional fixed fee per booking</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="font-bold text-gray-700 block mb-1">Official Support Email</label>
+                                <input
+                                  type="email"
+                                  value={adminSupportEmail}
+                                  onChange={(e) => setAdminSupportEmail(e.target.value)}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="font-bold text-gray-700 block mb-1">Legal Terms Version</label>
+                                <input
+                                  type="text"
+                                  value={adminTermsVersion}
+                                  onChange={(e) => setAdminTermsVersion(e.target.value)}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={isSavingSettings}
+                              onClick={async () => {
+                                setIsSavingSettings(true);
+                                try {
+                                  const db = getDb();
+                                  const { doc, setDoc } = await import('firebase/firestore');
+                                  await setDoc(doc(db, 'settings', 'global'), {
+                                    commissionPercentage: adminCommissionPct,
+                                    fixedCommissionFee: adminFixedFee,
+                                    supportEmail: adminSupportEmail,
+                                    termsVersion: adminTermsVersion,
+                                    updatedAt: new Date().toISOString()
+                                  }, { merge: true });
+
+                                  showNotification('✨ Commission & Policy settings updated successfully in database!');
+                                } catch (err) {
+                                  showNotification('❌ Failed to save settings.');
+                                } finally {
+                                  setIsSavingSettings(false);
+                                }
+                              }}
+                              className="w-full bg-brand-primary hover:bg-brand-primary-dark disabled:opacity-50 text-white font-bold py-3 rounded-2xl text-xs shadow-md transition-all uppercase tracking-wider active:scale-98 mt-2"
+                            >
+                              {isSavingSettings ? 'Saving Settings...' : 'Save & Publish Marketplace Settings'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 4: PUSH NOTIFICATION BROADCASTER */}
+                    {adminSubTab === 'broadcast' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900">Broadcast Push & Live Pop-up Notification</h4>
+                              <p className="text-[11px] text-gray-500">Sends live alerts with text & images directly to all users' phones</p>
+                            </div>
+                            <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full uppercase">
+                              Live Push
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="font-bold text-gray-700 block mb-1">Notification Title</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. 🎉 Grand Kolhapur Offer: Flat 20% OFF on Halls!"
+                                value={adminNotifTitle}
+                                onChange={(e) => setAdminNotifTitle(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="font-bold text-gray-700 block mb-1">Description / Message</label>
+                              <textarea
+                                rows={3}
+                                placeholder="e.g. Book your wedding or reception hall this weekend and unlock free stage flower decoration worth ₹20,000. Limited slots available!"
+                                value={adminNotifMessage}
+                                onChange={(e) => setAdminNotifMessage(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary resize-none"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={isBroadcastingNotif || !adminNotifTitle.trim() || !adminNotifMessage.trim()}
+                              onClick={async () => {
+                                if (!adminNotifTitle.trim() || !adminNotifMessage.trim()) return;
+                                setIsBroadcastingNotif(true);
+                                try {
+                                  const db = getDb();
+                                  const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+                                  await addDoc(collection(db, 'broadcast_notifications'), {
+                                    title: adminNotifTitle.trim(),
+                                    message: adminNotifMessage.trim(),
+                                    type: adminNotifType,
+                                    imageUrl: adminNotifImage.trim() || null,
+                                    actionText: adminNotifAction.trim() || 'View Details',
+                                    createdAt: serverTimestamp()
+                                  });
+
+                                  sendNativePhoneNotification(
+                                    adminNotifTitle.trim(),
+                                    adminNotifMessage.trim(),
+                                    adminNotifType
+                                  );
+
+                                  showNotification('🚀 Notification broadcasted to all active phones & web clients!');
+                                  setAdminNotifTitle('');
+                                  setAdminNotifMessage('');
+                                } catch (err) {
+                                  showNotification('❌ Broadcast failed.');
+                                } finally {
+                                  setIsBroadcastingNotif(false);
+                                }
+                              }}
+                              className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider"
+                            >
+                              {isBroadcastingNotif ? 'Broadcasting...' : '🚀 Broadcast Live Pop-up to All Users'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 5: CATEGORIES CRUD */}
+                    {adminSubTab === 'categories' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <h4 className="text-sm font-bold text-gray-900">Active Vendor Categories ({categoriesList.length})</h4>
+                            <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-md">Live Firestore Sync</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            {categoriesList.map((cat) => (
+                              <div key={cat.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center">
+                                <div>
+                                  <p className="font-bold text-gray-800">{cat.name}</p>
+                                  <p className="text-[10px] text-gray-400 font-mono">ID: {cat.id}</p>
+                                </div>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(`Delete category "${cat.name}"?`)) {
+                                      try {
+                                        const res = await fetch(`${BACKEND_API_URL}/api/admin/categories/${cat.id}`, { method: 'DELETE' });
+                                        const d = await res.json();
+                                        if (d.success) showNotification(`Deleted ${cat.name}`);
+                                      } catch (e) {
+                                        showNotification('Error deleting category');
+                                      }
+                                    }
+                                  }}
+                                  className="text-rose-600 hover:text-rose-800 p-1 font-bold"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 6: VENDOR APPROVALS */}
+                    {adminSubTab === 'approval' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <h4 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-3">
+                            Pending Vendor Registrations ({vendors.filter(v => !v.approved).length})
+                          </h4>
+
+                          {vendors.filter(v => !v.approved).length === 0 ? (
+                            <p className="text-center text-gray-400 py-6">No pending vendor registrations. All vendors are approved & active!</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {vendors.filter(v => !v.approved).map((v) => (
+                                <div key={v.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex justify-between items-center">
+                                  <div>
+                                    <h5 className="font-bold text-gray-900 text-sm">{v.name}</h5>
+                                    <p className="text-xs text-gray-500">{v.category} • {v.location} • ₹{v.basePrice.toLocaleString('en-IN')}</p>
+                                    <p className="text-[10px] text-gray-400">Phone: {v.phone || 'N/A'}</p>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const db = getDb();
+                                        const { doc, setDoc } = await import('firebase/firestore');
+                                        await setDoc(doc(db, 'vendors', v.id), { ...v, approved: true }, { merge: true });
+                                        showNotification(`🎉 Approved ${v.name}! Now live on Parva.`);
+                                      } catch (e) {
+                                        showNotification('Failed to approve vendor');
+                                      }
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm uppercase tracking-wider"
+                                  >
+                                    Approve & Go Live
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-TAB 7: LEADS CSV EXPORT */}
+                    {adminSubTab === 'leads' && (
+                      <div className="space-y-4 text-xs animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
+                          <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                            <div>
+                              <h4 className="text-sm font-bold text-gray-900">Extracted Customer Inquiries & Leads</h4>
+                              <p className="text-[11px] text-gray-500">Export high-intent customers who requested quotes or availability</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const headers = ['Name', 'Phone', 'Email', 'City', 'Vendor', 'Budget', 'Timestamp'];
+                                const rows = leadsList.map(l => [
+                                  l.name || '',
+                                  l.phone || '',
+                                  l.email || '',
+                                  l.city || '',
+                                  l.vendorName || '',
+                                  `₹${l.budget || 0}`,
+                                  l.timestamp || ''
+                                ]);
+                                const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+                                const encodedUri = encodeURI(csvContent);
+                                const link = document.createElement("a");
+                                link.setAttribute("href", encodedUri);
+                                link.setAttribute("download", `parva_leads_${Date.now()}.csv`);
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                showNotification('📥 Leads CSV downloaded successfully!');
+                              }}
+                              className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm"
+                            >
+                              <Download size={12} />
+                              <span>Download CSV</span>
+                            </button>
+                          </div>
+
+                          <div className="space-y-2 max-h-[350px] overflow-y-auto">
+                            {leadsList.map((lead, idx) => (
+                              <div key={idx} className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center text-xs">
+                                <div>
+                                  <p className="font-bold text-gray-900">{lead.name}</p>
+                                  <p className="text-[10px] text-gray-500">{lead.phone} • {lead.email} • {lead.city}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-bold text-indigo-600">{lead.vendorName || 'General'}</span>
+                                  <span className="block text-[9px] text-gray-400">Budget: ₹{Number(lead.budget || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : currentUser?.role === 'vendor' ? (
                   /* 💼 Bespoke Vendor Control Dashboard */
                   <div className="space-y-6" id="vendor-portal-container">
                     {/* Vendor Header info card */}
@@ -4780,8 +5337,7 @@ export default function App() {
                                     `₹${l.budget || 0}`,
                                     l.timestamp || ''
                                   ]);
-                                  const csvContent = "data:text/csv;charset=utf-8," 
-                                    + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+                                  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
                                   
                                   const encodedUri = encodeURI(csvContent);
                                   const link = document.createElement("a");
