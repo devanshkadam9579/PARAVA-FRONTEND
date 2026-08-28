@@ -1659,6 +1659,43 @@ export default function App() {
 
     setBookings(prev => [...newBookings, ...prev]);
     
+    // Sync all bookings & vendor demand notifications to Firestore
+    try {
+      const db = getDb();
+      import('firebase/firestore').then(async ({ doc, setDoc, collection, addDoc, serverTimestamp }) => {
+        for (const bk of newBookings) {
+          await setDoc(doc(db, 'bookings', bk.id), bk);
+          
+          // Save Lead for Admin and Vendor
+          const leadId = `lead_${Date.now()}_${bk.vendor.id}`;
+          await setDoc(doc(db, 'leads', leadId), {
+            id: leadId,
+            vendorId: bk.vendor.id,
+            vendorName: bk.vendor.name,
+            customerName: currentUser?.name || 'Valued Client',
+            customerPhone: currentUser?.phone || 'N/A',
+            customerEmail: currentUser?.email || 'N/A',
+            eventDate: bk.eventDate,
+            eventType: bk.eventType,
+            amount: bk.finalPrice,
+            status: 'Confirmed & Paid',
+            createdAt: serverTimestamp()
+          });
+
+          // Dispatch Demand Notification for Vendor & User
+          await addDoc(collection(db, 'broadcast_notifications'), {
+            title: `🎉 New Booking Demand for ${bk.vendor.name}`,
+            message: `Booking confirmed for ${bk.eventType} on ${bk.eventDate}. Total: ₹${bk.finalPrice.toLocaleString('en-IN')}`,
+            type: 'slot',
+            vendorId: bk.vendor.id,
+            createdAt: serverTimestamp()
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("Firestore plan bookings sync error:", e);
+    }
+
     // Clear slots
     setPlannerHall(null);
     setPlannerCatering(null);
