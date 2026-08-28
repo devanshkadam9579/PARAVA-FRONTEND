@@ -1031,6 +1031,8 @@ export default function App() {
   const [adminFixedFee, setAdminFixedFee] = useState<number>(0);
   const [adminSupportEmail, setAdminSupportEmail] = useState('support@parvaevents.com');
   const [adminTermsVersion, setAdminTermsVersion] = useState('1.2');
+  const [blockedCities, setBlockedCities] = useState<string[]>([]);
+  const [isProcessingBooking, setIsProcessingBooking] = useState<boolean>(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [adminDashboardStats, setAdminDashboardStats] = useState<any>(null);
 
@@ -3891,8 +3893,17 @@ export default function App() {
                         <span className="font-extrabold text-brand-text truncate block">{item.service.name}</span>
                         <span className="text-[9px] text-brand-text-secondary uppercase tracking-wider block mt-0.5">{item.vendor.name} • {item.vendor.category}</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-extrabold text-brand-text">₹{item.service.price.toLocaleString('en-IN')}</span>
+                      <div className="flex items-center gap-2 shrink-0 text-right">
+                        <div>
+                          <span className="font-extrabold text-brand-text block">
+                            ₹{(item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price).toLocaleString('en-IN')}
+                          </span>
+                          {item.vendor.category === 'Catering' && (
+                            <span className="text-[8px] font-bold text-amber-800 block">
+                              ₹{item.service.price}/plt × {planningGuestSize || 100} Guests
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => handleRemoveServiceFromBundle(item.vendor.id, item.service.name)}
                           className="text-brand-primary hover:text-brand-primary-dark p-1"
@@ -4730,6 +4741,70 @@ export default function App() {
                               </div>
                             </div>
 
+                            {/* Payment Gateway Toggle Switch */}
+                            <div className="bg-indigo-50/60 border border-indigo-100 p-3.5 rounded-2xl flex items-center justify-between">
+                              <div>
+                                <h5 className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                                  <span>💳</span>
+                                  <span>Online Payment Gateway (Razorpay)</span>
+                                </h5>
+                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                  {paymentsEnabled 
+                                    ? "Active: Users pay advance connection fee via Razorpay" 
+                                    : "Direct Mode: Users confirm booking directly without online payment"}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setPaymentsEnabled(!paymentsEnabled)}
+                                className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition active:scale-95 uppercase tracking-wider ${
+                                  paymentsEnabled 
+                                    ? 'bg-emerald-600 text-white shadow-sm' 
+                                    : 'bg-gray-200 text-gray-700'
+                                }`}
+                              >
+                                {paymentsEnabled ? '✓ Enabled' : '✕ Disabled (Direct)'}
+                              </button>
+                            </div>
+
+                            {/* City Block / Unblock Management */}
+                            <div className="bg-gray-50 border border-gray-200 p-3.5 rounded-2xl space-y-2.5">
+                              <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                                <h5 className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                                  <span>🏙️</span>
+                                  <span>City Operations & Availability</span>
+                                </h5>
+                                <span className="text-[9px] text-gray-500 font-semibold">{blockedCities.length} Blocked</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-1.5 max-h-[140px] overflow-y-auto pr-1">
+                                {['Kolhapur', 'Pune', 'Nagpur', 'Nashik', 'Mumbai', 'Delhi NCR', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Jaipur', 'Ahmedabad', 'Lucknow', 'Satara', 'Sangli'].map((city) => {
+                                  const isBlocked = blockedCities.includes(city);
+                                  return (
+                                    <button
+                                      key={city}
+                                      type="button"
+                                      onClick={() => {
+                                        if (isBlocked) {
+                                          setBlockedCities(blockedCities.filter(c => c !== city));
+                                        } else {
+                                          setBlockedCities([...blockedCities, city]);
+                                        }
+                                      }}
+                                      className={`p-2 rounded-xl text-[10px] font-bold border transition flex items-center justify-between ${
+                                        isBlocked
+                                          ? 'bg-rose-50 border-rose-200 text-rose-700'
+                                          : 'bg-white border-gray-200 text-gray-800'
+                                      }`}
+                                    >
+                                      <span className="truncate pr-1">{city}</span>
+                                      <span className="text-[9px]">{isBlocked ? '🔴' : '🟢'}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
                             <button
                               type="button"
                               disabled={isSavingSettings}
@@ -4743,10 +4818,12 @@ export default function App() {
                                     fixedCommissionFee: adminFixedFee,
                                     supportEmail: adminSupportEmail,
                                     termsVersion: adminTermsVersion,
+                                    paymentsEnabled,
+                                    blockedCities,
                                     updatedAt: new Date().toISOString()
                                   }, { merge: true });
 
-                                  showNotification('✨ Commission & Policy settings updated successfully in database!');
+                                  showNotification('✨ Settings, Payment Mode & City Availability updated in database!');
                                 } catch (err) {
                                   showNotification('❌ Failed to save settings.');
                                 } finally {
@@ -5646,6 +5723,7 @@ export default function App() {
       />
       <LocationSelector
         currentCity={currentCity}
+        blockedCities={blockedCities}
         onSelectCity={(city) => setCurrentCity(city)}
         isOpen={isLocationOpen}
         onClose={() => setIsLocationOpen(false)}
@@ -6035,7 +6113,7 @@ export default function App() {
       {/* Persistent Bottom Selection Bar */}
       <CartFloatingBar
         itemCount={bundledItems.length}
-        totalPrice={bundledItems.reduce((acc, item) => acc + item.service.price, 0)}
+        totalPrice={bundledItems.reduce((acc, item) => acc + (item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price), 0)}
         onClick={() => setActiveTab('bookings')}
         isVisible={bundledItems.length > 0 && activeTab !== 'bookings' && activeTab !== 'profile' && !selectedVendor}
       />

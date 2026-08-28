@@ -652,10 +652,10 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                 </div>
               </div>
 
-              {/* Catering Dynamic Guest Multiplier Box */}
+              {/* Catering Dynamic Guest Multiplier Box with Direct Text Input */}
               {isCatering && (
-                <div className="bg-amber-50/90 border border-amber-200/80 p-4 rounded-2xl mx-6 mt-4 space-y-2.5 shadow-2xs">
-                  <div className="flex justify-between items-center">
+                <div className="bg-amber-50/90 border border-amber-200/80 p-4 rounded-2xl mx-6 mt-4 space-y-3 shadow-2xs">
+                  <div className="flex justify-between items-start gap-2">
                     <div>
                       <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
                         <span>🍽️</span>
@@ -665,29 +665,40 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                         Base Rate: ₹{vendor.basePrice.toLocaleString('en-IN')} / plate
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+
+                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
                       <button
                         type="button"
-                        onClick={() => setCateringGuestCount(prev => Math.max(25, prev - 25))}
-                        className="font-black text-amber-900 text-sm px-1 hover:text-brand-primary"
+                        onClick={() => setCateringGuestCount(prev => Math.max(10, prev - 25))}
+                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
                       >
                         -
                       </button>
-                      <span className="font-black text-xs text-amber-950 font-mono min-w-[60px] text-center">
-                        {cateringGuestCount} Guests
-                      </span>
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          min={1}
+                          max={10000}
+                          value={cateringGuestCount}
+                          onChange={(e) => setCateringGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-16 text-center font-black text-xs text-amber-950 font-mono outline-none bg-transparent"
+                        />
+                        <span className="text-[10px] font-bold text-amber-800 pr-1">Guests</span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setCateringGuestCount(prev => prev + 25)}
-                        className="font-black text-amber-900 text-sm px-1 hover:text-brand-primary"
+                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
                       >
                         +
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-amber-200/60 text-xs">
-                    <span className="text-amber-900 font-bold">Estimated Catering Total:</span>
+                  <div className="flex justify-between items-center pt-2.5 border-t border-amber-200/70 text-xs">
+                    <span className="text-amber-900 font-bold">
+                      Calculation: ₹{vendor.basePrice.toLocaleString('en-IN')} × {cateringGuestCount} Guests =
+                    </span>
                     <span className="font-extrabold text-brand-primary text-sm">
                       ₹{servicesTotal.toLocaleString('en-IN')}
                     </span>

@@ -11,6 +11,7 @@ import { CITIES } from '../data';
 interface LocationSelectorProps {
   currentCity: string;
   citiesList?: string[];
+  blockedCities?: string[];
   onSelectCity: (city: string) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -19,6 +20,7 @@ interface LocationSelectorProps {
 export default function LocationSelector({
   currentCity,
   citiesList = [],
+  blockedCities = [],
   onSelectCity,
   isOpen,
   onClose
