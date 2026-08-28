@@ -645,6 +645,103 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
+  // ==================== NOTIFICATION SYSTEM & POP-UP ENGINE ====================
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | 'unsupported'>(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported';
+  });
+
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const saved = localStorage.getItem('parva_app_notifications');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      {
+        id: 'notif_init_1',
+        type: 'slot',
+        title: 'Slot Confirmation Engine Active',
+        message: 'Real-time vendor calendar sync is active. Booked slots receive instant phone confirmations.',
+        timestamp: '10m ago',
+        read: false
+      },
+      {
+        id: 'notif_init_2',
+        type: 'offer',
+        title: 'Exclusive Kolhapur Offer: Flat 15% OFF',
+        message: 'Use coupon code WELCOME10 at checkout to unlock instant celebration discounts.',
+        timestamp: '1h ago',
+        read: false,
+        actionText: 'Use Coupon'
+      },
+      {
+        id: 'notif_init_3',
+        type: 'delivery',
+        title: 'Equipment & Vendor Dispatch Tracking',
+        message: 'Live stage setup and delivery alerts will stream directly to your notification feed.',
+        timestamp: 'Yesterday',
+        read: true
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('parva_app_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const status = await Notification.requestPermission();
+        setPermissionStatus(status);
+        if (status === 'granted') {
+          sendNativePhoneNotification(
+            'Pop-up Notifications Enabled! 🎉',
+            'You will now receive live alerts for slot confirmations, delivery updates, and exclusive deals.',
+            'system'
+          );
+        }
+      } catch (e) {
+        console.error('Error requesting notification permission:', e);
+      }
+    }
+  };
+
+  const sendNativePhoneNotification = (title: string, body: string, type: 'offer' | 'slot' | 'delivery' | 'system' = 'system') => {
+    const newNotif: AppNotification = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      type,
+      title,
+      message: body,
+      timestamp: 'Just now',
+      read: false
+    };
+
+    setNotifications(prev => [newNotif, ...prev]);
+    showNotification(body);
+
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const icon = '/parva_logo.png';
+        const n = new Notification(title, {
+          body,
+          icon,
+          badge: icon,
+          vibrate: [200, 100, 200]
+        } as any);
+        n.onclick = () => {
+          window.focus();
+          setIsNotificationCenterOpen(true);
+        };
+      } catch (e) {
+        console.warn('Native phone popup notification error:', e);
+      }
+    }
+  };
+
+  const unreadNotificationsCount = (notifications || []).filter(n => !n.read).length;
+
+
   // Debounce search query input to improve filtering performance
   useEffect(() => {
     const timer = setTimeout(() => {
