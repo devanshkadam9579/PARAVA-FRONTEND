@@ -1080,6 +1080,7 @@ export default function App() {
 
   // User Coordinates and Geolocation for Dynamic Distance Calculations
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const activeOriginCoords = userCoords || CITY_COORDINATES[currentCity] || CITY_COORDINATES['Kolhapur'];
   const [wizardLatitude, setWizardLatitude] = useState('');
   const [wizardLongitude, setWizardLongitude] = useState('');
   const [adminVendorLatitude, setAdminVendorLatitude] = useState('');
@@ -3395,7 +3396,7 @@ export default function App() {
                           isWishlisted={(wishlist || []).includes(vendor.id)}
                           onToggleWishlist={handleToggleWishlist}
                           layout="horizontal"
-                          userCoords={userCoords}
+                          userCoords={activeOriginCoords}
                         />
                       </div>
                     ))
@@ -3430,7 +3431,7 @@ export default function App() {
                       isWishlisted={(wishlist || []).includes(vendor.id)}
                       onToggleWishlist={handleToggleWishlist}
                       layout="grid"
-                      userCoords={userCoords}
+                      userCoords={activeOriginCoords}
                     />
                   ))}
                 {vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Banquet Hall' || v.category === 'Decorator')).length === 0 && (
@@ -3677,7 +3678,7 @@ export default function App() {
                         layout="grid"
                         planningDate={planningStartDate}
                         isAvailable={isAvailable}
-                        userCoords={userCoords}
+                        userCoords={activeOriginCoords}
                       />
                     );
                   })}
@@ -4789,7 +4790,7 @@ export default function App() {
                           onSelect={(v) => handleVendorSelect(v)}
                           isWishlisted={true}
                           onToggleWishlist={handleToggleWishlist}
-                          userCoords={userCoords}
+                          userCoords={activeOriginCoords}
                         />
                       ))}
                     </div>

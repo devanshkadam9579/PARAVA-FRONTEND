@@ -1646,7 +1646,103 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
           </AnimatePresence>
           {/* Full Calendar Picker Modal Overlay */}
           <AnimatePresence>
-            
+            {isFullCalendarOpen && (
+              <div className="fixed inset-0 z-[125] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  className="bg-white rounded-[32px] w-full max-w-md p-6 shadow-2xl space-y-4 relative overflow-hidden border border-gray-100"
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary">
+                        <Calendar size={16} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 leading-tight">Vendor Booking Calendar</h3>
+                        <p className="text-[11px] text-gray-500">{vendor.name}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsFullCalendarOpen(false)}
+                      className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Calendar Instructions & Legend */}
+                  <div className="flex items-center justify-between text-[11px] bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-700">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-semibold text-rose-600">
+                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span>Booked / Blocked</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-semibold text-brand-primary">
+                      <span className="w-2 h-2 rounded-full bg-brand-primary" />
+                      <span>Selected</span>
+                    </div>
+                  </div>
+
+                  {/* Date Grid */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-gray-400 uppercase">
+                      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1.5 max-h-[300px] overflow-y-auto p-1">
+                      {Array.from({ length: 30 }, (_, i) => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + i + 1);
+                        const dateStr = d.toISOString().split('T')[0];
+                        const dayNum = d.getDate();
+                        const isBlocked = (vendor.busyDates || []).includes(dateStr) || i === 4 || i === 11 || i === 18;
+                        const isSelected = selectedDate === dateStr;
+
+                        return (
+                          <button
+                            key={dateStr}
+                            disabled={isBlocked}
+                            onClick={() => {
+                              setSelectedDate(dateStr);
+                              if (onShowNotification) {
+                                onShowNotification(`Selected ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
+                              }
+                              setIsFullCalendarOpen(false);
+                            }}
+                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all p-1 ${
+                              isSelected
+                                ? 'bg-brand-primary text-white font-extrabold shadow-md scale-105 ring-2 ring-brand-primary/30'
+                                : isBlocked
+                                ? 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed border border-dashed border-gray-200'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold active:scale-95'
+                            }`}
+                          >
+                            <span className="text-xs">{dayNum}</span>
+                            <span className="text-[8px] font-semibold">{d.toLocaleDateString('en-US', { month: 'short' })}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Footer button */}
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setIsFullCalendarOpen(false)}
+                      className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-3 rounded-2xl text-xs shadow-md transition-all active:scale-95"
+                    >
+                      {selectedDate ? `Confirm Date: ${selectedDate}` : 'Close Calendar'}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
           </AnimatePresence>
 
           {/* Reels Video Popup Player Modal */}
