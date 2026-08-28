@@ -38,6 +38,24 @@ import SharedPlanView from './components/SharedPlanView';
 import ParvaLogin from './components/LoginScreen';
 import { Share2 } from 'lucide-react';
 
+export const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'Kolhapur': { lat: 16.7050, lng: 74.2433 },
+  'Pune': { lat: 18.5204, lng: 73.8567 },
+  'Mumbai': { lat: 19.0760, lng: 72.8777 },
+  'Satara': { lat: 17.6805, lng: 74.0183 },
+  'Sangli': { lat: 16.8524, lng: 74.5815 },
+  'Nagpur': { lat: 21.1458, lng: 79.0882 },
+  'Nashik': { lat: 19.9975, lng: 73.7898 },
+  'Delhi NCR': { lat: 28.6139, lng: 77.2090 },
+  'Bangalore': { lat: 12.9716, lng: 77.5946 },
+  'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+  'Chennai': { lat: 13.0827, lng: 80.2707 },
+  'Kolkata': { lat: 22.5726, lng: 88.3639 },
+  'Jaipur': { lat: 26.9124, lng: 75.7873 },
+  'Ahmedabad': { lat: 23.0225, lng: 72.5714 },
+  'Lucknow': { lat: 26.8467, lng: 80.9462 }
+};
+
 const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
