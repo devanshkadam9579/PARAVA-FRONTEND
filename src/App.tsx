@@ -25,6 +25,7 @@ import { VENDORS, QUICK_CATEGORIES, HERO_PROMOS, INITIAL_CHAT_MESSAGES, CITIES, 
 
 // Component imports
 import LocationSelector from './components/LocationSelector';
+import NotificationCenterModal, { AppNotification } from './components/NotificationCenterModal';
 import VoiceSearchModal from './components/VoiceSearchModal';
 import VendorCard from './components/VendorCard';
 import VendorDetailSheet from './components/VendorDetailSheet';
@@ -3084,12 +3085,22 @@ export default function App() {
         <div className="flex items-center gap-2">
           {/* Notifications */}
           <button
-            onClick={() => showNotification('No new notifications')}
+            onClick={() => {
+              setIsNotificationCenterOpen(true);
+              if (permissionStatus === 'default') {
+                requestNotificationPermission();
+              }
+            }}
             className="p-2.5 hover:bg-gray-100 rounded-full text-brand-text transition relative"
             id="notification-bell"
+            title="Open Notifications & Pop-up Alerts"
           >
             <Bell size={18} />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-primary animate-ping" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-brand-primary text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                {unreadNotificationsCount}
+              </span>
+            )}
           </button>
 
           {/* Cart showing bundle count */}
@@ -4802,6 +4813,33 @@ export default function App() {
       </nav>
 
       {/* 4. DIALOGS & MODAL DRAWER PORTALS */}
+      <NotificationCenterModal
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        notifications={notifications}
+        onMarkAsRead={(id) => {
+          setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+        }}
+        onClearAll={() => setNotifications([])}
+        onActionClick={(notif) => {
+          if (notif.type === 'offer') {
+            setActiveTab('explore');
+            setIsNotificationCenterOpen(false);
+          } else if (notif.type === 'slot') {
+            setActiveTab('bookings');
+            setIsNotificationCenterOpen(false);
+          }
+        }}
+        onTriggerTestNotification={() => {
+          sendNativePhoneNotification(
+            'Slot Confirmed: Royal Grand Hall 🏛️',
+            'Your wedding slot on Dec 12, 2026 is confirmed! Decorator setup dispatched.',
+            'slot'
+          );
+        }}
+        permissionStatus={permissionStatus}
+        onRequestPermission={requestNotificationPermission}
+      />
       <LocationSelector
         currentCity={currentCity}
         onSelectCity={(city) => setCurrentCity(city)}
