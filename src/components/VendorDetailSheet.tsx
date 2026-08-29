@@ -1076,13 +1076,13 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
 
                 {/* About Tab */}
                 {activeTab === 'about' && (
-                  <div className="space-y-5">
-                    <div className="space-y-5 bg-white p-5 rounded-2xl border border-brand-border">
-                      {/* Description / Bio Section */}
+                  <div className="space-y-4">
+                    <div className="space-y-4 bg-white p-5 rounded-2xl border border-brand-border">
+                      {/* 1. Description / Professional Bio */}
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider">
-                            Professional Bio
+                          <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider">
+                            Professional Overview
                           </h4>
                           {isAdmin && !isEditingDescription && (
                             <button
@@ -1107,83 +1107,37 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                             </div>
                           </div>
                         ) : (
-                          <p className="text-xs text-brand-text-secondary leading-relaxed">
+                          <p className="text-xs text-brand-text-secondary leading-relaxed font-medium">
                             {vendor.description}
                           </p>
                         )}
                       </div>
 
-                      {/* Founder Section */}
-                      {(vendor.founderName || isAdmin) && (
-                        <div className="pt-5 border-t border-gray-100">
-                          <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider mb-4">
-                            Meet the Founder
-                          </h4>
-                          <div className="flex items-center gap-4">
-                            {vendor.founderImage ? (
-                              <img loading="lazy" src={vendor.founderImage} alt={vendor.founderName} className="w-16 h-16 rounded-full object-cover border-2 border-brand-primary/20" />
-                            ) : (
-                              <div className="w-16 h-16 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary text-xl font-bold">
-                                {vendor.founderName?.charAt(0) || 'F'}
-                              </div>
-                            )}
-                            <div>
-                              <p className="font-bold text-brand-text">{vendor.founderName}</p>
-                              <p className="text-xs text-brand-text-secondary">{vendor.founderBio || 'Founder & Owner'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Budgets & Events Section */}
-                      <div className="pt-5 border-t border-gray-100 grid grid-cols-2 gap-4">
+                      {/* 2. Budgets & Events Handled */}
+                      <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 bg-gray-50/60 p-3 rounded-xl">
                         <div>
-                          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Budget Range</h4>
-                          <p className="text-xs font-bold text-brand-text">
-                            {vendor.minBudget ? `₹${vendor.minBudget.toLocaleString()}` : (vendor.basePrice ? `₹${vendor.basePrice.toLocaleString()}` : 'Price on request')}
-                            {vendor.maxBudget ? ` - ₹${vendor.maxBudget.toLocaleString()}` : ''}
+                          <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Budget Range</h4>
+                          <p className="text-xs font-black text-gray-900">
+                            {vendor.category === 'Catering' 
+                              ? `₹${vendor.basePrice.toLocaleString('en-IN')}/plate`
+                              : (vendor.minBudget ? `₹${vendor.minBudget.toLocaleString('en-IN')}` : `₹${vendor.basePrice.toLocaleString('en-IN')}`)}
+                            {vendor.maxBudget ? ` - ₹${vendor.maxBudget.toLocaleString('en-IN')}` : ''}
                           </p>
                         </div>
                         <div>
-                          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Events Handled</h4>
-                          <p className="text-xs font-bold text-brand-text">
-                            {vendor.eventsHandled && vendor.eventsHandled.length > 0 ? vendor.eventsHandled.join(', ') : vendor.occasion.join(', ')}
+                          <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Events Handled</h4>
+                          <p className="text-xs font-bold text-gray-900 truncate">
+                            {vendor.eventsHandled && vendor.eventsHandled.length > 0 
+                              ? vendor.eventsHandled.join(', ') 
+                              : (vendor.occasion ? vendor.occasion.join(', ') : 'Weddings, Birthdays, Corporate')}
                           </p>
                         </div>
                       </div>
 
-                      {/* Google Maps Location */}
-                      {(vendor.googleMapsUrl || vendor.location) && (
-                        <div className="pt-5 border-t border-gray-100">
-                          <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider mb-3">
-                            Location & Map
-                          </h4>
-                          <div className="flex items-start gap-2 mb-3">
-                            <MapPin size={16} className="text-brand-primary shrink-0 mt-0.5" />
-                            <p className="text-xs font-medium text-brand-text-secondary leading-relaxed">
-                              {vendor.location}
-                            </p>
-                          </div>
-                          {vendor.googleMapsUrl && (
-                            <div className="rounded-xl overflow-hidden border border-gray-100 h-40">
-                              <iframe 
-                                src={vendor.googleMapsUrl} 
-                                width="100%" 
-                                height="100%" 
-                                style={{ border: 0 }} 
-                                allowFullScreen 
-                                loading="lazy" 
-                                referrerPolicy="no-referrer-when-downgrade"
-                              ></iframe>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Amenities & Features Section */}
-                      <div>
-                        <div className="flex justify-between items-center mb-2.5">
-                          <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider">
+                      {/* 3. Amenities & Key Features */}
+                      <div className="pt-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider">
                             Key Amenities & Features
                           </h4>
                           {isAdmin && !isEditingFeatures && (
@@ -1197,7 +1151,6 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                         </div>
                         {isEditingFeatures ? (
                           <div className="space-y-2 bg-gray-50 p-2.5 rounded-xl border border-brand-border">
-                            <span className="text-[8px] font-bold text-gray-400 block uppercase">Comma-separated list:</span>
                             <input
                               type="text"
                               value={editedFeatures}
@@ -1211,56 +1164,88 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {vendor.features && vendor.features.length > 0 ? (
                               vendor.features.map((feature) => (
                                 <span
                                   key={feature}
-                                  className="bg-gray-100 text-brand-text text-[11px] font-medium py-1 px-2.5 rounded-lg border border-gray-200/50 flex items-center gap-1"
+                                  className="bg-brand-primary/5 text-brand-primary text-[11px] font-bold py-1 px-3 rounded-lg border border-brand-primary/10 flex items-center gap-1.5"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
                                   <span>{feature}</span>
                                 </span>
                               ))
                             ) : (
-                              <span className="text-xs text-brand-text-secondary italic">No features listed</span>
+                              <span className="text-xs text-brand-text-secondary italic">Standard Event Amenities</span>
                             )}
                           </div>
                         )}
                       </div>
 
-                      {/* Founder Info Section */}
-                      <div className="pt-4 border-t border-dashed border-gray-100">
-                        <h4 className="text-xs font-semibold text-brand-text uppercase tracking-wider mb-3">
+                      {/* 4. Single Polished "Meet the Founder" Section */}
+                      <div className="pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider mb-2.5">
                           Meet the Founder
                         </h4>
-                        <div className="flex items-center gap-4 bg-brand-bg/50 p-4 rounded-2xl border border-brand-border">
-                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-brand-primary shadow-sm">
-                            <img loading="lazy" 
-                              src={vendor.founderImage || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200"} 
-                              alt={vendor.founderName}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
+                        <div className="flex items-center gap-4 bg-gradient-to-r from-gray-50 to-pink-50/30 p-4 rounded-2xl border border-gray-200/80">
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-brand-primary shadow-sm bg-white shrink-0">
+                            {vendor.founderImage ? (
+                              <img loading="lazy" 
+                                src={vendor.founderImage} 
+                                alt={vendor.founderName || 'Founder'}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-brand-primary text-white font-black text-xl flex items-center justify-center">
+                                {(vendor.founderName || vendor.name).charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-brand-text">{vendor.founderName || 'Founder Name'}</p>
-                            <p className="text-[10px] text-brand-text-secondary font-bold uppercase tracking-wider">Visionary & Lead Strategist</p>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <ShieldCheck size={12} className="text-brand-primary" />
-                              <span className="text-[9px] font-black text-brand-primary uppercase">Identity Verified</span>
+                            <p className="text-sm font-black text-gray-900">{vendor.founderName || 'Managing Director'}</p>
+                            <p className="text-[10px] text-brand-primary font-bold uppercase tracking-wider">
+                              {vendor.experience ? `${vendor.experience} Experience` : 'Visionary & Lead Strategist'}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-700 font-bold">
+                              <ShieldCheck size={13} className="text-emerald-600" />
+                              <span>Identity & Business Verified</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Integrated Mini Map Placeholder */}
-                    <MiniMapView vendor={vendor} onShowNotification={onShowNotification} />
+                      {/* 5. Location & Map (Locked / Privacy Shield before Booking Payment) */}
+                      <div className="pt-4 border-t border-gray-100 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-extrabold text-brand-text uppercase tracking-wider flex items-center gap-1.5">
+                            <MapPin size={13} className="text-brand-primary" />
+                            <span>Location & Directions</span>
+                          </h4>
+                          <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {vendor.location || 'Local Region'}
+                          </span>
+                        </div>
+
+                        {/* Privacy Banner - Physical address unlocked after booking */}
+                        <div className="bg-amber-50/80 border border-amber-200/80 p-3.5 rounded-2xl space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-amber-900 font-black text-xs">
+                            <span>🔒</span>
+                            <span>Exact Landmark & Live Navigation</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                            Exact street address, Google Maps pin, and vendor direct coordination will unlock automatically in your booking receipt after payment.
+                          </p>
+                          <div className="pt-1 flex items-center gap-2 text-[10px] text-gray-600 font-semibold">
+                            <span>📍 Operational Zone: <b>{vendor.location}</b></span>
+                            <span>•</span>
+                            <span>⏱️ Response: <b>{vendor.responseTime || '< 15 mins'}</b></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-
-                {/* Reviews Tab */}
                 {activeTab === 'reviews' && (
                   <div className="space-y-4">
                     {/* Summary row */}

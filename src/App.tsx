@@ -3614,12 +3614,13 @@ export default function App() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredVendors.map((vendor) => {
+                  {filteredVendors.map((vendor, i) => {
                     const isAvailable = isVendorAvailable(vendor.id, planningStartDate, planningEndDate, vendors);
 
                     return (
                       <VendorCard
                         key={vendor.id}
+                        rankIndex={i}
                         vendor={vendor}
                         onSelect={(v) => handleVendorSelect(v)}
                         isWishlisted={(wishlist || []).includes(vendor.id)}
