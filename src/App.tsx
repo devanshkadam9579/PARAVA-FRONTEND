@@ -1032,6 +1032,15 @@ export default function App() {
   const [editProfileAddress, setEditProfileAddress] = useState('');
   const [editProfilePhone, setEditProfilePhone] = useState('');
   const [editProfileName, setEditProfileName] = useState('');
+  // Synchronize profile form states with currentUser
+  useEffect(() => {
+    if (currentUser) {
+      setEditProfileName(currentUser.name || '');
+      setEditProfilePhone(currentUser.phone || '');
+      setEditProfileAddress(currentUser.address || '');
+    }
+  }, [currentUser]);
+
 
   // Logged-in Vendor Edit States
   const [vendorEditName, setVendorEditName] = useState('');
@@ -4707,27 +4716,43 @@ export default function App() {
                                 if (!file) return;
                                 showNotification('⏳ Uploading profile picture...');
                                 try {
-                                  const reader = new FileReader();
-                                  reader.readAsDataURL(file);
-                                  reader.onload = async () => {
-                                    const base64 = reader.result as string;
-                                    const res = await fetch('https://parava-backend-1.onrender.com/api/upload/image', {
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+                                  formData.append('upload_preset', 'ml_default');
+                                  formData.append('cloud_name', 'k03rmhkg');
+                                  
+                                  let photoUrl = '';
+                                  try {
+                                    const cloudRes = await fetch('https://api.cloudinary.com/v1_1/k03rmhkg/image/upload', {
                                       method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ image: base64, folder: 'parva_users' })
+                                      body: formData
                                     });
-                                    const data = await res.json();
-                                    const uploadedUrl = data.url || base64;
-                                    const updated = { ...currentUser, photoURL: uploadedUrl };
-                                    setCurrentUser(updated);
-                                    localStorage.setItem('parva_user', JSON.stringify(updated));
-                                    const db = getDb();
-                                    const { doc, setDoc } = await import('firebase/firestore');
-                                    if (currentUser?.uid) {
-                                      await setDoc(doc(db, 'users', currentUser.uid), { photoURL: uploadedUrl }, { merge: true });
+                                    const cloudData = await cloudRes.json();
+                                    if (cloudData.secure_url) {
+                                      photoUrl = cloudData.secure_url;
                                     }
-                                    showNotification('🎉 Profile picture updated successfully!');
-                                  };
+                                  } catch (e) {}
+
+                                  if (!photoUrl) {
+                                    const reader = new FileReader();
+                                    reader.readAsDataURL(file);
+                                    await new Promise<void>((resolve) => {
+                                      reader.onload = () => {
+                                        photoUrl = reader.result as string;
+                                        resolve();
+                                      };
+                                    });
+                                  }
+
+                                  const updated = { ...currentUser, photoURL: photoUrl };
+                                  setCurrentUser(updated);
+                                  localStorage.setItem('parva_user', JSON.stringify(updated));
+                                  const db = getDb();
+                                  const { doc, setDoc } = await import('firebase/firestore');
+                                  if (currentUser?.uid) {
+                                    await setDoc(doc(db, 'users', currentUser.uid), { photoURL: photoUrl }, { merge: true });
+                                  }
+                                  showNotification('🎉 Profile picture updated successfully!');
                                 } catch (err) {
                                   showNotification('⚠️ Failed to upload image.');
                                 }
@@ -4819,9 +4844,10 @@ export default function App() {
                           <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Full Name</label>
                           <input
                             type="text"
-                            defaultValue={currentUser?.name || ''}
+                            value={editProfileName}
                             onChange={(e) => setEditProfileName(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                            placeholder="Your full name"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
                           />
                         </div>
 
@@ -4829,10 +4855,11 @@ export default function App() {
                           <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Mobile Phone Number</label>
                           <input
                             type="tel"
-                            placeholder="e.g. 9876543210"
-                            defaultValue={currentUser?.phone || ''}
-                            onChange={(e) => setEditProfilePhone(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary font-mono"
+                            maxLength={10}
+                            placeholder="10-digit mobile number"
+                            value={editProfilePhone}
+                            onChange={(e) => setEditProfilePhone(e.target.value.replace(/\D/g, ''))}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary font-mono transition"
                           />
                         </div>
 
@@ -4840,7 +4867,7 @@ export default function App() {
                           <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Email Address</label>
                           <input
                             type="email"
-                            defaultValue={currentUser?.email || ''}
+                            value={currentUser?.email || ''}
                             disabled
                             className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-500 outline-none cursor-not-allowed"
                           />
@@ -4850,9 +4877,10 @@ export default function App() {
                           <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">City / Locality</label>
                           <input
                             type="text"
-                            defaultValue={currentUser?.city || currentCity}
+                            value={currentCity}
                             onChange={(e) => setCurrentCity(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                            placeholder="Your current city"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
                           />
                         </div>
 
@@ -4861,9 +4889,9 @@ export default function App() {
                           <input
                             type="text"
                             placeholder="e.g. Near Rankala Lake, Rajarampuri, Kolhapur"
-                            defaultValue={currentUser?.address || ''}
+                            value={editProfileAddress}
                             onChange={(e) => setEditProfileAddress(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
                           />
                         </div>
                       </div>
