@@ -1325,7 +1325,7 @@ export default function App() {
     if (currentUser && currentUser.role === 'user') {
       try {
         const { doc, setDoc } = await import('firebase/firestore');
-        const leadId = `lead-${currentUser.name.replace(/\s+/g, '')}-${v.id}-${Date.now()}`;
+        const leadId = `lead-${(currentUser?.name || 'user').replace(/\s+/g, '')}-${v.id}-${Date.now()}`;
         await setDoc(doc(getDb(), 'leads', leadId), {
           id: leadId,
           vendorId: v.id,
@@ -1354,7 +1354,7 @@ export default function App() {
         try {
           const db = getDb();
           const { doc, setDoc } = await import('firebase/firestore');
-          const connId = `${currentUser.uid}_${params.vendorId}`;
+          const connId = `${currentUser?.uid || 'user'}_${params.vendorId}`;
           await setDoc(doc(db, 'connections', connId), {
             id: connId,
             userId: currentUser.uid,
@@ -4165,12 +4165,12 @@ export default function App() {
                         <div className="w-18 h-18 rounded-full border-4 border-white bg-brand-primary text-white text-2xl font-extrabold flex items-center justify-center shadow-md mb-2.5">
                           {getUserInitials(currentUser)}
                         </div>
-                        <h3 className="font-bold text-brand-text text-base">{currentUser.name}</h3>
+                        <h3 className="font-bold text-brand-text text-base">{currentUser?.name || 'Partner'}</h3>
                         <p className="text-xs text-brand-primary font-black mt-0.5">
                           PARVA PARTNER PORTAL 💼
                         </p>
                         <span className="text-[10px] bg-slate-900 text-amber-400 font-extrabold tracking-widest px-2.5 py-0.5 rounded-full mt-2">
-                          ID: {currentUser.vendorId}
+                          ID: {currentUser?.vendorId || 'N/A'}
                         </span>
                       </div>
 
@@ -4393,7 +4393,7 @@ export default function App() {
                           
                           {/* List existing images */}
                           <div className="grid grid-cols-3 gap-2">
-                            {(vendors.find(v => v.id === currentUser.vendorId)?.images || []).map((imgUrl, i) => (
+                            {(vendors.find(v => v.id === currentUser?.vendorId)?.images || []).map((imgUrl, i) => (
                               <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-brand-border bg-gray-50">
                                 <img loading="lazy" src={imgUrl} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600'; }} />
                                 <button
@@ -4454,8 +4454,8 @@ export default function App() {
                       <div className="space-y-4 text-xs">
                         {/* Interactive Visual Monthly Calendar View */}
                         <VendorDashboardCalendar
-                          vendorId={currentUser.vendorId}
-                          busyDates={vendors.find(v => v.id === currentUser.vendorId)?.busyDates || []}
+                          vendorId={currentUser?.vendorId || ''}
+                          busyDates={vendors.find(v => v.id === currentUser?.vendorId)?.busyDates || []}
                           bookings={bookings}
                           onToggleDate={async (dateStr) => {
                             try {
@@ -4486,15 +4486,15 @@ export default function App() {
                         {/* Interested Leads/Enquiries List */}
                         <div className="bg-white rounded-[24px] border border-brand-border p-5 space-y-3.5 animate-in fade-in duration-200">
                           <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                            <h4 className="font-black text-brand-success uppercase tracking-wider text-[10px]">Interested Users ({leadsList.filter(l => l.vendorId === currentUser.vendorId).length})</h4>
+                            <h4 className="font-black text-brand-success uppercase tracking-wider text-[10px]">Interested Users ({leadsList.filter(l => l.vendorId === currentUser?.vendorId).length})</h4>
                             <span className="bg-brand-success/10 text-brand-success text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">Customer Leads</span>
                           </div>
 
-                          {leadsList.filter(l => l.vendorId === currentUser.vendorId).length > 0 && (
+                          {leadsList.filter(l => l.vendorId === currentUser?.vendorId).length > 0 && (
                             <div className="flex gap-2 pb-1.5">
                               <button
                                 onClick={() => {
-                                  const myLeads = leadsList.filter(l => l.vendorId === currentUser.vendorId);
+                                  const myLeads = leadsList.filter(l => l.vendorId === currentUser?.vendorId);
                                   const headers = ['Name', 'Phone', 'Email', 'City', 'Budget', 'Timestamp'];
                                   const rows = myLeads.map(l => [
                                     l.name || '',
@@ -4509,7 +4509,7 @@ export default function App() {
                                   const encodedUri = encodeURI(csvContent);
                                   const link = document.createElement("a");
                                   link.setAttribute("href", encodedUri);
-                                  link.setAttribute("download", `customer_leads_${currentUser.name.replace(/\s+/g, '_')}_${Date.now()}.csv`);
+                                  link.setAttribute("download", `customer_leads_${(currentUser?.name || 'vendor').replace(/\s+/g, '_')}_${Date.now()}.csv`);
                                   document.body.appendChild(link);
                                   link.click();
                                   document.body.removeChild(link);
@@ -4522,7 +4522,7 @@ export default function App() {
                               </button>
                               <button
                                 onClick={() => {
-                                  const myLeads = leadsList.filter(l => l.vendorId === currentUser.vendorId);
+                                  const myLeads = leadsList.filter(l => l.vendorId === currentUser?.vendorId);
                                   const textLines = myLeads.map((l, idx) => 
                                     `${idx + 1}. NAME: ${l.name}\n   PHONE: ${l.phone}\n   EMAIL: ${l.email}\n   CITY: ${l.city}\n   BUDGET: ₹${l.budget}\n   DATE: ${l.timestamp}\n-------------------------`
                                   ).join('\n');
@@ -4530,7 +4530,7 @@ export default function App() {
                                   const blob = new Blob([textLines], { type: 'text/plain;charset=utf-8' });
                                   const link = document.createElement("a");
                                   link.href = URL.createObjectURL(blob);
-                                  link.setAttribute("download", `customer_leads_${currentUser.name.replace(/\s+/g, '_')}_${Date.now()}.txt`);
+                                  link.setAttribute("download", `customer_leads_${(currentUser?.name || 'vendor').replace(/\s+/g, '_')}_${Date.now()}.txt`);
                                   document.body.appendChild(link);
                                   link.click();
                                   document.body.removeChild(link);
@@ -4544,14 +4544,14 @@ export default function App() {
                             </div>
                           )}
 
-                          {leadsList.filter(l => l.vendorId === currentUser.vendorId).length === 0 ? (
+                          {leadsList.filter(l => l.vendorId === currentUser?.vendorId).length === 0 ? (
                             <div className="text-center py-5 space-y-1.5">
                               <p className="text-[11px] text-brand-text-secondary font-black">No dynamic enquiries received yet.</p>
                               <p className="text-[10px] text-gray-400 leading-relaxed">Interested users clicking "Check Availability" on your page will automatically populate here in real-time!</p>
                             </div>
                           ) : (
                             <div className="space-y-3">
-                              {leadsList.filter(l => l.vendorId === currentUser.vendorId).map((lead, i) => (
+                              {leadsList.filter(l => l.vendorId === currentUser?.vendorId).map((lead, i) => (
                                 <div key={i} className="bg-gray-50 rounded-xl p-3 border border-brand-border relative space-y-1">
                                   <span className="absolute top-2 right-2 text-[9px] text-brand-text-secondary font-medium">{lead.timestamp || 'Just now'}</span>
                                   <h5 className="font-extrabold text-brand-text text-xs">{lead.name}</h5>
