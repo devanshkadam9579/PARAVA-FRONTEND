@@ -1174,6 +1174,7 @@ export default function App() {
   const [vendorWizardStep, setVendorWizardStep] = useState(1);
   const [wizardName, setWizardName] = useState('');
   const [wizardCategory, setWizardCategory] = useState('Banquet Hall');
+  const [wizardCategories, setWizardCategories] = useState<string[]>(['Banquet Hall']);
   const [wizardCity, setWizardCity] = useState('Mumbai');
   const [wizardTagline, setWizardTagline] = useState('');
   const [wizardPhone, setWizardPhone] = useState('');
@@ -2316,7 +2317,8 @@ export default function App() {
 
     const matchesCategory =
       selectedExploreCategory === 'all' ||
-      (vendor.category || '').toLowerCase() === selectedExploreCategory.toLowerCase();
+      (vendor.category || '').toLowerCase() === selectedExploreCategory.toLowerCase() ||
+      (Array.isArray((vendor as any).categories) && (vendor as any).categories.some((c: string) => c.toLowerCase() === selectedExploreCategory.toLowerCase()));
 
     const matchesPrice = (vendor.basePrice || 0) <= priceRange;
     const matchesOccasion = exploreOccasion === 'All' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
@@ -2615,21 +2617,42 @@ export default function App() {
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Category</label>
-                                <select
-                                  value={wizardCategory}
-                                  onChange={(e) => setWizardCategory(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-semibold outline-none"
-                                >
-                                  {categoriesList.length > 0 ? (
-                                    categoriesList.map(c => (
-                                      <option key={c.name} value={c.name}>{c.name}</option>
-                                    ))
-                                  ) : (
-                                    <option value="Venues">Venues</option>
-                                  )}
-                                </select>
+                              <div className="col-span-2 space-y-1.5">
+                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
+                                  Select Categories / Services Provided (Multiple Allowed)
+                                </label>
+                                <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50/80 rounded-xl border border-brand-border max-h-28 overflow-y-auto">
+                                  {(categoriesList.length > 0 ? categoriesList : [{ name: 'Venues' }, { name: 'Decorators' }, { name: 'Catering' }, { name: 'DJ & Sound' }, { name: 'Photography' }]).map((cat) => {
+                                    const isSelected = wizardCategories.includes(cat.name);
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={cat.name}
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            if (wizardCategories.length > 1) {
+                                              const updated = wizardCategories.filter(c => c !== cat.name);
+                                              setWizardCategories(updated);
+                                              setWizardCategory(updated[0]);
+                                            }
+                                          } else {
+                                            const updated = [...wizardCategories, cat.name];
+                                            setWizardCategories(updated);
+                                            setWizardCategory(updated[0]);
+                                          }
+                                        }}
+                                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 ${
+                                          isSelected
+                                            ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                                        }`}
+                                      >
+                                        <span>{isSelected ? '✓' : '+'}</span>
+                                        <span>{cat.name}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
                               <div>
                                 <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">City Location</label>
@@ -3010,7 +3033,8 @@ export default function App() {
                                   const newVendorDoc = {
                                     id: customId,
                                     name: wizardName,
-                                    category: wizardCategory,
+                                    category: wizardCategories[0] || wizardCategory || 'Venues',
+                                    categories: wizardCategories.length > 0 ? wizardCategories : [wizardCategory || 'Venues'],
                                     tagline: wizardTagline,
                                     description: wizardDescription || `Premium ${wizardCategory} based in ${wizardCity}`,
                                     rating: 4.8,
