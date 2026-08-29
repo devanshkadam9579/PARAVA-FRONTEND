@@ -4567,8 +4567,120 @@ export default function App() {
                       </div>
                     )}
                   </div>
+                ) : !currentUser ? (
+                  /* 👤 Guest / Sign In Profile View */
+                  <div className="space-y-5">
+                    <div className="bg-white rounded-[28px] border border-brand-border p-6 text-center shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-r from-brand-primary-light via-rose-100 to-amber-100" />
+                      
+                      <div className="relative pt-4 flex flex-col items-center">
+                        <div className="w-20 h-20 rounded-full border-4 border-white bg-slate-100 text-slate-400 text-2xl font-black flex items-center justify-center shadow-md mb-3">
+                          👤
+                        </div>
+                        <h3 className="font-black text-gray-900 text-lg tracking-tight">Welcome to PARVA</h3>
+                        <p className="text-xs text-gray-500 font-medium mt-1 max-w-xs">
+                          Sign in to manage bookings, unlock direct vendor WhatsApp chats, and save your wishlist.
+                        </p>
+                      </div>
+
+                      {/* Google Sign-in Card inside Profile */}
+                      <div className="mt-6 space-y-3 max-w-sm mx-auto text-left">
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Your Full Name (Optional)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Devansh Kadam"
+                            value={googleLoginName}
+                            onChange={(e) => setGoogleLoginName(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Mobile Phone Number</label>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-gray-100 border border-gray-200 text-xs font-bold text-gray-700 px-3 py-2.5 rounded-xl">+91</span>
+                            <input
+                              type="tel"
+                              maxLength={10}
+                              placeholder="10-digit number"
+                              value={googleLoginPhone}
+                              onChange={(e) => setGoogleLoginPhone(e.target.value.replace(/\D/g, ''))}
+                              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition font-mono tracking-wider"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+                              const provider = new GoogleAuthProvider();
+                              const result = await signInWithPopup(getAuthInstance(), provider);
+                              const user = result.user;
+
+                              const db = getDb();
+                              const { doc, getDoc, setDoc } = await import('firebase/firestore');
+                              const userDoc = await getDoc(doc(db, 'users', user.uid));
+                              const existingData = userDoc.exists() ? userDoc.data() : {};
+
+                              const finalName = googleLoginName.trim() || user.displayName || existingData.name || 'Parva User';
+                              const finalPhone = googleLoginPhone.trim() || existingData.phone || '';
+
+                              const loggedUser = {
+                                uid: user.uid,
+                                name: finalName,
+                                email: user.email || '',
+                                phone: finalPhone,
+                                photoURL: user.photoURL || '',
+                                city: existingData.city || currentCity || 'Kolhapur',
+                                address: existingData.address || '',
+                                role: existingData.role || 'user'
+                              };
+
+                              await setDoc(doc(db, 'users', user.uid), loggedUser, { merge: true });
+                              setCurrentUser(loggedUser);
+                              localStorage.setItem('parva_user', JSON.stringify(loggedUser));
+                              showNotification(`🎉 Welcome, ${finalName}!`);
+                            } catch (err: any) {
+                              console.error("Google sign in error:", err);
+                              showNotification(`⚠️ Sign-in failed: ${err.message}`);
+                            }
+                          }}
+                          className="w-full bg-white hover:bg-gray-50 text-gray-900 font-black py-3.5 px-4 rounded-2xl border-2 border-gray-200 hover:border-brand-primary flex items-center justify-center gap-3 transition shadow-md active:scale-98 text-xs uppercase tracking-wider mt-2"
+                        >
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                          <span>Sign in with Google</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vendor Portal Switcher Banner */}
+                    <div className="bg-gradient-to-r from-amber-500/10 via-brand-primary/10 to-amber-500/10 rounded-[24px] p-5 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <h4 className="font-black text-xs text-gray-900 flex items-center gap-1.5">
+                          <span>🏛️</span>
+                          <span>Are you an Event Vendor?</span>
+                        </h4>
+                        <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                          Manage your banquet hall, catering, decor or photography services
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginRole('vendor');
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition active:scale-95 uppercase tracking-wider shrink-0"
+                      >
+                        Vendor Login / Register
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  /* 👤 Standard Premium User Profile View */
+                  /* 👤 Standard Premium Logged-In User Profile View */
                   <div className="space-y-5">
                     {/* User Header Info Card with Avatar Photo Upload */}
                     <div className="bg-white rounded-[28px] border border-brand-border p-6 text-center shadow-sm relative overflow-hidden">
