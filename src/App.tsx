@@ -1190,6 +1190,8 @@ export default function App() {
   const [wizardDescription, setWizardDescription] = useState('');
   const [wizardFeatures, setWizardFeatures] = useState('');
   const [wizardCoverImage, setWizardCoverImage] = useState('');
+  const [wizardImagesList, setWizardImagesList] = useState<string[]>(['']);
+  const [wizardVideosList, setWizardVideosList] = useState<string[]>(['']);
   const [wizardImage2, setWizardImage2] = useState('');
   const [wizardImage3, setWizardImage3] = useState('');
   const [wizardVideoUrl, setWizardVideoUrl] = useState('');
@@ -2899,110 +2901,146 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* Step 4: Media Uploads (Camera / Gallery Upload + URL Link) */}
+                        {/* Step 4: Dynamic Media Uploads (Unlimited N Images & Videos) */}
                         {vendorWizardStep === 4 && (
-                          <div className="space-y-3.5">
-                            {/* 1. Cover Image (Main Showcase) */}
-                            <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
-                              <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
-                                📷 Primary Cover Photo (Required)
-                              </label>
-                              <CloudinaryImageUploader
-                                label="Take Photo or Pick from Gallery"
-                                initialImage={wizardCoverImage}
-                                onImageUploaded={(url) => setWizardCoverImage(url)}
-                              />
-                              <div className="flex items-center gap-2 pt-1">
-                                <span className="text-[9px] text-gray-400 font-bold uppercase">or URL:</span>
-                                <input
-                                  type="text"
-                                  placeholder="Paste image link https://..."
-                                  value={wizardCoverImage}
-                                  onChange={(e) => setWizardCoverImage(e.target.value)}
-                                  className="flex-1 bg-white border border-brand-border rounded-lg px-2.5 py-1.5 text-[10px] outline-none font-mono"
-                                />
-                              </div>
-                            </div>
-
-                            {/* 2. Additional Showcase Images */}
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5">
-                                <label className="text-[9px] font-bold text-gray-700 uppercase tracking-wider block">Image 2</label>
-                                <CloudinaryImageUploader
-                                  label="Upload / Camera"
-                                  initialImage={wizardImage2}
-                                  onImageUploaded={(url) => setWizardImage2(url)}
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="or Link https://..."
-                                  value={wizardImage2}
-                                  onChange={(e) => setWizardImage2(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-lg px-2 py-1 text-[9px] outline-none font-mono"
-                                />
-                              </div>
-
-                              <div className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5">
-                                <label className="text-[9px] font-bold text-gray-700 uppercase tracking-wider block">Image 3</label>
-                                <CloudinaryImageUploader
-                                  label="Upload / Camera"
-                                  initialImage={wizardImage3}
-                                  onImageUploaded={(url) => setWizardImage3(url)}
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="or Link https://..."
-                                  value={wizardImage3}
-                                  onChange={(e) => setWizardImage3(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-lg px-2 py-1 text-[9px] outline-none font-mono"
-                                />
-                              </div>
-                            </div>
-
-                            {/* 3. Video Shorts / Reels */}
-                            <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
-                              <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
-                                🎬 Video Shorts / Event Reel (Optional)
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <label className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-xl cursor-pointer flex items-center gap-1.5 transition shrink-0 active:scale-95">
-                                  <span>📹 Record / Pick MP4 Video</span>
-                                  <input
-                                    type="file"
-                                    accept="video/*"
-                                    className="hidden"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (!file) return;
-                                      showNotification('⏳ Uploading video reel to Cloudinary...');
-                                      try {
-                                        const formData = new FormData();
-                                        formData.append('file', file);
-                                        formData.append('upload_preset', 'ml_default');
-                                        formData.append('cloud_name', 'k03rmhkg');
-                                        const res = await fetch('https://api.cloudinary.com/v1_1/k03rmhkg/video/upload', {
-                                          method: 'POST',
-                                          body: formData
-                                        });
-                                        const data = await res.json();
-                                        if (data.secure_url) {
-                                          setWizardVideoUrl(data.secure_url);
-                                          showNotification('🎉 Video uploaded successfully!');
-                                        }
-                                      } catch (err) {
-                                        showNotification('⚠️ Video upload error. Please paste a link instead.');
-                                      }
-                                    }}
-                                  />
+                          <div className="space-y-4">
+                            {/* Showcase Images with Add Slot button */}
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
+                                  📷 Portfolio Photos ({wizardImagesList.length})
                                 </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setWizardImagesList([...wizardImagesList, ''])}
+                                  className="text-[10px] font-bold bg-pink-50 text-brand-primary px-2.5 py-1 rounded-lg border border-pink-200 hover:bg-pink-100 transition active:scale-95"
+                                >
+                                  + Add Image
+                                </button>
                               </div>
-                              <input
-                                type="text"
-                                placeholder="or YouTube Shorts / Reel URL (https://www.youtube.com/shorts/...)"
-                                value={wizardVideoUrl}
-                                onChange={(e) => setWizardVideoUrl(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-lg px-2.5 py-1.5 text-[10px] outline-none font-mono"
-                              />
+
+                              <div className="space-y-2.5 max-h-60 overflow-y-auto p-1">
+                                {wizardImagesList.map((imgUrl, idx) => (
+                                  <div key={idx} className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5 relative">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-bold text-gray-700">
+                                        {idx === 0 ? 'Cover Photo (Primary)' : `Photo #${idx + 1}`}
+                                      </span>
+                                      {wizardImagesList.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setWizardImagesList(wizardImagesList.filter((_, i) => i !== idx))}
+                                          className="text-gray-400 hover:text-red-500 p-0.5 text-xs"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                    </div>
+                                    <CloudinaryImageUploader
+                                      label={`Upload Photo #${idx + 1} (Camera / Gallery)`}
+                                      initialImage={imgUrl}
+                                      onImageUploaded={(url) => {
+                                        const next = [...wizardImagesList];
+                                        next[idx] = url;
+                                        setWizardImagesList(next);
+                                        if (idx === 0) setWizardCoverImage(url);
+                                      }}
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="or paste URL https://..."
+                                      value={imgUrl}
+                                      onChange={(e) => {
+                                        const next = [...wizardImagesList];
+                                        next[idx] = e.target.value;
+                                        setWizardImagesList(next);
+                                        if (idx === 0) setWizardCoverImage(e.target.value);
+                                      }}
+                                      className="w-full bg-white border border-brand-border rounded-lg px-2.5 py-1 text-[10px] font-mono outline-none"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Video Reels with Add Slot button */}
+                            <div className="space-y-3 border-t border-dashed border-gray-200 pt-3">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
+                                  🎬 Video Shorts & Reels ({wizardVideosList.length})
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setWizardVideosList([...wizardVideosList, ''])}
+                                  className="text-[10px] font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-200 transition active:scale-95"
+                                >
+                                  + Add Video
+                                </button>
+                              </div>
+
+                              <div className="space-y-2.5 max-h-48 overflow-y-auto p-1">
+                                {wizardVideosList.map((vidUrl, idx) => (
+                                  <div key={idx} className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5 relative">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-bold text-gray-700">Video Reel #{idx + 1}</span>
+                                      {wizardVideosList.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setWizardVideosList(wizardVideosList.filter((_, i) => i !== idx))}
+                                          className="text-gray-400 hover:text-red-500 p-0.5 text-xs"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <label className="bg-slate-900 hover:bg-slate-800 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg cursor-pointer flex items-center gap-1 transition active:scale-95">
+                                        <span>📹 Pick MP4 Video</span>
+                                        <input
+                                          type="file"
+                                          accept="video/*"
+                                          className="hidden"
+                                          onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            showNotification('⏳ Uploading video to Cloudinary...');
+                                            try {
+                                              const formData = new FormData();
+                                              formData.append('file', file);
+                                              formData.append('upload_preset', 'ml_default');
+                                              formData.append('cloud_name', 'k03rmhkg');
+                                              const res = await fetch('https://api.cloudinary.com/v1_1/k03rmhkg/video/upload', {
+                                                method: 'POST',
+                                                body: formData
+                                              });
+                                              const data = await res.json();
+                                              if (data.secure_url) {
+                                                const next = [...wizardVideosList];
+                                                next[idx] = data.secure_url;
+                                                setWizardVideosList(next);
+                                                showNotification('🎉 Video uploaded!');
+                                              }
+                                            } catch (err) {
+                                              showNotification('⚠️ Upload error.');
+                                            }
+                                          }}
+                                        />
+                                      </label>
+                                      <input
+                                        type="text"
+                                        placeholder="or YouTube Shorts link (https://...)"
+                                        value={vidUrl}
+                                        onChange={(e) => {
+                                          const next = [...wizardVideosList];
+                                          next[idx] = e.target.value;
+                                          setWizardVideosList(next);
+                                        }}
+                                        className="flex-1 bg-white border border-brand-border rounded-lg px-2.5 py-1 text-[10px] font-mono outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 mt-2">
