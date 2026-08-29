@@ -1263,7 +1263,7 @@ export default function App() {
         setIsPremiumUser(true);
         localStorage.setItem('parva_premium_status', 'true');
         setIsRazorpayOpen(false);
-        showNotification('👑 Welcome to PARVA Elite Premium Member club!');
+        showNotification('👑 Welcome to MyParva App Elite Premium Member club!');
       } else if (purpose === 'connection' && pendingCheckoutBooking) {
         const newBookingObj = pendingCheckoutBooking.booking;
         const targetUser = pendingCheckoutBooking.user || currentUser;
@@ -1413,7 +1413,7 @@ export default function App() {
         key: keyId,
         amount: Math.round(amount * 100),
         currency: "INR",
-        name: "PARVA Celebrations",
+        name: "MyParva App",
         description: params.type === 'connection' ? 'Vendor Connection Fee' : 'Booking Commission Fee',
         order_id: orderId,
         handler: async function (response: any) {
@@ -2351,6 +2351,11 @@ export default function App() {
     if (activeSortOption === 'Price - High to Low' || sortBy === 'priceDesc') return (b.basePrice || 0) - (a.basePrice || 0);
     if (activeSortOption === 'Most Booked' || sortBy === 'trust') return (b.bookingsCount || b.trustScore || 0) - (a.bookingsCount || a.trustScore || 0);
     
+    // Default: Sort strictly by Rank & Trust Score & Rating
+    const rankA = Number((a as any).rank || (a as any).regionRank || a.rating || 0);
+    const rankB = Number((b as any).rank || (b as any).regionRank || b.rating || 0);
+    if (rankB !== rankA) return rankB - rankA;
+
     let distA = parseFloat(a.distance) || 0;
     let distB = parseFloat(b.distance) || 0;
     if (userCoords && a.latitude && a.longitude) {
@@ -2400,7 +2405,7 @@ export default function App() {
                 <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white flex items-center justify-center mx-auto shadow-sm border border-brand-border">
                   <img src={appLogo} className="w-12 h-12 object-contain" alt="PARVA Logo" referrerPolicy="no-referrer" />
                 </div>
-                <h3 className="font-extrabold text-brand-text text-base">Welcome to PARVA</h3>
+                <h3 className="font-extrabold text-brand-text text-base">Welcome to MyParva App</h3>
                 <p className="text-xs text-brand-text-secondary">Unlock verified event vendors, contact links & customized planner tools</p>
               </div>
 
@@ -2863,49 +2868,109 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* Step 4: Media Uploads */}
+                        {/* Step 4: Media Uploads (Camera / Gallery Upload + URL Link) */}
                         {vendorWizardStep === 4 && (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Cover Image URL</label>
-                              <input
-                                type="text"
-                                placeholder="https://images.unsplash.com/photo-..."
-                                value={wizardCoverImage}
-                                onChange={(e) => setWizardCoverImage(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none text-[10px]"
+                          <div className="space-y-3.5">
+                            {/* 1. Cover Image (Main Showcase) */}
+                            <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
+                              <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
+                                📷 Primary Cover Photo (Required)
+                              </label>
+                              <CloudinaryImageUploader
+                                label="Take Photo or Pick from Gallery"
+                                initialImage={wizardCoverImage}
+                                onImageUploaded={(url) => setWizardCoverImage(url)}
                               />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Image 2 URL</label>
+                              <div className="flex items-center gap-2 pt-1">
+                                <span className="text-[9px] text-gray-400 font-bold uppercase">or URL:</span>
                                 <input
                                   type="text"
-                                  placeholder="https://..."
+                                  placeholder="Paste image link https://..."
+                                  value={wizardCoverImage}
+                                  onChange={(e) => setWizardCoverImage(e.target.value)}
+                                  className="flex-1 bg-white border border-brand-border rounded-lg px-2.5 py-1.5 text-[10px] outline-none font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 2. Additional Showcase Images */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5">
+                                <label className="text-[9px] font-bold text-gray-700 uppercase tracking-wider block">Image 2</label>
+                                <CloudinaryImageUploader
+                                  label="Upload / Camera"
+                                  initialImage={wizardImage2}
+                                  onImageUploaded={(url) => setWizardImage2(url)}
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="or Link https://..."
                                   value={wizardImage2}
                                   onChange={(e) => setWizardImage2(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none text-[10px]"
+                                  className="w-full bg-white border border-brand-border rounded-lg px-2 py-1 text-[9px] outline-none font-mono"
                                 />
                               </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Image 3 URL</label>
+
+                              <div className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5">
+                                <label className="text-[9px] font-bold text-gray-700 uppercase tracking-wider block">Image 3</label>
+                                <CloudinaryImageUploader
+                                  label="Upload / Camera"
+                                  initialImage={wizardImage3}
+                                  onImageUploaded={(url) => setWizardImage3(url)}
+                                />
                                 <input
                                   type="text"
-                                  placeholder="https://..."
+                                  placeholder="or Link https://..."
                                   value={wizardImage3}
                                   onChange={(e) => setWizardImage3(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none text-[10px]"
+                                  className="w-full bg-white border border-brand-border rounded-lg px-2 py-1 text-[9px] outline-none font-mono"
                                 />
                               </div>
                             </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Video Shorts / Reel URL</label>
+
+                            {/* 3. Video Shorts / Reels */}
+                            <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
+                              <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
+                                🎬 Video Shorts / Event Reel (Optional)
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <label className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-xl cursor-pointer flex items-center gap-1.5 transition shrink-0 active:scale-95">
+                                  <span>📹 Record / Pick MP4 Video</span>
+                                  <input
+                                    type="file"
+                                    accept="video/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      showNotification('⏳ Uploading video reel to Cloudinary...');
+                                      try {
+                                        const formData = new FormData();
+                                        formData.append('file', file);
+                                        formData.append('upload_preset', 'ml_default');
+                                        formData.append('cloud_name', 'k03rmhkg');
+                                        const res = await fetch('https://api.cloudinary.com/v1_1/k03rmhkg/video/upload', {
+                                          method: 'POST',
+                                          body: formData
+                                        });
+                                        const data = await res.json();
+                                        if (data.secure_url) {
+                                          setWizardVideoUrl(data.secure_url);
+                                          showNotification('🎉 Video uploaded successfully!');
+                                        }
+                                      } catch (err) {
+                                        showNotification('⚠️ Video upload error. Please paste a link instead.');
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
                               <input
                                 type="text"
-                                placeholder="https://www.youtube.com/shorts/..."
+                                placeholder="or YouTube Shorts / Reel URL (https://www.youtube.com/shorts/...)"
                                 value={wizardVideoUrl}
                                 onChange={(e) => setWizardVideoUrl(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none text-[10px]"
+                                className="w-full bg-white border border-brand-border rounded-lg px-2.5 py-1.5 text-[10px] outline-none font-mono"
                               />
                             </div>
 
@@ -2954,7 +3019,7 @@ export default function App() {
                                     distance: 'Local Partner',
                                     responseTime: '< 30 mins',
                                     verified: false,
-                                    approved: false, // Wait for admin approval!
+                                    approved: true, // Live immediately on Home and Explore!
                                     basePrice: Number(wizardBasePrice),
                                     images: imagesArr,
                                     location: wizardCity,
@@ -4167,7 +4232,7 @@ export default function App() {
                         </div>
                         <h3 className="font-bold text-brand-text text-base">{currentUser?.name || 'Partner'}</h3>
                         <p className="text-xs text-brand-primary font-black mt-0.5">
-                          PARVA PARTNER PORTAL 💼
+                          MYPARVA PARTNER PORTAL 💼
                         </p>
                         <span className="text-[10px] bg-slate-900 text-amber-400 font-extrabold tracking-widest px-2.5 py-0.5 rounded-full mt-2">
                           ID: {currentUser?.vendorId || 'N/A'}
@@ -4586,7 +4651,7 @@ export default function App() {
                         <div className="w-20 h-20 rounded-full border-4 border-white bg-slate-100 text-slate-400 text-2xl font-black flex items-center justify-center shadow-md mb-3">
                           👤
                         </div>
-                        <h3 className="font-black text-gray-900 text-lg tracking-tight">Welcome to PARVA</h3>
+                        <h3 className="font-black text-gray-900 text-lg tracking-tight">Welcome to MyParva App</h3>
                         <p className="text-xs text-gray-500 font-medium mt-1 max-w-xs">
                           Sign in to manage bookings, unlock direct vendor WhatsApp chats, and save your wishlist.
                         </p>
@@ -4982,7 +5047,7 @@ export default function App() {
                         { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
                         { label: 'Financials & Invoices', desc: 'Download tax records and transaction logs' },
                         { label: 'Replay App Walkthrough', desc: 'Watch the onboarding splash and info slides again' },
-                        { label: 'About PARVA App', desc: 'Version 1.0.0 • Terms of Service & Security' }
+                        { label: 'About MyParva App', desc: 'Version 1.0.0 • Terms of Service & Security' }
                       ].map((item, idx) => (
                         <button
                           key={idx}
@@ -5473,7 +5538,7 @@ export default function App() {
             </div>
             <div className="flex-1 overflow-y-auto space-y-3.5 text-[10px] text-brand-text-secondary leading-relaxed">
               <p className="font-semibold text-brand-text">Effective Date: July 16, 2026</p>
-              <p>At PARVA Celebrations, we value your privacy. We collect user information, including name, phone, email, and budget, to instantly match you with event vendors. This data is shared with the specific vendors you choose to book or connect with.</p>
+              <p>At MyParva App, we value your privacy. We collect user information, including name, phone, email, and budget, to instantly match you with event vendors. This data is shared with the specific vendors you choose to book or connect with.</p>
               <h4 className="font-bold text-brand-text uppercase">1. Information We Collect</h4>
               <p>We collect personal information that you provide to us directly, such as your contact details, and transactions related to your event bookings and connection fees.</p>
               <h4 className="font-bold text-brand-text uppercase">2. How We Use Information</h4>
@@ -5505,7 +5570,7 @@ export default function App() {
               <div className="w-16 h-16 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary mx-auto mb-2">
                 <Info size={24} />
               </div>
-              <h4 className="font-bold text-brand-text text-xs">PARVA Celebrations</h4>
+              <h4 className="font-bold text-brand-text text-xs">MyParva App</h4>
               <p className="text-[9px] uppercase tracking-widest text-brand-primary font-black">Plan • Bundle • Save</p>
               <p className="mt-2 text-left">PARVA is an all-in-one celebration booking platform designed to simplify event matching for weddings, birthdays, corporate meets, and anniversaries.</p>
               <p className="text-left">With Zomato-style matchmaking, clear standard pricing, multiplier bundle discounts, and real-time chat gates, PARVA is the first production-ready event-planning ecosystem in India.</p>
