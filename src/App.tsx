@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getAuthInstance, getDb, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
@@ -2310,8 +2310,9 @@ export default function App() {
     }
   };
 
-  // Filter & Search computation
-  const filteredVendors = vendors.filter((vendor) => {
+  // Filter & Search computation (Memoized for high FPS performance)
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((vendor) => {
     // 1. City / Location match (case-insensitive & fallback)
     const targetCity = (currentCity || '').toLowerCase().trim();
     const vendorLoc = (vendor.location || '').toLowerCase().trim();
@@ -2363,7 +2364,7 @@ export default function App() {
     });
 
     return matchesCity && matchesCategory && matchesSearch && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesTypes && matchesOccasion && vendor.approved !== false;
-  }).sort((a, b) => {
+    }).sort((a, b) => {
     if (activeSortOption === 'Rating - High to Low' || sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
     if (activeSortOption === 'Price - Low to High' || sortBy === 'priceAsc') return (a.basePrice || 0) - (b.basePrice || 0);
     if (activeSortOption === 'Price - High to Low' || sortBy === 'priceDesc') return (b.basePrice || 0) - (a.basePrice || 0);
@@ -2383,7 +2384,8 @@ export default function App() {
       distB = calculateHaversineDistance(userCoords.lat, userCoords.lng, b.latitude, b.longitude);
     }
     return distA - distB;
-  });
+    });
+  }, [vendors, currentCity, selectedExploreCategory, debouncedSearchQuery, priceRange, activeFilterMinPrice, activeFilterMaxPrice, activeFilterTypes, exploreOccasion, sortBy, activeSortOption, userCoords]);
 
   const safeHeroIndex = heroIndex >= promosList.length ? 0 : heroIndex;
   const currentPromo = promosList[safeHeroIndex];

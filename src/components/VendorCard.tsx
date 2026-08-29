@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Heart, Star, ShieldCheck, MapPin, Sparkles, Clock, CalendarCheck, Check, Video, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import React, { useState, useEffect, memo } from 'react';
+import { Heart, Star, MapPin, Play } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Vendor } from '../types';
 
@@ -24,17 +24,12 @@ interface VendorCardProps {
   rankIndex?: number;
 }
 
-export default function VendorCard({
+const VendorCard = memo(function VendorCard({
   vendor,
   onSelect,
   isWishlisted,
   onToggleWishlist,
   layout = 'grid',
-  planningDate,
-  planningGuestSize,
-  isAvailable = true,
-  isSelectedInPlanner = false,
-  onChooseForPlanner,
   userCoords,
   rankIndex
 }: VendorCardProps): any {
@@ -47,14 +42,14 @@ export default function VendorCard({
   const [isHovered, setIsHovered] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
 
-  // Auto-cycle image loop when hovered or periodically
+  // Cycle image ONLY when hovered to prevent background CPU/timer lag
   useEffect(() => {
-    if (images.length <= 1) return;
+    if (!isHovered || images.length <= 1) return;
     const interval = setInterval(() => {
       setActiveImgIdx((prev) => (prev + 1) % images.length);
-    }, 3200);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [isHovered, images.length]);
 
   // Geolocation Distance Calculator
   const getDistanceDisplay = () => {
@@ -78,9 +73,6 @@ export default function VendorCard({
     return `${pseudoDist} km`;
   };
 
-  const trustScore = vendor.trustScore || 97;
-  const bookingsCount = vendor.bookingsCount || (vendor.id.charCodeAt(0) * 3) % 250 + 120;
-  const responseTime = vendor.responseTime || '< 15 mins';
   const hasVideo = vendor.videos && vendor.videos.length > 0 && vendor.videos[0];
   const rankNumber = (rankIndex !== undefined ? rankIndex + 1 : (Number((vendor as any).regionRank || (vendor as any).rank) || 1));
 
@@ -89,13 +81,12 @@ export default function VendorCard({
       <motion.div
         whileTap={{ scale: 0.98 }}
         onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setActiveImgIdx(0);
+        }}
         onClick={() => onSelect(vendor)}
-        className={`bg-white border border-gray-200/90 overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 flex flex-col h-full rounded-2xl shadow-sm relative ${
-          isSelectedInPlanner 
-            ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-[1.01]' 
-            : 'hover:border-gray-300'
-        }`}
+        className="bg-white border border-gray-200/90 overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 flex flex-col h-full rounded-2xl shadow-sm relative hover:border-gray-300"
         id={`vendor-card-${vendor.id}`}
       >
         {/* Cover Image & Overlays */}
@@ -126,7 +117,7 @@ export default function VendorCard({
             <img
               src={images[activeImgIdx]}
               alt={vendor.name}
-              className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
+              className="w-full h-full object-cover transition-all duration-500 ease-in-out group-hover:scale-105"
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={(e) => {
@@ -223,4 +214,6 @@ export default function VendorCard({
       </motion.div>
     </div>
   );
-}
+});
+
+export default VendorCard;

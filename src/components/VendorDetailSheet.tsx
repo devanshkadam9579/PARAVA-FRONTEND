@@ -881,9 +881,27 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                                   </div>
 
                                   <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                                    <span className="text-[10px] text-brand-text-secondary font-bold uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-md">
-                                      Per {svc.unit}
-                                    </span>
+                                    <div>
+                                      {isCatering ? (
+                                        <div>
+                                          <span className="text-xs font-black text-brand-primary block">
+                                            ₹{(svc.price * cateringGuestCount).toLocaleString('en-IN')}
+                                          </span>
+                                          <span className="text-[9px] text-gray-400 font-semibold block">
+                                            ₹{svc.price}/plate × {cateringGuestCount} Guests
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <span className="text-xs font-black text-gray-900 block">
+                                            ₹{svc.price?.toLocaleString('en-IN')}
+                                          </span>
+                                          <span className="text-[9px] text-gray-400 font-bold uppercase">
+                                            {svc.unit || 'per event'}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
                                     
                                     {isAdded ? (
                                       <button
@@ -896,7 +914,7 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                                       </button>
                                     ) : (
                                       <button
-                                        onClick={() => onAddServiceToBundle(svc)}
+                                        onClick={() => onAddServiceToBundle(isCatering ? { ...svc, price: svc.price * cateringGuestCount, unit: `₹${svc.price}/plate × ${cateringGuestCount} Guests` } : svc)}
                                         className="bg-gray-900 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md shadow-black/10 hover:bg-black hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-1.5"
                                         id={`add-svc-btn-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
                                       >
