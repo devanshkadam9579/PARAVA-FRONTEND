@@ -3256,7 +3256,7 @@ export default function App() {
               <AnimatedSearchBar
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                categories={activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList}
+                categories={categoriesList}
                 vendors={vendors}
                 currentCity={currentCity}
                 onSelectVendor={(v) => handleVendorSelect(v)}
@@ -3309,7 +3309,7 @@ export default function App() {
                 <span className="text-sm text-brand-primary font-semibold hover:underline cursor-pointer">View All</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
-                {(activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList).map((cat) => (
+                {categoriesList.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => {
@@ -3467,7 +3467,7 @@ export default function App() {
               <AnimatedSearchBar
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                categories={activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList}
+                categories={categoriesList}
                 vendors={vendors}
                 currentCity={currentCity}
                 onSelectVendor={(v) => handleVendorSelect(v)}
@@ -3491,7 +3491,7 @@ export default function App() {
               >
                 All Services
               </button>
-              {(activeCategoriesInCity.length > 0 ? activeCategoriesInCity : categoriesList).map((catObj) => (
+              {categoriesList.map((catObj) => (
                 <button
                   key={catObj.id}
                   onClick={() => setSelectedExploreCategory(catObj.name)}
