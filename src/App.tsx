@@ -14,7 +14,7 @@ import {
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
