@@ -1791,18 +1791,19 @@ export default function App() {
 
   // Bundling Actions
   const handleAddServiceToBundle = (vendor: Vendor, service: VendorServiceItem) => {
-    // Check if service already added
     const alreadyAdded = bundledItems.some(
       (item) => item.vendor.id === vendor.id && item.service.name === service.name
     );
     if (alreadyAdded) return;
 
-    // For catering, if service.price is the per-plate rate (< 5000), multiply by guest count
-    const finalService = (vendor.category === 'Catering' && service.price < 5000)
+    // If service is from catering and not yet multiplied with guest count:
+    const isCatering = vendor.category === 'Catering';
+    const guestCount = planningGuestSize || 100;
+    const finalService = (isCatering && !service.unit?.includes('Guests'))
       ? {
           ...service,
-          price: service.price * (planningGuestSize || 100),
-          unit: `₹${service.price}/plt × ${planningGuestSize || 100} Guests`
+          price: service.price * guestCount,
+          unit: `₹${service.price}/plate × ${guestCount} Guests`
         }
       : service;
 
@@ -3682,12 +3683,7 @@ export default function App() {
 
                 {/* Estimate checkout total and Connection Fee Details */}
                 {(() => {
-                  const servicesTotal = bundledItems.reduce((sum, item) => {
-                    if (item.vendor.category === 'Catering') {
-                      return sum + (item.service.price < 5000 ? item.service.price * (planningGuestSize || 100) : item.service.price);
-                    }
-                    return sum + item.service.price;
-                  }, 0);
+                  const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
                   const calculatedBookingFee = Math.round(servicesTotal * (bookingFeePercentage / 100));
                   const gstAmount = Math.round(calculatedBookingFee * 0.18);
                   const finalPayableTotal = Math.max(0, calculatedBookingFee + gstAmount - couponDiscount);
@@ -4573,131 +4569,319 @@ export default function App() {
                   </div>
                 ) : (
                   /* 👤 Standard Premium User Profile View */
-                  <div className="space-y-6">
-                    {/* User Header Info Card */}
-                    <div className="bg-white rounded-[24px] border border-brand-border p-5 text-center shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-r from-brand-primary-light to-brand-accent/20" />
+                  <div className="space-y-5">
+                    {/* User Header Info Card with Avatar Photo Upload */}
+                    <div className="bg-white rounded-[28px] border border-brand-border p-6 text-center shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-r from-brand-primary-light via-rose-100 to-amber-100" />
                       
-                      <div className="relative pt-6 flex flex-col items-center">
-                        <div className="w-18 h-18 rounded-full border-4 border-white bg-brand-primary text-white text-2xl font-extrabold flex items-center justify-center shadow-md mb-2.5">
-                          {getUserInitials(currentUser)}
+                      <div className="relative pt-4 flex flex-col items-center">
+                        {/* Profile Avatar with Photo Upload Trigger */}
+                        <div className="relative group mb-3">
+                          <div className="w-20 h-20 rounded-full border-4 border-white bg-brand-primary text-white text-2xl font-black flex items-center justify-center shadow-lg overflow-hidden">
+                            {currentUser?.photoURL ? (
+                              <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                              getUserInitials(currentUser)
+                            )}
+                          </div>
+                          <label className="absolute bottom-0 right-0 bg-slate-900 hover:bg-slate-800 text-white p-1.5 rounded-full shadow-md cursor-pointer transition active:scale-95">
+                            <Camera size={13} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                showNotification('⏳ Uploading profile picture...');
+                                try {
+                                  const reader = new FileReader();
+                                  reader.readAsDataURL(file);
+                                  reader.onload = async () => {
+                                    const base64 = reader.result as string;
+                                    const res = await fetch('https://parava-backend-1.onrender.com/api/upload/image', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ image: base64, folder: 'parva_users' })
+                                    });
+                                    const data = await res.json();
+                                    const uploadedUrl = data.url || base64;
+                                    const updated = { ...currentUser, photoURL: uploadedUrl };
+                                    setCurrentUser(updated);
+                                    localStorage.setItem('parva_user', JSON.stringify(updated));
+                                    const db = getDb();
+                                    const { doc, setDoc } = await import('firebase/firestore');
+                                    if (currentUser?.uid) {
+                                      await setDoc(doc(db, 'users', currentUser.uid), { photoURL: uploadedUrl }, { merge: true });
+                                    }
+                                    showNotification('🎉 Profile picture updated successfully!');
+                                  };
+                                } catch (err) {
+                                  showNotification('⚠️ Failed to upload image.');
+                                }
+                              }}
+                            />
+                          </label>
                         </div>
-                        <h3 className="font-bold text-brand-text text-base">{getUserName(currentUser)}</h3>
-                        <p className="text-xs text-brand-text-secondary">
-                          {isAdmin ? 'System Administrator 👑' : `Premium Member • ${currentUser.city || 'N/A'}`}
-                        </p>
 
-                        <span className="text-[10px] text-brand-text-secondary mt-1">{currentUser.email || 'N/A'} • {currentUser.phone || 'N/A'}</span>
+                        <h3 className="font-black text-gray-900 text-lg tracking-tight">{getUserName(currentUser)}</h3>
+                        <p className="text-xs text-brand-text-secondary font-semibold mt-0.5">
+                          Verified Member • {currentUser?.city || currentCity || 'Kolhapur'}
+                        </p>
+                        <span className="text-[10px] text-gray-400 font-mono mt-0.5">
+                          {currentUser?.email || 'N/A'} • {currentUser?.phone || 'No phone added'}
+                        </span>
                       </div>
 
-                  {/* Personal metrics showcase */}
-                  <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-gray-100">
-                    <div className="text-center">
-                      <span className="text-[10px] text-brand-text-secondary uppercase tracking-wider block mb-0.5">Bookings</span>
-                      <span className="font-extrabold text-brand-primary text-sm">{bookings.length} Saved</span>
+                      {/* Personal metrics showcase */}
+                      <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-gray-100">
+                        <div className="text-center">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Bookings</span>
+                          <span className="font-black text-brand-primary text-sm">{bookings.length}</span>
+                        </div>
+                        <div className="text-center border-x border-gray-100">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Wishlist</span>
+                          <span className="font-black text-gray-800 text-sm">{wishlist.length}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-0.5">Logins</span>
+                          <span className="font-black text-emerald-600 text-sm">{loginsCount}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center border-x border-gray-100">
-                      <span className="text-[10px] text-brand-text-secondary uppercase tracking-wider block mb-0.5">Wishlist</span>
-                      <span className="font-extrabold text-brand-text text-sm">{wishlist.length} Saved</span>
+
+                    {/* Edit Profile & Address Form */}
+                    <div className="bg-white rounded-[24px] border border-brand-border p-5 shadow-sm space-y-4">
+                      <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-gray-900">Personal & Event Details</h4>
+                          <p className="text-[10px] text-gray-500 font-medium">Update your contact information for vendor coordination</p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isDetectingLocation}
+                          onClick={() => {
+                            if (!navigator.geolocation) {
+                              showNotification('⚠️ Geolocation not supported on this browser.');
+                              return;
+                            }
+                            setIsDetectingLocation(true);
+                            navigator.geolocation.getCurrentPosition(
+                              async (pos) => {
+                                try {
+                                  const lat = pos.coords.latitude;
+                                  const lng = pos.coords.longitude;
+                                  const updatedUser = {
+                                    ...currentUser,
+                                    latitude: lat,
+                                    longitude: lng,
+                                    address: `GPS (${lat.toFixed(3)}, ${lng.toFixed(3)})`
+                                  };
+                                  setCurrentUser(updatedUser);
+                                  localStorage.setItem('parva_user', JSON.stringify(updatedUser));
+                                  const db = getDb();
+                                  const { doc, setDoc } = await import('firebase/firestore');
+                                  if (currentUser?.uid) {
+                                    await setDoc(doc(db, 'users', currentUser.uid), updatedUser, { merge: true });
+                                  }
+                                  showNotification(`📍 Live GPS Verified: (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
+                                } catch (e) {}
+                                setIsDetectingLocation(false);
+                              },
+                              (err) => {
+                                showNotification(`⚠️ GPS Error: ${err.message}`);
+                                setIsDetectingLocation(false);
+                              },
+                              { timeout: 10000 }
+                            );
+                          }}
+                          className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 transition active:scale-95"
+                        >
+                          <MapPin size={12} />
+                          <span>{isDetectingLocation ? 'Locating...' : 'Detect GPS'}</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Full Name</label>
+                          <input
+                            type="text"
+                            defaultValue={currentUser?.name || ''}
+                            onChange={(e) => setEditProfileName(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Mobile Phone Number</label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. 9876543210"
+                            defaultValue={currentUser?.phone || ''}
+                            onChange={(e) => setEditProfilePhone(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Email Address</label>
+                          <input
+                            type="email"
+                            defaultValue={currentUser?.email || ''}
+                            disabled
+                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-500 outline-none cursor-not-allowed"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">City / Locality</label>
+                          <input
+                            type="text"
+                            defaultValue={currentUser?.city || currentCity}
+                            onChange={(e) => setCurrentCity(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Event Venue / Address</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Near Rankala Lake, Rajarampuri, Kolhapur"
+                            defaultValue={currentUser?.address || ''}
+                            onChange={(e) => setEditProfileAddress(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const updatedUser = {
+                            ...currentUser,
+                            name: editProfileName || currentUser?.name || 'Parva User',
+                            phone: editProfilePhone || currentUser?.phone || '',
+                            city: currentCity,
+                            address: editProfileAddress || currentUser?.address || ''
+                          };
+                          setCurrentUser(updatedUser);
+                          localStorage.setItem('parva_user', JSON.stringify(updatedUser));
+                          try {
+                            const db = getDb();
+                            const { doc, setDoc } = await import('firebase/firestore');
+                            if (currentUser?.uid) {
+                              await setDoc(doc(db, 'users', currentUser.uid), updatedUser, { merge: true });
+                            }
+                            showNotification('✓ Profile details saved successfully!');
+                          } catch (e) {
+                            showNotification('Saved locally.');
+                          }
+                        }}
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-3 rounded-xl text-xs transition active:scale-98 uppercase tracking-wider"
+                      >
+                        Save Profile Changes
+                      </button>
                     </div>
-                    <div className="text-center">
-                      <span className="text-[10px] text-brand-text-secondary uppercase tracking-wider block mb-0.5">Logins Count</span>
-                      <span className="font-extrabold text-brand-success text-sm">{loginsCount} Entries</span>
+
+                    {/* Vendor Portal Switcher Banner */}
+                    <div className="bg-gradient-to-r from-amber-500/10 via-brand-primary/10 to-amber-500/10 rounded-[24px] p-5 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <h4 className="font-black text-xs text-gray-900 flex items-center gap-1.5">
+                          <span>🏛️</span>
+                          <span>Are you an Event Vendor?</span>
+                        </h4>
+                        <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                          Manage your banquet hall, catering, decor or photography services
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginRole('vendor');
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="bg-brand-primary hover:bg-brand-primary-dark text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition active:scale-95 uppercase tracking-wider shrink-0"
+                      >
+                        Vendor Login / Register
+                      </button>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-dashed border-gray-100 text-center">
-                    <button 
-                      onClick={() => setIsAboutOpen(true)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline flex items-center justify-center gap-1.5"
-                    >
-                      <Info size={12} />
-                      About PARVA Celebrations
-                    </button>
-                    <button 
-                      onClick={() => setIsPrivacyOpen(true)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline flex items-center justify-center gap-1.5"
-                    >
-                      <ShieldCheck size={12} />
-                      Privacy Policy
-                    </button>
-                    
-
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setCurrentUser(null);
-                      setIsAdmin(false);
-                      localStorage.removeItem('parva_user');
-                      showNotification('Logged out successfully.');
-                    }}
-                    className="mt-4 text-xs font-bold text-brand-primary hover:underline"
-                  >
-                    🚪 Log Out Account
-                  </button>
-                </div>
-
-
-
-                  <div className="flex justify-between items-center px-1">
-                    <h4 className="font-extrabold text-brand-text text-sm uppercase tracking-wider flex items-center gap-1">
-                      <Heart size={14} className="text-brand-primary fill-brand-primary" />
-                      <span>My Wishlisted Vendors ({wishlist.length})</span>
-                    </h4>
-                  </div>
-
-                  {wishlist.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-brand-border p-8 text-center text-xs text-brand-text-secondary">
-                      No saved vendors. Tap the heart icon on any card to wishlist them!
+                    {/* Wishlist Header */}
+                    <div className="flex justify-between items-center px-1 pt-2">
+                      <h4 className="font-extrabold text-brand-text text-sm uppercase tracking-wider flex items-center gap-1">
+                        <Heart size={14} className="text-brand-primary fill-brand-primary" />
+                        <span>My Wishlisted Vendors ({wishlist.length})</span>
+                      </h4>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {vendors.filter((v) => (wishlist || []).includes(v.id)).map((vendor) => (
-                        <VendorCard
-                          key={vendor.id}
-                          vendor={vendor}
-                          onSelect={(v) => handleVendorSelect(v)}
-                          isWishlisted={true}
-                          onToggleWishlist={handleToggleWishlist}
-                          userCoords={activeOriginCoords}
-                        />
+
+                    {wishlist.length === 0 ? (
+                      <div className="bg-white rounded-2xl border border-brand-border p-8 text-center text-xs text-brand-text-secondary">
+                        No saved vendors. Tap the heart icon on any card to wishlist them!
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {vendors.filter((v) => (wishlist || []).includes(v.id)).map((vendor) => (
+                          <VendorCard
+                            key={vendor.id}
+                            vendor={vendor}
+                            onSelect={(v) => handleVendorSelect(v)}
+                            isWishlisted={true}
+                            onToggleWishlist={handleToggleWishlist}
+                            userCoords={activeOriginCoords}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Profile Settings Menu */}
+                    <div className="bg-white rounded-2xl border border-brand-border divide-y divide-gray-100 overflow-hidden shadow-sm">
+                      {[
+                        { label: 'Booking Preferences', desc: 'Default city, contact phone, GST details' },
+                        { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
+                        { label: 'Financials & Invoices', desc: 'Download tax records and transaction logs' },
+                        { label: 'Replay App Walkthrough', desc: 'Watch the onboarding splash and info slides again' },
+                        { label: 'About PARVA App', desc: 'Version 1.0.0 • Terms of Service & Security' }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            if (item.label === 'Replay App Walkthrough') {
+                              setShowSplash(true);
+                            } else {
+                              showNotification(`${item.label} opened`);
+                            }
+                          }}
+                          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 text-left transition"
+                          id={`profile-setting-row-${idx}`}
+                        >
+                          <div>
+                            <h5 className="font-bold text-brand-text text-xs">{item.label}</h5>
+                            <p className="text-[10px] text-brand-text-secondary mt-0.5">{item.desc}</p>
+                          </div>
+                          <ChevronRight size={16} className="text-gray-400" />
+                        </button>
                       ))}
                     </div>
-                  )}
 
-                {/* Profile Settings Menu */}
-                <div className="bg-white rounded-2xl border border-brand-border divide-y divide-gray-100 overflow-hidden shadow-sm">
-                  {[
-                    { label: 'Booking Preferences', desc: 'Default city, contact phone, GST details' },
-                    { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
-                    { label: 'Financials & Invoices', desc: 'Download tax records and transaction logs' },
-                    { label: 'Replay App Walkthrough', desc: 'Watch the onboarding splash and info slides again' },
-                    { label: 'About PARVA App', desc: 'Version 1.0.0 • Terms of Service & Security' }
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        if (item.label === 'Replay App Walkthrough') {
-                          setShowSplash(true);
-                        } else {
-                          showNotification(`${item.label} opened`);
-                        }
-                      }}
-                      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 text-left transition"
-                      id={`profile-setting-row-${idx}`}
-                    >
-                      <div>
-                        <h5 className="font-bold text-brand-text text-xs">{item.label}</h5>
-                        <p className="text-[10px] text-brand-text-secondary mt-0.5">{item.desc}</p>
-                      </div>
-                      <ChevronRight size={16} className="text-gray-400" />
-                    </button>
-                  ))}
-                </div>
-
-              </div>
-            )}
+                    {/* Logout Button Card */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-[20px] p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentUser(null);
+                          setIsAdmin(false);
+                          localStorage.removeItem('parva_user');
+                          showNotification('🚪 Logged out successfully.');
+                        }}
+                        className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline uppercase tracking-wider"
+                      >
+                        Log Out of Account
+                      </button>
+                    </div>
+                  </div>
+                )}
           </div>
         </div>
       )}

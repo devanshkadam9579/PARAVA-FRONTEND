@@ -662,88 +662,45 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                 </div>
               </div>
 
-              {/* Catering Menu Selection & Guest Count Multiplier */}
+              {/* Clean Catering Guest Count Box */}
               {isCatering && (
-                <div className="bg-amber-50/90 border border-amber-200/90 p-4 rounded-2xl mx-6 mt-4 space-y-3.5 shadow-2xs">
-                  <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
-                    <div>
-                      <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
-                        <span>🍽️</span>
-                        <span>Select Catering Menu & Enter Guests</span>
-                      </h4>
-                      <p className="text-[10px] text-amber-800 font-medium">Select package and adjust guest count</p>
+                <div className="bg-amber-50/90 border border-amber-200/90 p-4 rounded-2xl mx-6 mt-4 flex items-center justify-between shadow-2xs">
+                  <div>
+                    <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
+                      <span>🍽️</span>
+                      <span>Event Guest Count</span>
+                    </h4>
+                    <p className="text-[10px] text-amber-800 font-medium mt-0.5">
+                      Select any plate service below to calculate total
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setCateringGuestCount(prev => Math.max(10, prev - 25))}
+                      className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
+                    >
+                      -
+                    </button>
+                    <div className="flex items-center">
+                      <input
+                        type="number"
+                        min={1}
+                        max={10000}
+                        value={cateringGuestCount}
+                        onChange={(e) => setCateringGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-16 text-center font-black text-xs text-amber-950 font-mono outline-none bg-transparent"
+                      />
+                      <span className="text-[10px] font-bold text-amber-800 pr-1">Guests</span>
                     </div>
-                    <span className="bg-amber-200/80 text-amber-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-                      Catering Multiplier
-                    </span>
-                  </div>
-
-                  {/* 1. Real Catering Services from Vendor */}
-                  <div className="space-y-1.5">
-                    {cateringServices.map((service) => (
-                      <button
-                        key={service.id}
-                        type="button"
-                        onClick={() => setSelectedCateringServiceId(service.id)}
-                        className={`w-full p-2.5 rounded-xl border text-left transition flex items-center justify-between ${
-                          selectedCateringServiceId === service.id
-                            ? 'bg-white border-brand-primary shadow-sm text-gray-900 ring-1 ring-brand-primary'
-                            : 'bg-white/60 border-amber-100 text-gray-700 hover:bg-white'
-                        }`}
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-extrabold text-xs text-gray-900">{service.name}</p>
-                          {service.description && (
-                            <p className="text-[10px] text-gray-500 truncate">{service.description}</p>
-                          )}
-                        </div>
-                        <span className="font-black text-xs text-brand-primary shrink-0 bg-brand-primary/10 px-2 py-1 rounded-lg">
-                          ₹{service.price.toLocaleString('en-IN')}/plate
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* 2. Number of Guests Direct Input & Stepper */}
-                  <div className="flex justify-between items-center pt-1">
-                    <span className="text-[11px] font-bold text-amber-950">Number of Guests:</span>
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => setCateringGuestCount(prev => Math.max(10, prev - 25))}
-                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
-                      >
-                        -
-                      </button>
-                      <div className="flex items-center">
-                        <input
-                          type="number"
-                          min={1}
-                          max={10000}
-                          value={cateringGuestCount}
-                          onChange={(e) => setCateringGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-16 text-center font-black text-xs text-amber-950 font-mono outline-none bg-transparent"
-                        />
-                        <span className="text-[10px] font-bold text-amber-800 pr-1">Guests</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCateringGuestCount(prev => prev + 25)}
-                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 3. Final Multiplied Calculation Banner */}
-                  <div className="flex justify-between items-center pt-2.5 border-t border-amber-200/70 text-xs">
-                    <span className="text-amber-900 font-bold">
-                      ₹{activePlateRate.toLocaleString('en-IN')} × {cateringGuestCount} Guests =
-                    </span>
-                    <span className="font-black text-brand-primary text-sm">
-                      ₹{servicesTotal.toLocaleString('en-IN')}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCateringGuestCount(prev => prev + 25)}
+                      className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
               )}
