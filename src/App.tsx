@@ -2304,28 +2304,46 @@ export default function App() {
 
   // Filter & Search computation
   const filteredVendors = vendors.filter((vendor) => {
-    // City filter match (flexible includes for onboarding detailed locations)
-    const matchesCity = (vendor.location || '').toLowerCase().includes((currentCity || '').toLowerCase());
+    // 1. City / Location match (case-insensitive & fallback)
+    const targetCity = (currentCity || '').toLowerCase().trim();
+    const vendorLoc = (vendor.location || '').toLowerCase().trim();
+    const vendorReg = ((vendor as any).region || '').toLowerCase().trim();
+    const vendorCity = ((vendor as any).city || '').toLowerCase().trim();
+    const matchesCity = !targetCity || targetCity === 'all' || 
+      vendorLoc.includes(targetCity) || 
+      vendorReg.includes(targetCity) || 
+      vendorCity.includes(targetCity) ||
+      targetCity.includes(vendorLoc);
 
-    // Suitability check based on selected event type
-    const matchesSuitability = isVendorSuitedForEvent(vendor, planningEventType);
-
-    const matchesSearch =
-      (vendor.name || '').toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      (vendor.category || '').toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      (vendor.tagline || '').toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+    // 2. Category match (singular/plural flexible & multi-category array check)
+    const selectedCat = (selectedExploreCategory || 'all').toLowerCase().trim();
+    const vendorCat = (vendor.category || '').toLowerCase().trim();
+    const vendorCats = Array.isArray((vendor as any).categories)
+      ? (vendor as any).categories.map((c: string) => c.toLowerCase().trim())
+      : [];
 
     const matchesCategory =
-      selectedExploreCategory === 'all' ||
-      (vendor.category || '').toLowerCase() === selectedExploreCategory.toLowerCase() ||
-      (Array.isArray((vendor as any).categories) && (vendor as any).categories.some((c: string) => c.toLowerCase() === selectedExploreCategory.toLowerCase()));
+      selectedCat === 'all' ||
+      vendorCat === selectedCat ||
+      vendorCat.startsWith(selectedCat.slice(0, 4)) ||
+      selectedCat.startsWith(vendorCat.slice(0, 4)) ||
+      vendorCats.some((c: string) => c === selectedCat || c.startsWith(selectedCat.slice(0, 4)) || selectedCat.startsWith(c.slice(0, 4)));
 
-    const matchesPrice = (vendor.basePrice || 0) <= priceRange;
-    const matchesOccasion = exploreOccasion === 'All' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
+    // 3. Search query match
+    const sq = debouncedSearchQuery.toLowerCase().trim();
+    const matchesSearch = !sq ||
+      (vendor.name || '').toLowerCase().includes(sq) ||
+      (vendor.category || '').toLowerCase().includes(sq) ||
+      (vendor.tagline || '').toLowerCase().includes(sq) ||
+      (vendor.description || '').toLowerCase().includes(sq) ||
+      vendorCats.some((c: string) => c.includes(sq));
 
-    // Custom Modal Filters
+    // 4. Price & custom filters (applied only when customized by user)
+    const matchesPrice = !priceRange || priceRange >= 250000 || (vendor.basePrice || 0) <= priceRange;
     const matchesMinPrice = activeFilterMinPrice === null || (vendor.basePrice || 0) >= activeFilterMinPrice;
     const matchesMaxPrice = activeFilterMaxPrice === null || (vendor.basePrice || 0) <= activeFilterMaxPrice;
+    const matchesOccasion = exploreOccasion === 'All' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
+
     const matchesTypes = activeFilterTypes.length === 0 || activeFilterTypes.some(t => {
       const typeLower = t.toLowerCase();
       return (
@@ -2336,17 +2354,7 @@ export default function App() {
       );
     });
 
-    // Filter by date availability
-    const matchesAvailability = isVendorAvailable(vendor.id, planningStartDate, planningEndDate, vendors);
-    
-    // Filter by budget
-    const matchesBudget = vendor.basePrice <= planningBudget;
-
-    // Filter by guest size (for venues)
-    const matchesGuestSize = vendor.category !== 'Banquet Hall' || 
-      (!vendor.capacity || planningGuestSize <= vendor.capacity);
-
-    return matchesCity && matchesSuitability && matchesSearch && matchesCategory && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesTypes && matchesAvailability && matchesOccasion && matchesBudget && matchesGuestSize && vendor.approved !== false;
+    return matchesCity && matchesCategory && matchesSearch && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesTypes && matchesOccasion && vendor.approved !== false;
   }).sort((a, b) => {
     if (activeSortOption === 'Rating - High to Low' || sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
     if (activeSortOption === 'Price - Low to High' || sortBy === 'priceAsc') return (a.basePrice || 0) - (b.basePrice || 0);

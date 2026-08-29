@@ -437,17 +437,19 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isGalleryOpen, galleryIndex, vendor.images.length]);
 
-  // Generate simple next 7 days dates for interactive calendar selector
+  // Generate real next 7 days dates strictly matching vendor.busyDates
   const today = new Date();
   const availableDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() + i + 2); // Start from day after tomorrow
+    d.setDate(today.getDate() + i + 1);
+    const dateString = d.toISOString().split('T')[0];
+    const isBlocked = (vendor.busyDates || []).includes(dateString);
     return {
-      dateString: d.toISOString().split('T')[0],
+      dateString,
       dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNum: d.getDate(),
       monthName: d.toLocaleDateString('en-US', { month: 'short' }),
-      available: i !== 3 && i !== 5 // Simulate couple of booked dates
+      available: !isBlocked
     };
   });
 
@@ -756,10 +758,16 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                   })}
                 </div>
                 {selectedDate && (
-                  <p className="text-xs text-brand-success font-semibold flex items-center gap-1 mt-2.5">
-                    <CheckCircle2 size={13} />
-                    <span>Vendor is fully available for booking on {selectedDate}!</span>
-                  </p>
+                  (vendor.busyDates || []).includes(selectedDate) ? (
+                    <p className="text-xs text-rose-600 font-bold flex items-center gap-1 mt-2.5">
+                      <span>❌ Date {selectedDate} is Booked / Blocked by Vendor</span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-brand-success font-semibold flex items-center gap-1 mt-2.5">
+                      <CheckCircle2 size={13} />
+                      <span>Vendor is fully available for booking on {selectedDate}!</span>
+                    </p>
+                  )
                 )}
               </div>
 
@@ -1744,7 +1752,7 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                         d.setDate(d.getDate() + i + 1);
                         const dateStr = d.toISOString().split('T')[0];
                         const dayNum = d.getDate();
-                        const isBlocked = (vendor.busyDates || []).includes(dateStr) || i === 4 || i === 11 || i === 18;
+                        const isBlocked = (vendor.busyDates || []).includes(dateStr);
                         const isSelected = selectedDate === dateStr;
 
                         return (
