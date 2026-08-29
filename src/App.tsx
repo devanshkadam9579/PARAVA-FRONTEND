@@ -1182,6 +1182,12 @@ export default function App() {
   const [wizardBasePrice, setWizardBasePrice] = useState('');
   const [wizardMaxCapacity, setWizardMaxCapacity] = useState('');
   const [wizardService1Name, setWizardService1Name] = useState('');
+  const [wizardService1Desc, setWizardService1Desc] = useState('');
+  const [wizardService1Image, setWizardService1Image] = useState('');
+  const [wizardService1Unit, setWizardService1Unit] = useState('per event');
+  const [wizardService2Desc, setWizardService2Desc] = useState('');
+  const [wizardService2Image, setWizardService2Image] = useState('');
+  const [wizardService2Unit, setWizardService2Unit] = useState('per event');
   const [wizardService1Price, setWizardService1Price] = useState('');
   const [wizardService2Name, setWizardService2Name] = useState('');
   const [wizardService2Price, setWizardService2Price] = useState('');
@@ -2777,39 +2783,75 @@ export default function App() {
                               </div>
                             </div>
 
-                            <div className="border-t border-brand-primary/5 pt-2">
-                              <span className="text-[9px] uppercase tracking-wider text-brand-primary font-extrabold block mb-1.5">Add Services (Package Packages)</span>
-                              <div className="space-y-2">
+                            <div className="border-t border-brand-primary/10 pt-3 space-y-3">
+                              <span className="text-[9px] uppercase tracking-wider text-brand-primary font-black block">Service Offerings & Packages (with Photos & Details)</span>
+                              
+                              {/* Service 1 */}
+                              <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
+                                <span className="text-[9px] font-black text-gray-700 uppercase">Primary Service #1</span>
                                 <div className="grid grid-cols-3 gap-2">
                                   <input
                                     type="text"
-                                    placeholder="Service 1 Name"
+                                    placeholder="Service Name (e.g. Mandap Setup)"
                                     value={wizardService1Name}
                                     onChange={(e) => setWizardService1Name(e.target.value)}
-                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none"
+                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
                                   />
                                   <input
                                     type="number"
-                                    placeholder="Price"
+                                    placeholder="Price (₹)"
                                     value={wizardService1Price}
                                     onChange={(e) => setWizardService1Price(e.target.value)}
-                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs outline-none"
+                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-bold outline-none"
                                   />
                                 </div>
+                                <input
+                                  type="text"
+                                  placeholder="Short Description (e.g. Floral stage setup and entrance)"
+                                  value={wizardService1Desc}
+                                  onChange={(e) => setWizardService1Desc(e.target.value)}
+                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs outline-none"
+                                />
+                                <div className="space-y-1 bg-white p-2 rounded-xl border border-brand-border">
+                                  <CloudinaryImageUploader
+                                    label="📷 Photo (Camera / Gallery)"
+                                    initialImage={wizardService1Image}
+                                    onImageUploaded={(url) => setWizardService1Image(url)}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Service 2 */}
+                              <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
+                                <span className="text-[9px] font-black text-gray-700 uppercase">Service #2 (Optional)</span>
                                 <div className="grid grid-cols-3 gap-2">
                                   <input
                                     type="text"
-                                    placeholder="Service 2 Name"
+                                    placeholder="Service Name (e.g. House Lighting)"
                                     value={wizardService2Name}
                                     onChange={(e) => setWizardService2Name(e.target.value)}
-                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs outline-none"
+                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
                                   />
                                   <input
                                     type="number"
-                                    placeholder="Price"
+                                    placeholder="Price (₹)"
                                     value={wizardService2Price}
                                     onChange={(e) => setWizardService2Price(e.target.value)}
-                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs outline-none"
+                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-bold outline-none"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Short Description"
+                                  value={wizardService2Desc}
+                                  onChange={(e) => setWizardService2Desc(e.target.value)}
+                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs outline-none"
+                                />
+                                <div className="space-y-1 bg-white p-2 rounded-xl border border-brand-border">
+                                  <CloudinaryImageUploader
+                                    label="📷 Photo (Camera / Gallery)"
+                                    initialImage={wizardService2Image}
+                                    onImageUploaded={(url) => setWizardService2Image(url)}
                                   />
                                 </div>
                               </div>
