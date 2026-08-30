@@ -58,25 +58,26 @@ function getYoutubeId(url: string) {
 }
 
 export const TIME_SLOTS = [
-  { id: 'morning', label: 'Morning', time: '09:00 AM – 01:00 PM', icon: '🌅' },
-  { id: 'afternoon', label: 'Afternoon', time: '01:00 PM – 05:00 PM', icon: '☀️' },
-  { id: 'evening', label: 'Evening', time: '05:00 PM – 10:00 PM', icon: '🌆' },
-  { id: 'full_day', label: 'Full Day', time: '09:00 AM – 10:00 PM', icon: '✨' },
+  { id: 'full_day', label: '24 Hr Full Day', time: 'Full Day' },
+  { id: 'morning', label: '09:00 - 13:00', time: '09:00 - 13:00' },
+  { id: 'afternoon', label: '13:00 - 17:00', time: '13:00 - 17:00' },
+  { id: 'evening', label: '17:00 - 22:00', time: '17:00 - 22:00' },
 ];
 
 export function formatTimeSlot(slotId?: string): string {
   switch ((slotId || '').toLowerCase()) {
     case 'morning':
-      return 'Morning (09:00 AM – 01:00 PM)';
+      return '09:00 - 13:00';
     case 'afternoon':
-      return 'Afternoon (01:00 PM – 05:00 PM)';
+      return '13:00 - 17:00';
     case 'evening':
-      return 'Evening (05:00 PM – 10:00 PM)';
+      return '17:00 - 22:00';
     case 'full_day':
     default:
-      return 'Full Day (09:00 AM – 10:00 PM)';
+      return '24 Hr Full Day';
   }
 }
+
 
 interface VendorDetailSheetProps {
   vendor: Vendor;
@@ -150,7 +151,8 @@ export default function VendorDetailSheet({
 
   const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
   const [selectedDate, setSelectedDate] = useState<string>(planningStartDate || '');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(planningTimeSlot || 'evening');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(planningTimeSlot || 'full_day');
+  const [calendarMonthDate, setCalendarMonthDate] = useState<Date>(() => new Date());
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
@@ -170,6 +172,7 @@ export default function VendorDetailSheet({
   useEffect(() => {
     if (planningTimeSlot) setSelectedTimeSlot(planningTimeSlot);
   }, [planningTimeSlot]);
+
 
 
   // New Interactive Modals State
@@ -806,7 +809,7 @@ export default function VendorDetailSheet({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                       <Clock size={14} className="text-brand-primary" />
-                      <span className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Select Time of Day</span>
+                      <span className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Select Time Slot</span>
                     </div>
                     <span className="text-[10px] font-extrabold text-brand-primary">
                       {formatTimeSlot(selectedTimeSlot)}
@@ -825,7 +828,7 @@ export default function VendorDetailSheet({
                             setSelectedTimeSlot(slot.id);
                             if (onSelectTimeSlot) onSelectTimeSlot(slot.id);
                           }}
-                          className={`p-2 rounded-xl border text-left transition-all ${
+                          className={`p-2 rounded-xl border text-center transition-all ${
                             isBlocked
                               ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
                               : isSlotSelected
@@ -833,13 +836,10 @@ export default function VendorDetailSheet({
                               : 'bg-white border-brand-border hover:border-brand-primary/50 text-gray-800'
                           }`}
                         >
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <span>{slot.icon}</span>
-                            <span className={`text-[11px] font-black ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>
-                              {slot.label}
-                            </span>
-                          </div>
-                          <span className={`text-[8.5px] font-medium block truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                          <span className={`text-[11px] font-black block ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>
+                            {slot.label}
+                          </span>
+                          <span className={`text-[8.5px] font-medium block mt-0.5 truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>
                             {slot.time}
                           </span>
                         </button>
@@ -851,16 +851,17 @@ export default function VendorDetailSheet({
                 {selectedDate && (
                   (vendor.busyDates || []).includes(selectedDate) || (vendor.busySlots?.[selectedDate] || []).includes(selectedTimeSlot) ? (
                     <p className="text-xs text-rose-600 font-bold flex items-center gap-1 mt-2.5">
-                      <span>❌ Date {selectedDate} ({formatTimeSlot(selectedTimeSlot)}) is Booked / Blocked</span>
+                      <span>• Date {selectedDate} ({formatTimeSlot(selectedTimeSlot)}) is Booked / Blocked</span>
                     </p>
                   ) : (
                     <p className="text-xs text-brand-success font-semibold flex items-center gap-1 mt-2.5">
                       <CheckCircle2 size={13} />
-                      <span>Vendor is fully available for booking on {selectedDate} ({formatTimeSlot(selectedTimeSlot)})!</span>
+                      <span>Available for booking on {selectedDate} ({formatTimeSlot(selectedTimeSlot)})</span>
                     </p>
                   )
                 )}
               </div>
+
 
 
               {/* Segmented Tabs Control */}
@@ -1850,25 +1851,53 @@ export default function VendorDetailSheet({
                     </div>
                   </div>
 
+                  {/* Real Month & Year Navigation Header */}
+                  <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-2xl border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                      className="p-1.5 rounded-xl border border-gray-200 hover:bg-white text-gray-700 active:scale-95 transition"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="font-extrabold text-sm text-gray-900">
+                      {calendarMonthDate.toLocaleString('default', { month: 'long' })} {calendarMonthDate.getFullYear()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                      className="p-1.5 rounded-xl border border-gray-200 hover:bg-white text-gray-700 active:scale-95 transition"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
                   {/* Date Grid */}
                   <div className="space-y-2">
                     <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-gray-400 uppercase">
                       <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1.5 max-h-[300px] overflow-y-auto p-1">
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + i + 1);
-                        const dateStr = d.toISOString().split('T')[0];
-                        const dayNum = d.getDate();
+                    <div className="grid grid-cols-7 gap-1.5 max-h-[260px] overflow-y-auto p-1">
+                      {/* Leading Empty Slots for Month Offset */}
+                      {Array.from({ length: new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth(), 1).getDay() }).map((_, idx) => (
+                        <div key={`empty-${idx}`} className="aspect-square rounded-2xl opacity-0 pointer-events-none" />
+                      ))}
+
+                      {/* Days of the Month */}
+                      {Array.from({ length: new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                        const dayNum = i + 1;
+                        const d = new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth(), dayNum);
+                        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isPast = dateStr < todayStr;
                         const isBlocked = (vendor.busyDates || []).includes(dateStr);
                         const isSelected = selectedDate === dateStr;
 
                         return (
                           <button
                             key={dateStr}
-                            disabled={isBlocked}
+                            disabled={isBlocked || isPast}
                             onClick={() => {
                               setSelectedDate(dateStr);
                               if (onSelectDate) onSelectDate(dateStr);
@@ -1879,6 +1908,8 @@ export default function VendorDetailSheet({
                             className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all p-1 ${
                               isSelected
                                 ? 'bg-brand-primary text-white font-extrabold shadow-md scale-105 ring-2 ring-brand-primary/30'
+                                : isPast
+                                ? 'bg-gray-50 text-gray-300 cursor-not-allowed border border-gray-100'
                                 : isBlocked
                                 ? 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed border border-dashed border-gray-200'
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold active:scale-95'
@@ -1895,7 +1926,7 @@ export default function VendorDetailSheet({
                   {/* Time Slot Selection inside Full Calendar */}
                   <div className="pt-2 border-t border-gray-100 space-y-1.5">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                      Select Preferred Time of Day
+                      Select Preferred Time Slot
                     </span>
                     <div className="grid grid-cols-2 gap-1.5">
                       {TIME_SLOTS.map((slot) => {
@@ -1908,17 +1939,14 @@ export default function VendorDetailSheet({
                               setSelectedTimeSlot(slot.id);
                               if (onSelectTimeSlot) onSelectTimeSlot(slot.id);
                             }}
-                            className={`p-2 rounded-xl border text-left transition-all ${
+                            className={`p-2.5 rounded-xl border text-center transition-all ${
                               isSlotSelected
                                 ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
                                 : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
                             }`}
                           >
-                            <div className="flex items-center gap-1">
-                              <span>{slot.icon}</span>
-                              <span className={`text-[11px] font-black ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>{slot.label}</span>
-                            </div>
-                            <span className={`text-[8px] block truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>{slot.time}</span>
+                            <span className={`text-[11px] font-black block ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>{slot.label}</span>
+                            <span className={`text-[8.5px] block mt-0.5 truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>{slot.time}</span>
                           </button>
                         );
                       })}
@@ -1934,6 +1962,7 @@ export default function VendorDetailSheet({
                       {selectedDate ? `Confirm ${selectedDate} (${formatTimeSlot(selectedTimeSlot)})` : 'Close Calendar'}
                     </button>
                   </div>
+
                 </motion.div>
 
               </div>

@@ -91,25 +91,26 @@ const loadCashfreeScript = (): Promise<any> => {
 };
 
 export const TIME_SLOTS = [
-  { id: 'morning', label: 'Morning', time: '09:00 AM – 01:00 PM', icon: '🌅' },
-  { id: 'afternoon', label: 'Afternoon', time: '01:00 PM – 05:00 PM', icon: '☀️' },
-  { id: 'evening', label: 'Evening', time: '05:00 PM – 10:00 PM', icon: '🌆' },
-  { id: 'full_day', label: 'Full Day', time: '09:00 AM – 10:00 PM', icon: '✨' },
+  { id: 'full_day', label: '24 Hr Full Day', time: 'Full Day' },
+  { id: 'morning', label: '09:00 - 13:00', time: '09:00 - 13:00' },
+  { id: 'afternoon', label: '13:00 - 17:00', time: '13:00 - 17:00' },
+  { id: 'evening', label: '17:00 - 22:00', time: '17:00 - 22:00' },
 ];
 
 export const formatTimeSlot = (slotId?: string): string => {
   switch ((slotId || '').toLowerCase()) {
     case 'morning':
-      return 'Morning (09:00 AM – 01:00 PM)';
+      return '09:00 - 13:00';
     case 'afternoon':
-      return 'Afternoon (01:00 PM – 05:00 PM)';
+      return '13:00 - 17:00';
     case 'evening':
-      return 'Evening (05:00 PM – 10:00 PM)';
+      return '17:00 - 22:00';
     case 'full_day':
     default:
-      return 'Full Day (09:00 AM – 10:00 PM)';
+      return '24 Hr Full Day';
   }
 };
+
 
 // Deterministic availability evaluator strictly based on Firestore busyDates and busySlots
 export const isVendorAvailable = (
@@ -270,14 +271,15 @@ const VendorDashboardCalendar = ({
 
             if (isBooked) {
               dayStyle = "bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-500/20 border border-emerald-400 scale-[1.03]";
-              statusText = "Confirmed Booking! 🎉";
+              statusText = "Confirmed Booking";
             } else if (isFullyBlocked) {
               dayStyle = "bg-rose-500 text-white font-extrabold shadow-md shadow-rose-500/20 border border-rose-400 scale-[1.03]";
-              statusText = "Day Blocked 🔒";
+              statusText = "Day Blocked";
             } else if (slotBlocked) {
               dayStyle = "bg-amber-500 text-white font-extrabold shadow-md shadow-amber-500/20 border border-amber-400 scale-[1.03]";
-              statusText = "Partial Slots Blocked ⏳";
+              statusText = "Partial Slots Blocked";
             }
+
 
             return (
               <button
@@ -395,12 +397,9 @@ const VendorDashboardCalendar = ({
                         key={slot.id} 
                         className="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 bg-white"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{slot.icon}</span>
-                          <div>
-                            <span className="text-xs font-extrabold text-gray-800 block leading-tight">{slot.label}</span>
-                            <span className="text-[10px] font-medium text-gray-500">{slot.time}</span>
-                          </div>
+                        <div>
+                          <span className="text-xs font-extrabold text-gray-800 block leading-tight">{slot.label}</span>
+                          <span className="text-[10px] font-medium text-gray-500">{slot.time}</span>
                         </div>
                         <button
                           onClick={() => {
@@ -416,9 +415,10 @@ const VendorDashboardCalendar = ({
                               : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                           }`}
                         >
-                          {isSlotBlocked ? 'Blocked 🔒' : 'Available ✓'}
+                          {isSlotBlocked ? 'Blocked' : 'Available'}
                         </button>
                       </div>
+
                     );
                   })}
                 </div>
@@ -3691,12 +3691,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Extra Section: Top Decorators & Halls near You */}
+            {/* Section: Top Event Planners Near You */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-brand-text text-sm uppercase tracking-wider">Top Halls & Decorators</h3>
+                <h3 className="font-bold text-brand-text text-sm uppercase tracking-wider">Top Event Planners Near You</h3>
                 <span 
-                  onClick={() => { setSelectedExploreCategory('Banquet Hall'); setActiveTab('explore'); }}
+                  onClick={() => { setSelectedExploreCategory('Event Planner'); setActiveTab('explore'); }}
                   className="text-xs text-brand-primary font-semibold hover:underline cursor-pointer"
                 >
                   View All
@@ -3704,7 +3704,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-1 gap-4">
                 {vendors
-                  .filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Banquet Hall' || v.category === 'Decorator'))
+                  .filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Event Planner' || v.category === 'Banquet Hall' || v.category === 'Decorator'))
                   .map((vendor) => (
                     <VendorCard
                       key={vendor.id}
@@ -3716,13 +3716,14 @@ export default function App() {
                       userCoords={activeOriginCoords}
                     />
                   ))}
-                {vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Banquet Hall' || v.category === 'Decorator')).length === 0 && (
+                {vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Event Planner' || v.category === 'Banquet Hall' || v.category === 'Decorator')).length === 0 && (
                   <div className="bg-white rounded-2xl border border-brand-border p-6 text-center text-xs text-brand-text-secondary">
-                    No active banquet halls or decorators in {currentCity} yet.
+                    No active event planners listed in {currentCity} yet.
                   </div>
                 )}
               </div>
             </div>
+
           </div>
         )}
 
@@ -4077,24 +4078,22 @@ export default function App() {
                             key={slot.id}
                             type="button"
                             onClick={() => setPlanningTimeSlot(slot.id)}
-                            className={`p-2 rounded-xl border text-left transition-all ${
+                            className={`p-2 rounded-xl border text-center transition-all ${
                               isSelected
                                 ? 'bg-brand-primary border-brand-primary text-white shadow-md shadow-brand-primary/20 scale-[1.02]'
                                 : 'bg-white border-gray-200 hover:border-brand-primary/50 text-gray-800'
                             }`}
                           >
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <span>{slot.icon}</span>
-                              <span className={`text-[11px] font-black ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                                {slot.label}
-                              </span>
-                            </div>
-                            <span className={`text-[8.5px] font-medium block truncate ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                            <span className={`text-[11px] font-black block ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                              {slot.label}
+                            </span>
+                            <span className={`text-[8.5px] font-medium block mt-0.5 truncate ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
                               {slot.time}
                             </span>
                           </button>
                         );
                       })}
+
                     </div>
                   </div>
 
