@@ -14,8 +14,9 @@ import {
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
-  ChevronUp, ChevronDown, Camera
+  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail
 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
@@ -295,6 +296,8 @@ export default function App() {
 
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+
 
   // Splash screen tour state
   const [showSplash, setShowSplash] = useState<boolean>(() => {
@@ -3300,7 +3303,18 @@ export default function App() {
         </div>
 
         {/* Action icons right side */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Help & Support */}
+          <button
+            onClick={() => setIsSupportModalOpen(true)}
+            className="p-2.5 hover:bg-gray-100 rounded-full text-brand-text transition relative"
+            id="support-help-button"
+            aria-label="Help and Support"
+            title="Help and Support"
+          >
+            <Headphones size={18} />
+          </button>
+
           {/* Notifications */}
           <button
             onClick={() => {
@@ -3320,6 +3334,7 @@ export default function App() {
               </span>
             )}
           </button>
+
 
           {/* Cart showing bundle count */}
           <button
@@ -5589,7 +5604,84 @@ export default function App() {
         onClose={() => setIsLocationOpen(false)}
       />
 
+      {/* Help & Support Customer Modal */}
+      <AnimatePresence>
+        {isSupportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSupportModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white w-full max-w-sm rounded-[28px] p-6 shadow-2xl border border-brand-border z-10 space-y-4"
+              id="help-support-modal"
+            >
+              <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary">
+                    <Headphones size={16} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-brand-text text-base">Help & Support</h3>
+                    <p className="text-[10px] text-brand-text-secondary font-bold">Official PARVA Assistance</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSupportModalOpen(false)}
+                  className="p-1.5 hover:bg-gray-100 rounded-full transition text-gray-400"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {/* Email Support */}
+                <div className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100 space-y-2">
+                  <div className="flex items-center gap-2 text-brand-primary">
+                    <Mail size={14} />
+                    <span className="text-[11px] font-black uppercase tracking-wider">Email Support</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-800 font-mono">support@parva.com</p>
+                  <p className="text-[10px] text-gray-500">For booking questions, vendor connections, or support-managed refunds.</p>
+                  <a
+                    href="mailto:support@parva.com?subject=PARVA%20Support%20Request"
+                    className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+                  >
+                    <Mail size={12} />
+                    <span>Send Query</span>
+                  </a>
+                </div>
+
+                {/* Call Support */}
+                <div className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-600">
+                    <Phone size={14} />
+                    <span className="text-[11px] font-black uppercase tracking-wider">Call Support</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-800 font-mono">8554006073</p>
+                  <p className="text-[10px] text-gray-500">Direct celebration concierge & assistance helpline.</p>
+                  <a
+                    href="tel:8554006073"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+                  >
+                    <Phone size={12} />
+                    <span>Call Support</span>
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <VoiceSearchModal
+
         isOpen={isVoiceOpen}
         onClose={() => setIsVoiceOpen(false)}
         onVoiceResult={handleVoiceSearchResult}

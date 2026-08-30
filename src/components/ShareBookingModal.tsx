@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Share2, Copy, Check, Calendar, Ticket, ShieldCheck, Heart, ExternalLink } from 'lucide-react';
+import { X, Share2, Copy, Check, Calendar, Ticket, ShieldCheck, Heart, ExternalLink, Download, Sparkles } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { Booking } from '../types';
 
 interface ShareBookingModalProps {
@@ -17,6 +18,7 @@ export default function ShareBookingModal({
   onShowNotification
 }: ShareBookingModalProps) {
   const [copied, setCopied] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   if (!isOpen || !booking) return null;
 
@@ -50,7 +52,6 @@ export default function ShareBookingModal({
         return String.fromCharCode(parseInt(p1, 16));
       }));
       
-      // Keep only origin + pathname for a clean, professional root share link
       return `${window.location.origin}${window.location.pathname}?sharedBooking=${b64}`;
     } catch (error) {
       console.error('Error generating share link:', error);
@@ -62,39 +63,108 @@ export default function ShareBookingModal({
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareableUrl);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareableUrl);
+      } else {
+        // Fallback for older browsers / iframe contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = shareableUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
-      onShowNotification('📋 Shareable event plan link copied!');
-      setTimeout(() => setCopied(false), 2000);
+      onShowNotification('📋 Read-only event plan link copied!');
+      setTimeout(() => setCopied(false), 2500);
     } catch (e) {
-      onShowNotification('Failed to copy to clipboard.');
+      onShowNotification('❌ Failed to copy to clipboard.');
     }
   };
 
   const handleWhatsAppShare = () => {
-    const servicesStr = booking.selectedServices
+    const servicesStr = (booking.selectedServices || [])
       .map((s) => `• *${s.name}* (₹${s.price.toLocaleString('en-IN')})`)
       .join('\n');
 
     const message = 
-`✨ *PARVA CELEBRATIONS - EVENT PLAN* ✨
+`✨ *PARVA CELEBRATIONS - EVENT BLUEPRINT* ✨
 
-🎉 *Celebration:* ${booking.eventType}
+🎉 *Celebration:* ${booking.eventType || 'Event'}
 📅 *Date:* ${booking.eventDate}
 🏢 *Vendor:* ${booking.vendor.name} (${booking.vendor.category})
-🎫 *Booking ID:* ${booking.bookingIdString}
+🎫 *Booking ID:* ${booking.bookingIdString || booking.id}
 
 📋 *Booked Services:*
 ${servicesStr}
 
-💰 *Estimated Value:* ₹${booking.finalPrice.toLocaleString('en-IN')}
+💰 *Total Investment:* ₹${(booking.finalPrice || booking.totalPrice || 0).toLocaleString('en-IN')}
 
-🔗 *View Live Shared Plan:* ${shareableUrl}`;
+🔗 *View Live Event Plan:* ${shareableUrl}`;
 
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
     onShowNotification('📲 Opening WhatsApp to share your event plan...');
   };
+
+  const handleNativeShare = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `PARVA Event Plan - ${booking.eventType || 'Celebration'}`,
+          text: `View our official celebration plan with ${booking.vendor.name} on PARVA!`,
+          url: shareableUrl
+        });
+        onShowNotification('🎉 Event plan shared successfully!');
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          handleWhatsAppShare();
+        }
+      }
+    } else {
+      handleWhatsAppShare();
+    }
+  };
+
+  const handleDownloadCardImage = async () => {
+    if (isGeneratingImage) return;
+    setIsGeneratingImage(true);
+    onShowNotification('🎨 Generating high-res event plan pass...');
+
+    try {
+      const cardElement = document.getElementById('booking-visual-pass');
+      if (!cardElement) {
+        onShowNotification('❌ Could not locate event card element.');
+        setIsGeneratingImage(false);
+        return;
+      }
+
+      const canvas = await html2canvas(cardElement, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `PARVA_Event_Plan_${booking.bookingIdString || booking.id}.png`;
+      link.href = imgData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      onShowNotification('🖼️ Event plan image saved to your downloads!');
+    } catch (err) {
+      console.error('Error generating card image:', err);
+      onShowNotification('❌ Could not generate card image. Please use WhatsApp share.');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
 
   return (
     <AnimatePresence>
@@ -240,33 +310,47 @@ ${servicesStr}
           </div>
 
           {/* Actions Footer */}
-          <div className="px-6 pb-6 pt-3 border-t border-gray-100 bg-gray-50 flex flex-col gap-2.5">
+          <div className="px-6 pb-6 pt-3 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
             <button
               onClick={handleWhatsAppShare}
               className="w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3 px-4 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 active:scale-[0.98]"
               id="whatsapp-share-btn"
             >
-              <span className="text-lg font-bold">📲</span>
+              <span className="text-base">📲</span>
               <span>Share via WhatsApp</span>
             </button>
-            <button
-              onClick={handleCopyLink}
-              className="w-full bg-white hover:bg-gray-100 text-brand-text border border-brand-border py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 active:scale-[0.98]"
-              id="copy-share-link-btn"
-            >
-              {copied ? (
-                <>
-                  <Check size={14} className="text-emerald-600" />
-                  <span className="text-emerald-600 font-extrabold">Link Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={14} className="text-brand-text-secondary" />
-                  <span>Copy Read-Only Link</span>
-                </>
-              )}
-            </button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleDownloadCardImage}
+                disabled={isGeneratingImage}
+                className="bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/20 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+                id="download-plan-image-btn"
+              >
+                <Download size={13} />
+                <span>{isGeneratingImage ? 'Exporting...' : 'Save Image'}</span>
+              </button>
+
+              <button
+                onClick={handleCopyLink}
+                className="bg-white hover:bg-gray-100 text-brand-text border border-brand-border py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                id="copy-share-link-btn"
+              >
+                {copied ? (
+                  <>
+                    <Check size={13} className="text-emerald-600" />
+                    <span className="text-emerald-600 font-extrabold">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} className="text-brand-text-secondary" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+
         </motion.div>
       </div>
     </AnimatePresence>
