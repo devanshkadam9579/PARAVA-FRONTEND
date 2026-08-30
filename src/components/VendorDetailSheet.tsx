@@ -59,24 +59,23 @@ function getYoutubeId(url: string) {
 
 export const TIME_SLOTS = [
   { id: 'full_day', label: '24 Hr Full Day', time: 'Full Day' },
-  { id: 'morning', label: '09:00 - 13:00', time: '09:00 - 13:00' },
-  { id: 'afternoon', label: '13:00 - 17:00', time: '13:00 - 17:00' },
-  { id: 'evening', label: '17:00 - 22:00', time: '17:00 - 22:00' },
+  { id: 'morning', label: '09:00 AM - 01:00 PM', time: '09:00 AM - 01:00 PM' },
+  { id: 'afternoon', label: '01:00 PM - 05:00 PM', time: '01:00 PM - 05:00 PM' },
+  { id: 'evening', label: '05:00 PM - 10:00 PM', time: '05:00 PM - 10:00 PM' },
 ];
 
-export function formatTimeSlot(slotId?: string): string {
-  switch ((slotId || '').toLowerCase()) {
-    case 'morning':
-      return '09:00 - 13:00';
-    case 'afternoon':
-      return '13:00 - 17:00';
-    case 'evening':
-      return '17:00 - 22:00';
-    case 'full_day':
-    default:
-      return '24 Hr Full Day';
+export function formatTimeSlot(slotId?: string, customTime?: string): string {
+  if (customTime && customTime.trim()) {
+    return customTime.trim();
   }
+  const s = (slotId || '').toLowerCase().trim();
+  if (s === 'morning') return '09:00 AM - 01:00 PM';
+  if (s === 'afternoon') return '01:00 PM - 05:00 PM';
+  if (s === 'evening') return '05:00 PM - 10:00 PM';
+  if (s.includes('am') || s.includes('pm') || s.includes(':')) return slotId!;
+  return '24 Hr Full Day';
 }
+
 
 
 interface VendorDetailSheetProps {
@@ -178,12 +177,14 @@ export default function VendorDetailSheet({
   // New Interactive Modals State
   const [isFullCalendarOpen, setIsFullCalendarOpen] = useState(false);
   const [selectedServiceModal, setSelectedServiceModal] = useState<VendorServiceItem | null>(null);
+  const [customDeliveryTime, setCustomDeliveryTime] = useState('');
   const [activeReelModal, setActiveReelModal] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+
 
 
   const safeUserName = currentUser?.name || (currentUser as any)?.displayName || currentUser?.email?.split('@')[0] || 'Guest Planner';
@@ -807,19 +808,20 @@ export default function VendorDetailSheet({
                 </div>
 
                 {/* Time Slot Selection */}
-                <div className="mt-3 pt-3 border-t border-dashed border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
+                {/* Time Slot Selection */}
+                <div className="mt-3 pt-3 border-t border-dashed border-gray-100 space-y-2">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Clock size={14} className="text-brand-primary" />
                       <span className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Select Time Slot</span>
                     </div>
                     <span className="text-[10px] font-extrabold text-brand-primary">
-                      {formatTimeSlot(selectedTimeSlot)}
+                      {formatTimeSlot(selectedTimeSlot, customDeliveryTime)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     {TIME_SLOTS.map((slot) => {
-                      const isSlotSelected = selectedTimeSlot === slot.id;
+                      const isSlotSelected = selectedTimeSlot === slot.id && !customDeliveryTime;
                       const isBlocked = (vendor.busySlots?.[selectedDate] || []).includes(slot.id);
                       return (
                         <button
@@ -827,6 +829,7 @@ export default function VendorDetailSheet({
                           type="button"
                           disabled={isBlocked}
                           onClick={() => {
+                            setCustomDeliveryTime('');
                             setSelectedTimeSlot(slot.id);
                             if (onSelectTimeSlot) onSelectTimeSlot(slot.id);
                           }}
@@ -848,20 +851,67 @@ export default function VendorDetailSheet({
                       );
                     })}
                   </div>
+
+                  {/* Exact Custom 12-Hour Time Input (Cakes, Delivery, Specific Start Time) */}
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100">
+                    <div>
+                      <span className="text-[9px] text-gray-700 font-extrabold uppercase tracking-wider block">
+                        Exact On-Time Schedule (12-Hour AM / PM)
+                      </span>
+                      <p className="text-[10px] text-gray-500">Pick exact time for cake delivery or custom timing</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={customDeliveryTime ? (() => {
+                          const [t, p] = customDeliveryTime.split(' ');
+                          if (!t) return '';
+                          let [h, m] = t.split(':').map(Number);
+                          if (p === 'PM' && h < 12) h += 12;
+                          if (p === 'AM' && h === 12) h = 0;
+                          return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        })() : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            const [h, m] = val.split(':');
+                            const hour = parseInt(h, 10);
+                            const ampm = hour >= 12 ? 'PM' : 'AM';
+                            const formattedHour = hour % 12 || 12;
+                            const timeStr = `${String(formattedHour).padStart(2, '0')}:${m} ${ampm}`;
+                            setCustomDeliveryTime(timeStr);
+                            setSelectedTimeSlot(timeStr);
+                            if (onSelectTimeSlot) onSelectTimeSlot(timeStr);
+                          } else {
+                            setCustomDeliveryTime('');
+                            setSelectedTimeSlot('evening');
+                            if (onSelectTimeSlot) onSelectTimeSlot('evening');
+                          }
+                        }}
+                        className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-bold text-gray-800 outline-none focus:border-brand-primary"
+                      />
+                      {customDeliveryTime && (
+                        <span className="text-xs font-black text-brand-primary bg-white px-2 py-1 rounded-lg border border-brand-primary/20 shadow-xs">
+                          {customDeliveryTime}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {selectedDate && (
                   (vendor.busyDates || []).includes(selectedDate) || (vendor.busySlots?.[selectedDate] || []).includes(selectedTimeSlot) ? (
                     <p className="text-xs text-rose-600 font-bold flex items-center gap-1 mt-2.5">
-                      <span>• Date {selectedDate} ({formatTimeSlot(selectedTimeSlot)}) is Booked / Blocked</span>
+                      <span>• Date {selectedDate} ({formatTimeSlot(selectedTimeSlot, customDeliveryTime)}) is Booked / Blocked</span>
                     </p>
                   ) : (
                     <p className="text-xs text-brand-success font-semibold flex items-center gap-1 mt-2.5">
                       <CheckCircle2 size={13} />
-                      <span>Available for booking on {selectedDate} ({formatTimeSlot(selectedTimeSlot)})</span>
+                      <span>Available for booking on {selectedDate} ({formatTimeSlot(selectedTimeSlot, customDeliveryTime)})</span>
                     </p>
                   )
                 )}
+
               </div>
 
 

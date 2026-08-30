@@ -92,24 +92,23 @@ const loadCashfreeScript = (): Promise<any> => {
 
 export const TIME_SLOTS = [
   { id: 'full_day', label: '24 Hr Full Day', time: 'Full Day' },
-  { id: 'morning', label: '09:00 - 13:00', time: '09:00 - 13:00' },
-  { id: 'afternoon', label: '13:00 - 17:00', time: '13:00 - 17:00' },
-  { id: 'evening', label: '17:00 - 22:00', time: '17:00 - 22:00' },
+  { id: 'morning', label: '09:00 AM - 01:00 PM', time: '09:00 AM - 01:00 PM' },
+  { id: 'afternoon', label: '01:00 PM - 05:00 PM', time: '01:00 PM - 05:00 PM' },
+  { id: 'evening', label: '05:00 PM - 10:00 PM', time: '05:00 PM - 10:00 PM' },
 ];
 
-export const formatTimeSlot = (slotId?: string): string => {
-  switch ((slotId || '').toLowerCase()) {
-    case 'morning':
-      return '09:00 - 13:00';
-    case 'afternoon':
-      return '13:00 - 17:00';
-    case 'evening':
-      return '17:00 - 22:00';
-    case 'full_day':
-    default:
-      return '24 Hr Full Day';
+export const formatTimeSlot = (slotId?: string, customTime?: string): string => {
+  if (customTime && customTime.trim()) {
+    return customTime.trim();
   }
+  const s = (slotId || '').toLowerCase().trim();
+  if (s === 'morning') return '09:00 AM - 01:00 PM';
+  if (s === 'afternoon') return '01:00 PM - 05:00 PM';
+  if (s === 'evening') return '05:00 PM - 10:00 PM';
+  if (s.includes('am') || s.includes('pm') || s.includes(':')) return slotId!;
+  return '24 Hr Full Day';
 };
+
 
 
 // Deterministic availability evaluator strictly based on Firestore busyDates and busySlots
@@ -1027,9 +1026,11 @@ export default function App() {
   const [planningTimeSlot, setPlanningTimeSlot] = useState<string>(() => {
     return localStorage.getItem('parva_planning_time_slot') || 'evening';
   });
+  const [customDeliveryTime, setCustomDeliveryTime] = useState<string>('');
   const [planningGuestSize, setPlanningGuestSize] = useState<number>(() => {
     return Number(localStorage.getItem('parva_planning_guest_size') || '100');
   });
+
   const [planningBudget, setPlanningBudget] = useState<number>(() => {
     return Number(localStorage.getItem('parva_planning_budget') || '500000');
   });
@@ -1238,6 +1239,7 @@ export default function App() {
   const [vendorEditPhone, setVendorEditPhone] = useState('');
   const [vendorEditVideos, setVendorEditVideos] = useState('');
   const [vendorEditFounder, setVendorEditFounder] = useState('');
+  const [vendorEditFounderImage, setVendorEditFounderImage] = useState('');
   const [vendorEditExperience, setVendorEditExperience] = useState('');
   const [vendorEditWhatsapp, setVendorEditWhatsapp] = useState('');
   const [vendorEditInsta, setVendorEditInsta] = useState('');
@@ -1245,6 +1247,7 @@ export default function App() {
   const [vendorNewImage, setVendorNewImage] = useState('');
   const [vendorNewBusyDate, setVendorNewBusyDate] = useState('');
   const [vendorSubTab, setVendorSubTab] = useState<'catalogue' | 'bookings' | 'dates_leads'>('bookings');
+
 
 
   const [adminSubTab, setAdminSubTab] = useState<'dashboard' | 'onboard' | 'categories' | 'leads' | 'approval' | 'email_logs' | 'settings'>('dashboard');
@@ -4129,12 +4132,15 @@ export default function App() {
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                       {TIME_SLOTS.map((slot) => {
-                        const isSelected = planningTimeSlot === slot.id;
+                        const isSelected = planningTimeSlot === slot.id && !customDeliveryTime;
                         return (
                           <button
                             key={slot.id}
                             type="button"
-                            onClick={() => setPlanningTimeSlot(slot.id)}
+                            onClick={() => {
+                              setCustomDeliveryTime('');
+                              setPlanningTimeSlot(slot.id);
+                            }}
                             className={`p-2 rounded-xl border text-center transition-all ${
                               isSelected
                                 ? 'bg-brand-primary border-brand-primary text-white shadow-md shadow-brand-primary/20 scale-[1.02]'
@@ -4150,9 +4156,53 @@ export default function App() {
                           </button>
                         );
                       })}
+                    </div>
 
+                    {/* Exact On-Time Schedule Custom Input */}
+                    <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100">
+                      <div>
+                        <span className="text-[9px] text-gray-700 font-extrabold uppercase tracking-wider block">
+                          Exact On-Time Schedule (12-Hour AM / PM)
+                        </span>
+                        <p className="text-[10px] text-gray-500">Pick exact delivery or custom start time (e.g., cake delivery)</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          value={customDeliveryTime ? (() => {
+                            const [t, p] = customDeliveryTime.split(' ');
+                            if (!t) return '';
+                            let [h, m] = t.split(':').map(Number);
+                            if (p === 'PM' && h < 12) h += 12;
+                            if (p === 'AM' && h === 12) h = 0;
+                            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                          })() : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const [h, m] = val.split(':');
+                              const hour = parseInt(h, 10);
+                              const ampm = hour >= 12 ? 'PM' : 'AM';
+                              const formattedHour = hour % 12 || 12;
+                              const timeStr = `${String(formattedHour).padStart(2, '0')}:${m} ${ampm}`;
+                              setCustomDeliveryTime(timeStr);
+                              setPlanningTimeSlot(timeStr);
+                            } else {
+                              setCustomDeliveryTime('');
+                              setPlanningTimeSlot('evening');
+                            }
+                          }}
+                          className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-bold text-gray-800 outline-none focus:border-brand-primary"
+                        />
+                        {customDeliveryTime && (
+                          <span className="text-xs font-black text-brand-primary bg-white px-2 py-1 rounded-lg border border-brand-primary/20 shadow-xs">
+                            {customDeliveryTime}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+
 
                   {/* Real-time Availability Check */}
                   {(() => {
@@ -4314,7 +4364,8 @@ export default function App() {
                               vendor: bundledItems[0].vendor,
                               selectedServices: bundledItems.map(item => item.service),
                               eventDate: planningStartDate,
-                              eventTimeSlot: planningTimeSlot || 'evening',
+                              eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
+                              customTime: customDeliveryTime || '',
                               eventType: planningEventType,
                               status: 'Pending',
                               totalPrice: servicesTotal,
@@ -4323,6 +4374,7 @@ export default function App() {
                               paymentStatus: 'Paid',
                               bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
                             };
+
 
 
                             handlePayWithRazorpay({
@@ -4403,8 +4455,22 @@ export default function App() {
                         </span>
                       </div>
 
+                      {/* Event Schedule & Exact Time */}
+                      <div className="bg-brand-primary-light/10 border border-brand-primary/15 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-gray-500 uppercase block">Event / Delivery Schedule</span>
+                          <span className="font-extrabold text-brand-primary-dark">
+                            {b.eventDate} • {formatTimeSlot(b.eventTimeSlot, (b as any).customTime)}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                          {b.eventType || 'Celebration'}
+                        </span>
+                      </div>
+
                       {/* Detailed list of services booked */}
                       <div className="space-y-2 mb-4">
+
                         <span className="text-[10px] font-semibold text-brand-text-secondary uppercase tracking-wider block">
                           Booked Services
                         </span>
@@ -4863,9 +4929,10 @@ export default function App() {
                                         <span className="font-extrabold text-gray-800">{b.eventDate}</span>
                                       </div>
                                       <div>
-                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Time Slot</span>
-                                        <span className="font-extrabold text-brand-primary">{formatTimeSlot(b.eventTimeSlot)}</span>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Delivery / Time</span>
+                                        <span className="font-extrabold text-brand-primary">{formatTimeSlot(b.eventTimeSlot, (b as any).customTime)}</span>
                                       </div>
+
                                       <div>
                                         <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Type</span>
                                         <span className="font-bold text-gray-700">{b.eventType || 'Celebration'}</span>

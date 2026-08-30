@@ -194,7 +194,7 @@ const VendorCard = memo(function VendorCard({
             </p>
           </div>
 
-          <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+          <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2 text-xs">
             <div>
               <span className="text-[9px] text-gray-400 font-bold block uppercase">
                 {vendor.category === 'Catering' ? 'Per Plate Rate' : 'Starting From'}
@@ -205,13 +205,28 @@ const VendorCard = memo(function VendorCard({
               </span>
             </div>
 
-            <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-200/60 flex items-center gap-1">
-              <MapPin size={10} className="text-gray-400" />
-              <span>{getDistanceDisplay()}</span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200/60 hidden sm:flex items-center gap-1">
+                <MapPin size={10} className="text-gray-400" />
+                <span>{getDistanceDisplay()}</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(vendor);
+                }}
+                className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-md shadow-brand-primary/20 transition-all active:scale-95 flex items-center gap-1"
+                id={`book-now-btn-${vendor.id}`}
+              >
+                <span>Book Now</span>
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
+
     </div>
   );
 });
