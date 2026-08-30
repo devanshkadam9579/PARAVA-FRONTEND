@@ -90,32 +90,69 @@ const loadCashfreeScript = (): Promise<any> => {
   });
 };
 
-// Deterministic availability evaluator strictly based on Firestore busyDates
-export const isVendorAvailable = (vendorId: string, startDateStr: string, endDateStr?: string, vendorsList?: any[]): boolean => {
+export const TIME_SLOTS = [
+  { id: 'morning', label: 'Morning', time: '09:00 AM – 01:00 PM', icon: '🌅' },
+  { id: 'afternoon', label: 'Afternoon', time: '01:00 PM – 05:00 PM', icon: '☀️' },
+  { id: 'evening', label: 'Evening', time: '05:00 PM – 10:00 PM', icon: '🌆' },
+  { id: 'full_day', label: 'Full Day', time: '09:00 AM – 10:00 PM', icon: '✨' },
+];
+
+export const formatTimeSlot = (slotId?: string): string => {
+  switch ((slotId || '').toLowerCase()) {
+    case 'morning':
+      return 'Morning (09:00 AM – 01:00 PM)';
+    case 'afternoon':
+      return 'Afternoon (01:00 PM – 05:00 PM)';
+    case 'evening':
+      return 'Evening (05:00 PM – 10:00 PM)';
+    case 'full_day':
+    default:
+      return 'Full Day (09:00 AM – 10:00 PM)';
+  }
+};
+
+// Deterministic availability evaluator strictly based on Firestore busyDates and busySlots
+export const isVendorAvailable = (
+  vendorId: string, 
+  startDateStr: string, 
+  endDateStr?: string, 
+  vendorsList?: any[],
+  timeSlot?: string
+): boolean => {
   if (!startDateStr) return true;
   
   if (vendorsList) {
     const v = vendorsList.find(item => item.id === vendorId);
-    if (v && v.busyDates && Array.isArray(v.busyDates) && v.busyDates.length > 0) {
-      const start = new Date(startDateStr);
-      const end = endDateStr ? new Date(endDateStr) : start;
-      const current = new Date(start);
-      while (current <= end) {
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, '0');
-        const day = String(current.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-        if (v.busyDates.includes(dateStr)) {
-          return false;
-        }
-        current.setDate(current.getDate() + 1);
+    if (!v) return true;
+
+    const slot = (timeSlot || 'full_day').toLowerCase();
+    const start = new Date(startDateStr);
+    const end = endDateStr ? new Date(endDateStr) : start;
+    const current = new Date(start);
+
+    while (current <= end) {
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      if (v.busyDates && Array.isArray(v.busyDates) && v.busyDates.includes(dateStr)) {
+        return false;
       }
+
+      if (v.busySlots && v.busySlots[dateStr] && Array.isArray(v.busySlots[dateStr])) {
+        const blocked = v.busySlots[dateStr];
+        if (blocked.includes('full_day')) return false;
+        if (slot === 'full_day' && blocked.length > 0) return false;
+        if (blocked.includes(slot)) return false;
+      }
+
+      current.setDate(current.getDate() + 1);
     }
   }
 
   return true;
 };
-
 
 const getUserName = (user: any) => {
   if (!user) return 'Guest Planner';
@@ -132,34 +169,38 @@ const getFirstName = (user: any) => {
   return name === 'Guest Planner' ? 'Guest Planner' : name.split(' ')[0];
 };
 
-const VendorDashboardCalendar = ({ vendorId, busyDates, bookings, onToggleDate, showNotification }: {
+const VendorDashboardCalendar = ({ 
+  vendorId, 
+  busyDates, 
+  busySlots = {},
+  bookings, 
+  onToggleDate, 
+  onToggleSlot,
+  showNotification 
+}: {
   vendorId: string;
   busyDates: string[];
+  busySlots?: Record<string, string[]>;
   bookings: Booking[];
   onToggleDate: (date: string) => void;
+  onToggleSlot?: (date: string, slot: string) => void;
   showNotification: (msg: string) => void;
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeDateModal, setActiveDateModal] = useState<string | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Get booked dates for this vendor
-  const bookedDates = bookings
-    .filter(b => b.vendor.id === vendorId)
-    .map(b => b.eventDate)
-    .filter(Boolean);
+  // Get active bookings for this vendor
+  const vendorBookings = bookings.filter(b => b.vendor.id === vendorId);
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
 
-  // Days in month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // First day of month (0 = Sun, 1 = Mon...)
   const firstDayIndex = new Date(year, month, 1).getDay();
-
-  // Prev month filler days
   const fillerDays = Array(firstDayIndex).fill(null);
 
   const daysArray = [];
@@ -181,12 +222,11 @@ const VendorDashboardCalendar = ({ vendorId, busyDates, bookings, onToggleDate, 
         <div>
           <h4 className="font-black text-indigo-600 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-ping" />
-            <span>Operational Schedule Manager</span>
+            <span>Operational Schedule & Slot Manager</span>
           </h4>
-          <p className="text-[10px] text-brand-text-secondary mt-0.5">Green = Booked, Red = Blocked. Tap dates to toggle block state.</p>
+          <p className="text-[10px] text-brand-text-secondary mt-0.5">Click any date to manage AM/PM time slot blocks or mark day unavailable.</p>
         </div>
         
-        {/* Month Selector Controls */}
         <div className="flex items-center gap-2">
           <button 
             onClick={handlePrevMonth}
@@ -208,7 +248,6 @@ const VendorDashboardCalendar = ({ vendorId, busyDates, bookings, onToggleDate, 
 
       {/* Grid calendar */}
       <div className="space-y-1">
-        {/* Day Header names */}
         <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-brand-text-secondary uppercase tracking-wider">
           <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
         </div>
@@ -221,39 +260,38 @@ const VendorDashboardCalendar = ({ vendorId, busyDates, bookings, onToggleDate, 
           {daysArray.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
-            const isBooked = bookedDates.includes(dateStr);
-            const isBlocked = busyDates.includes(dateStr);
+            const dateBookings = vendorBookings.filter(b => b.eventDate === dateStr);
+            const isBooked = dateBookings.length > 0;
+            const isFullyBlocked = busyDates.includes(dateStr);
+            const slotBlocked = busySlots[dateStr] && busySlots[dateStr].length > 0;
 
             let dayStyle = "bg-gray-50 hover:bg-gray-100 text-brand-text border border-transparent";
             let statusText = "";
 
             if (isBooked) {
               dayStyle = "bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-500/20 border border-emerald-400 scale-[1.03]";
-              statusText = "Booked Celebration! 🎉";
-            } else if (isBlocked) {
+              statusText = "Confirmed Booking! 🎉";
+            } else if (isFullyBlocked) {
               dayStyle = "bg-rose-500 text-white font-extrabold shadow-md shadow-rose-500/20 border border-rose-400 scale-[1.03]";
-              statusText = "Blocked Out 🔒";
+              statusText = "Day Blocked 🔒";
+            } else if (slotBlocked) {
+              dayStyle = "bg-amber-500 text-white font-extrabold shadow-md shadow-amber-500/20 border border-amber-400 scale-[1.03]";
+              statusText = "Partial Slots Blocked ⏳";
             }
 
             return (
               <button
                 key={`day-${day}`}
-                onClick={() => {
-                  if (isBooked) {
-                    showNotification(`🎉 This date is locked for an active customer booking: ${dateStr}. Cannot manually block/unblock!`);
-                  } else {
-                    onToggleDate(dateStr);
-                  }
-                }}
+                onClick={() => setActiveDateModal(dateStr)}
                 className={`aspect-square rounded-xl text-[11px] flex flex-col items-center justify-center relative transition active:scale-90 ${dayStyle}`}
                 title={`${dateStr} ${statusText}`}
               >
                 <span>{day}</span>
                 {isBooked && (
-                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-white animate-pulse" />
+                  <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 )}
-                {isBlocked && (
-                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-white" />
+                {!isBooked && (isFullyBlocked || slotBlocked) && (
+                  <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-white" />
                 )}
               </button>
             );
@@ -262,23 +300,144 @@ const VendorDashboardCalendar = ({ vendorId, busyDates, bookings, onToggleDate, 
       </div>
 
       {/* Legend key indicators */}
-      <div className="flex gap-4 justify-center items-center text-[9px] font-black uppercase tracking-wider text-brand-text-secondary pt-2 border-t border-dashed border-gray-100">
+      <div className="flex flex-wrap gap-3 justify-center items-center text-[9px] font-black uppercase tracking-wider text-brand-text-secondary pt-2 border-t border-dashed border-gray-100">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
-          <span>Booked Date</span>
+          <span>Confirmed Booking</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
-          <span>Blocked Date</span>
+          <span>Full Day Blocked</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm" />
+          <span>Partial Slots Blocked</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-gray-200 border border-brand-border" />
-          <span>Available Date</span>
+          <span>Available</span>
         </div>
       </div>
+
+      {/* Date & AM/PM Slot Management Modal */}
+      {activeDateModal && (
+        <div className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+              <div>
+                <h4 className="text-sm font-black text-gray-900 flex items-center gap-1.5">
+                  <Calendar size={16} className="text-brand-primary" />
+                  <span>Manage Schedule</span>
+                </h4>
+                <p className="text-xs font-extrabold text-brand-primary mt-0.5">{activeDateModal}</p>
+              </div>
+              <button 
+                onClick={() => setActiveDateModal(null)} 
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Existing bookings on this date */}
+            {(() => {
+              const dateBookings = vendorBookings.filter(b => b.eventDate === activeDateModal);
+              if (dateBookings.length > 0) {
+                return (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 space-y-2">
+                    <h5 className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                      <span>✓ Active Confirmed Bookings ({dateBookings.length})</span>
+                    </h5>
+                    {dateBookings.map((b, idx) => (
+                      <div key={idx} className="text-[11px] text-emerald-900 bg-white p-2 rounded-xl border border-emerald-100 space-y-0.5">
+                        <p className="font-bold">Customer: {b.customerName || 'Verified Client'}</p>
+                        <p className="text-[10px] text-emerald-700">Slot: {formatTimeSlot(b.eventTimeSlot)}</p>
+                        <p className="text-[10px] text-emerald-700">Value: ₹{b.finalPrice?.toLocaleString('en-IN')}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Whole Day Toggle */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                <div>
+                  <span className="text-xs font-bold text-gray-800 block">Whole Day Status</span>
+                  <span className="text-[10px] text-gray-500">
+                    {busyDates.includes(activeDateModal) ? 'Currently Blocked (Unavailable)' : 'Currently Open'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onToggleDate(activeDateModal)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                    busyDates.includes(activeDateModal)
+                      ? 'bg-rose-500 text-white hover:bg-rose-600'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  {busyDates.includes(activeDateModal) ? 'Unlock Day' : 'Block Day'}
+                </button>
+              </div>
+
+              {/* AM/PM Time Slot Toggles */}
+              <div className="space-y-2 pt-1">
+                <h5 className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+                  Individual Time Slot Availability
+                </h5>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {TIME_SLOTS.map((slot) => {
+                    const isSlotBlocked = (busySlots[activeDateModal] || []).includes(slot.id);
+                    return (
+                      <div 
+                        key={slot.id} 
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 bg-white"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{slot.icon}</span>
+                          <div>
+                            <span className="text-xs font-extrabold text-gray-800 block leading-tight">{slot.label}</span>
+                            <span className="text-[10px] font-medium text-gray-500">{slot.time}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (onToggleSlot) {
+                              onToggleSlot(activeDateModal, slot.id);
+                            } else {
+                              onToggleDate(activeDateModal);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition ${
+                            isSlotBlocked
+                              ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          }`}
+                        >
+                          {isSlotBlocked ? 'Blocked 🔒' : 'Available ✓'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveDateModal(null)}
+              className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold py-2.5 rounded-xl text-xs transition"
+            >
+              Done & Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:5000';
 
@@ -863,6 +1022,9 @@ export default function App() {
   const [planningEndDate, setPlanningEndDate] = useState<string>(() => {
     return localStorage.getItem('parva_planning_end_date') || new Date().toISOString().split('T')[0];
   });
+  const [planningTimeSlot, setPlanningTimeSlot] = useState<string>(() => {
+    return localStorage.getItem('parva_planning_time_slot') || 'evening';
+  });
   const [planningGuestSize, setPlanningGuestSize] = useState<number>(() => {
     return Number(localStorage.getItem('parva_planning_guest_size') || '100');
   });
@@ -881,9 +1043,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('parva_planning_start_date', planningStartDate);
     localStorage.setItem('parva_planning_end_date', planningEndDate);
+    localStorage.setItem('parva_planning_time_slot', planningTimeSlot);
     localStorage.setItem('parva_planning_guest_size', String(planningGuestSize));
     localStorage.setItem('parva_planning_budget', String(planningBudget));
-  }, [planningStartDate, planningEndDate, planningGuestSize, planningBudget]);
+  }, [planningStartDate, planningEndDate, planningTimeSlot, planningGuestSize, planningBudget]);
+
 
   // Unified planner package slots
   const [plannerHall, setPlannerHall] = useState<Vendor | null>(() => {
@@ -1413,9 +1577,10 @@ export default function App() {
           couponCode: couponApplied ? couponCode : undefined,
           customerName: currentUser?.name || params.bookingData?.customerName || 'Parva Customer',
           customerPhone: currentUser?.phone || params.bookingData?.customerPhone || '9999999999',
-          customerEmail: currentUser?.email || params.bookingData?.customerEmail || 'customer@parvaevents.com',
+          customerEmail: currentUser?.email || params.bookingData?.customerEmail || 'customer@parva.com',
           eventDate: params.bookingData?.eventDate || planningStartDate,
-          eventTimeSlot: params.bookingData?.eventTimeSlot || 'full_day'
+          eventTimeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'evening'
+
         })
       });
 
@@ -3861,12 +4026,107 @@ export default function App() {
                   ))}
                 </div>
 
+                {/* Interactive Event Schedule Confirmation (Date & AM/PM Time Slot) */}
+                <div className="bg-white border border-brand-primary/20 rounded-2xl p-3.5 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={15} className="text-brand-primary" />
+                      <h5 className="text-[11px] font-black uppercase tracking-wider text-brand-text">Event Date & Time Slot</h5>
+                    </div>
+                    <span className="text-[9px] font-extrabold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-md">
+                      Required for Booking
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Event Date Picker */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                      <label className="text-[9px] text-gray-500 font-extrabold uppercase tracking-wider block mb-1">
+                        Select Event Date
+                      </label>
+                      <input 
+                        type="date"
+                        min={new Date().toISOString().split('T')[0]}
+                        value={planningStartDate}
+                        onChange={(e) => setPlanningStartDate(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none text-xs font-black text-brand-text cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Selected Slot Indicator */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-col justify-center">
+                      <span className="text-[9px] text-gray-500 font-extrabold uppercase tracking-wider block mb-0.5">
+                        Current Selection
+                      </span>
+                      <span className="text-xs font-black text-brand-primary truncate">
+                        {planningStartDate} • {formatTimeSlot(planningTimeSlot)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AM/PM Time Slot Pills */}
+                  <div>
+                    <span className="text-[9px] text-gray-500 font-extrabold uppercase tracking-wider block mb-1.5">
+                      Choose Event Time Slot
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {TIME_SLOTS.map((slot) => {
+                        const isSelected = planningTimeSlot === slot.id;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => setPlanningTimeSlot(slot.id)}
+                            className={`p-2 rounded-xl border text-left transition-all ${
+                              isSelected
+                                ? 'bg-brand-primary border-brand-primary text-white shadow-md shadow-brand-primary/20 scale-[1.02]'
+                                : 'bg-white border-gray-200 hover:border-brand-primary/50 text-gray-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span>{slot.icon}</span>
+                              <span className={`text-[11px] font-black ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                                {slot.label}
+                              </span>
+                            </div>
+                            <span className={`text-[8.5px] font-medium block truncate ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                              {slot.time}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Real-time Availability Check */}
+                  {(() => {
+                    const unavailableVendors = bundledItems.filter(item => 
+                      !isVendorAvailable(item.vendor.id, planningStartDate, undefined, vendors, planningTimeSlot)
+                    );
+                    if (unavailableVendors.length > 0) {
+                      return (
+                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-xs text-rose-800 font-bold flex items-center gap-2">
+                          <span>⚠️</span>
+                          <span>{unavailableVendors[0].vendor.name} is not available on {planningStartDate} ({formatTimeSlot(planningTimeSlot)}). Please choose another date/slot.</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2 text-[11px] text-emerald-800 font-bold flex items-center gap-1.5">
+                        <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                        <span>All vendors in your cart are available for {planningStartDate} ({formatTimeSlot(planningTimeSlot)})!</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {/* Contact information validation before paying connection fees */}
                 <div className="border-t border-brand-border/40 pt-3.5 space-y-2.5">
                   <h5 className="text-[10px] font-black uppercase tracking-wider text-brand-text flex items-center gap-1">
                     <User size={12} className="text-brand-primary" />
                     <span>User Connection Details</span>
                   </h5>
+
                   {currentUser ? (
                     <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-800">
                       <p className="font-extrabold">✓ Logged in as: {getUserName(currentUser)}</p>
@@ -3998,6 +4258,7 @@ export default function App() {
                               vendor: bundledItems[0].vendor,
                               selectedServices: bundledItems.map(item => item.service),
                               eventDate: planningStartDate,
+                              eventTimeSlot: planningTimeSlot || 'evening',
                               eventType: planningEventType,
                               status: 'Pending',
                               totalPrice: servicesTotal,
@@ -4006,6 +4267,7 @@ export default function App() {
                               paymentStatus: 'Paid',
                               bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
                             };
+
 
                             handlePayWithRazorpay({
                               vendorId: newBooking.vendor.id,
@@ -4546,7 +4808,7 @@ export default function App() {
                                       </div>
                                       <div>
                                         <span className="text-gray-400 text-[9px] uppercase font-bold block">Time Slot</span>
-                                        <span className="font-extrabold text-gray-800 uppercase">{b.eventTimeSlot || 'Full Day'}</span>
+                                        <span className="font-extrabold text-brand-primary">{formatTimeSlot(b.eventTimeSlot)}</span>
                                       </div>
                                       <div>
                                         <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Type</span>
@@ -4907,6 +5169,7 @@ export default function App() {
                         <VendorDashboardCalendar
                           vendorId={currentUser?.vendorId || ''}
                           busyDates={vendors.find(v => v.id === currentUser?.vendorId)?.busyDates || []}
+                          busySlots={vendors.find(v => v.id === currentUser?.vendorId)?.busySlots || {}}
                           bookings={bookings}
                           onToggleDate={async (dateStr) => {
                             try {
@@ -4931,8 +5194,37 @@ export default function App() {
                               console.error(err);
                             }
                           }}
+                          onToggleSlot={async (dateStr, slotId) => {
+                            try {
+                              const v = vendors.find(item => item.id === currentUser.vendorId);
+                              if (v) {
+                                const currentSlots = v.busySlots || {};
+                                const dateSlots = currentSlots[dateStr] || [];
+                                let updatedDateSlots;
+                                if (dateSlots.includes(slotId)) {
+                                  updatedDateSlots = dateSlots.filter(s => s !== slotId);
+                                  showNotification(`🔓 Slot ${formatTimeSlot(slotId)} on ${dateStr} is now Available!`);
+                                } else {
+                                  updatedDateSlots = [...dateSlots, slotId];
+                                  showNotification(`🔒 Slot ${formatTimeSlot(slotId)} on ${dateStr} is now Blocked!`);
+                                }
+                                const updatedSlotsMap = {
+                                  ...currentSlots,
+                                  [dateStr]: updatedDateSlots
+                                };
+                                const db = getDb();
+                                await setDoc(doc(db, 'vendors', currentUser.vendorId), {
+                                  ...v,
+                                  busySlots: updatedSlotsMap
+                                });
+                              }
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
                           showNotification={showNotification}
                         />
+
 
                         {/* Interested Leads/Enquiries List */}
                         <div className="bg-white rounded-[24px] border border-brand-border p-5 space-y-3.5 animate-in fade-in duration-200">
@@ -5769,6 +6061,9 @@ export default function App() {
           planningEventType={planningEventType}
           planningStartDate={planningStartDate}
           planningEndDate={planningEndDate}
+          planningTimeSlot={planningTimeSlot}
+          onSelectDate={setPlanningStartDate}
+          onSelectTimeSlot={setPlanningTimeSlot}
           planningGuestSize={planningGuestSize}
           bookingFeePercentage={bookingFeePercentage}
           onNavigateToBookings={() => setActiveTab('bookings')}
@@ -5779,6 +6074,7 @@ export default function App() {
             setIsRazorpayOpen(true);
           }}
         />
+
       )}
 
       {/* 6. CASHFREE SECURE CHECKOUT TRIGGER OVERLAY */}

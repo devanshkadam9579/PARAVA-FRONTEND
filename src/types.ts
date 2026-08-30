@@ -57,6 +57,7 @@ export interface Vendor {
   founderBio?: string;
   experience?: string;
   busyDates?: string[];
+  busySlots?: Record<string, string[]>; // Map date YYYY-MM-DD -> ['morning', 'afternoon', 'evening', 'full_day']
   latitude?: number;
   longitude?: number;
 }
@@ -110,14 +111,20 @@ export interface Booking {
   vendor: Vendor;
   selectedServices: VendorServiceItem[];
   eventDate: string;
+  eventTimeSlot?: string; // 'morning' | 'afternoon' | 'evening' | 'full_day'
+  guestCount?: number;
   eventType: string;
-  status: 'Pending' | 'Confirmed' | 'Vendor Assigned' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'Confirmed' | 'Vendor Assigned' | 'In Progress' | 'Completed' | 'Rejected' | 'Cancelled';
   totalPrice: number;
   bundleDiscount: number;
   finalPrice: number;
   paymentStatus: 'Paid' | 'Partially Paid' | 'Unpaid';
   bookingIdString: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
 }
+
 
 export interface ChatMessage {
   id: string;

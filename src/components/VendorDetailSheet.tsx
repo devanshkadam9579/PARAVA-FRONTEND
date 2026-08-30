@@ -57,6 +57,27 @@ function getYoutubeId(url: string) {
   return '';
 }
 
+export const TIME_SLOTS = [
+  { id: 'morning', label: 'Morning', time: '09:00 AM – 01:00 PM', icon: '🌅' },
+  { id: 'afternoon', label: 'Afternoon', time: '01:00 PM – 05:00 PM', icon: '☀️' },
+  { id: 'evening', label: 'Evening', time: '05:00 PM – 10:00 PM', icon: '🌆' },
+  { id: 'full_day', label: 'Full Day', time: '09:00 AM – 10:00 PM', icon: '✨' },
+];
+
+export function formatTimeSlot(slotId?: string): string {
+  switch ((slotId || '').toLowerCase()) {
+    case 'morning':
+      return 'Morning (09:00 AM – 01:00 PM)';
+    case 'afternoon':
+      return 'Afternoon (01:00 PM – 05:00 PM)';
+    case 'evening':
+      return 'Evening (05:00 PM – 10:00 PM)';
+    case 'full_day':
+    default:
+      return 'Full Day (09:00 AM – 10:00 PM)';
+  }
+}
+
 interface VendorDetailSheetProps {
   vendor: Vendor;
   isOpen: boolean;
@@ -73,6 +94,9 @@ interface VendorDetailSheetProps {
   planningEventType: string;
   planningStartDate: string;
   planningEndDate: string;
+  planningTimeSlot?: string;
+  onSelectDate?: (date: string) => void;
+  onSelectTimeSlot?: (slot: string) => void;
   planningGuestSize: number;
   isAdmin?: boolean;
   onUpdateVendor?: (updatedVendor: Vendor) => void;
@@ -99,6 +123,9 @@ export default function VendorDetailSheet({
   planningEventType,
   planningStartDate,
   planningEndDate,
+  planningTimeSlot = 'evening',
+  onSelectDate,
+  onSelectTimeSlot,
   planningGuestSize,
   isAdmin = false,
   onUpdateVendor,
@@ -121,8 +148,9 @@ export default function VendorDetailSheet({
     };
   }, [onClose]);
 
-const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | 'reviews'>('services');
+  const [selectedDate, setSelectedDate] = useState<string>(planningStartDate || '');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(planningTimeSlot || 'evening');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
@@ -133,6 +161,16 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
   const [submittingReview, setSubmittingReview] = useState(false);
   const [likedReels, setLikedReels] = useState<Record<number, boolean>>({});
   const [playingVideoIndex, setPlayingVideoIndex] = useState<number | null>(null);
+
+  // Sync state if props update
+  useEffect(() => {
+    if (planningStartDate) setSelectedDate(planningStartDate);
+  }, [planningStartDate]);
+
+  useEffect(() => {
+    if (planningTimeSlot) setSelectedTimeSlot(planningTimeSlot);
+  }, [planningTimeSlot]);
+
 
   // New Interactive Modals State
   const [isFullCalendarOpen, setIsFullCalendarOpen] = useState(false);
@@ -733,7 +771,12 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                     return (
                       <button
                         key={item.dateString}
-                        onClick={() => item.available && setSelectedDate(item.dateString)}
+                        onClick={() => {
+                          if (item.available) {
+                            setSelectedDate(item.dateString);
+                            if (onSelectDate) onSelectDate(item.dateString);
+                          }
+                        }}
                         disabled={!item.available}
                         className={`flex flex-col items-center p-3 rounded-xl min-w-[58px] snap-center border transition-all ${
                           !item.available
@@ -757,19 +800,68 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                     );
                   })}
                 </div>
+
+                {/* Time Slot Selection */}
+                <div className="mt-3 pt-3 border-t border-dashed border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Clock size={14} className="text-brand-primary" />
+                      <span className="text-[11px] font-bold text-gray-800 uppercase tracking-wider">Select Time of Day</span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-brand-primary">
+                      {formatTimeSlot(selectedTimeSlot)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {TIME_SLOTS.map((slot) => {
+                      const isSlotSelected = selectedTimeSlot === slot.id;
+                      const isBlocked = (vendor.busySlots?.[selectedDate] || []).includes(slot.id);
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={isBlocked}
+                          onClick={() => {
+                            setSelectedTimeSlot(slot.id);
+                            if (onSelectTimeSlot) onSelectTimeSlot(slot.id);
+                          }}
+                          className={`p-2 rounded-xl border text-left transition-all ${
+                            isBlocked
+                              ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
+                              : isSlotSelected
+                              ? 'bg-brand-primary border-brand-primary text-white shadow-md shadow-brand-primary/20 scale-[1.02]'
+                              : 'bg-white border-brand-border hover:border-brand-primary/50 text-gray-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span>{slot.icon}</span>
+                            <span className={`text-[11px] font-black ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>
+                              {slot.label}
+                            </span>
+                          </div>
+                          <span className={`text-[8.5px] font-medium block truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                            {slot.time}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {selectedDate && (
-                  (vendor.busyDates || []).includes(selectedDate) ? (
+                  (vendor.busyDates || []).includes(selectedDate) || (vendor.busySlots?.[selectedDate] || []).includes(selectedTimeSlot) ? (
                     <p className="text-xs text-rose-600 font-bold flex items-center gap-1 mt-2.5">
-                      <span>❌ Date {selectedDate} is Booked / Blocked by Vendor</span>
+                      <span>❌ Date {selectedDate} ({formatTimeSlot(selectedTimeSlot)}) is Booked / Blocked</span>
                     </p>
                   ) : (
                     <p className="text-xs text-brand-success font-semibold flex items-center gap-1 mt-2.5">
                       <CheckCircle2 size={13} />
-                      <span>Vendor is fully available for booking on {selectedDate}!</span>
+                      <span>Vendor is fully available for booking on {selectedDate} ({formatTimeSlot(selectedTimeSlot)})!</span>
                     </p>
                   )
                 )}
               </div>
+
 
               {/* Segmented Tabs Control */}
               <div className="bg-white border-b border-brand-border flex overflow-x-auto scrollbar-none">
@@ -1779,10 +1871,10 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                             disabled={isBlocked}
                             onClick={() => {
                               setSelectedDate(dateStr);
+                              if (onSelectDate) onSelectDate(dateStr);
                               if (onShowNotification) {
                                 onShowNotification(`Selected ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
                               }
-                              setIsFullCalendarOpen(false);
                             }}
                             className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all p-1 ${
                               isSelected
@@ -1800,16 +1892,50 @@ const [activeTab, setActiveTab] = useState<'services' | 'showcase' | 'about' | '
                     </div>
                   </div>
 
+                  {/* Time Slot Selection inside Full Calendar */}
+                  <div className="pt-2 border-t border-gray-100 space-y-1.5">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                      Select Preferred Time of Day
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {TIME_SLOTS.map((slot) => {
+                        const isSlotSelected = selectedTimeSlot === slot.id;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTimeSlot(slot.id);
+                              if (onSelectTimeSlot) onSelectTimeSlot(slot.id);
+                            }}
+                            className={`p-2 rounded-xl border text-left transition-all ${
+                              isSlotSelected
+                                ? 'bg-brand-primary border-brand-primary text-white shadow-sm'
+                                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>{slot.icon}</span>
+                              <span className={`text-[11px] font-black ${isSlotSelected ? 'text-white' : 'text-gray-900'}`}>{slot.label}</span>
+                            </div>
+                            <span className={`text-[8px] block truncate ${isSlotSelected ? 'text-white/80' : 'text-gray-500'}`}>{slot.time}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Footer button */}
                   <div className="pt-2">
                     <button
                       onClick={() => setIsFullCalendarOpen(false)}
                       className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-3 rounded-2xl text-xs shadow-md transition-all active:scale-95"
                     >
-                      {selectedDate ? `Confirm Date: ${selectedDate}` : 'Close Calendar'}
+                      {selectedDate ? `Confirm ${selectedDate} (${formatTimeSlot(selectedTimeSlot)})` : 'Close Calendar'}
                     </button>
                   </div>
                 </motion.div>
+
               </div>
             )}
           </AnimatePresence>
