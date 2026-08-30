@@ -177,12 +177,14 @@ export default function VendorDetailSheet({
 
   // New Interactive Modals State
   const [isFullCalendarOpen, setIsFullCalendarOpen] = useState(false);
+  const [selectedServiceModal, setSelectedServiceModal] = useState<VendorServiceItem | null>(null);
   const [activeReelModal, setActiveReelModal] = useState<string | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+
 
   const safeUserName = currentUser?.name || (currentUser as any)?.displayName || currentUser?.email?.split('@')[0] || 'Guest Planner';
   const safeUserPhone = currentUser?.phone || 'N/A';
@@ -909,10 +911,13 @@ export default function VendorDetailSheet({
                             }`}
                             id={`service-card-${svc.name.toLowerCase().replace(/\s+/g, '-')}`}
                           >
-                            {/* Service Image Section */}
-                            <div className="h-32 bg-gray-100 relative w-full overflow-hidden">
+                            {/* Service Image Section (Clickable) */}
+                            <div 
+                              onClick={() => !isEditingSvc && setSelectedServiceModal(svc)}
+                              className="h-32 bg-gray-100 relative w-full overflow-hidden cursor-pointer group"
+                            >
                               {svc.image ? (
-                                <img loading="lazy" src={svc.image} alt={svc.name} className="w-full h-full object-cover" />
+                                <img loading="lazy" src={svc.image} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                               ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                                   <ImageIcon size={32} />
@@ -920,6 +925,9 @@ export default function VendorDetailSheet({
                               )}
                               <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm border border-white">
                                 <span className="text-sm font-extrabold text-brand-text">₹{svc.price.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-[9px] font-bold px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                Tap for details
                               </div>
                             </div>
                             
@@ -952,12 +960,16 @@ export default function VendorDetailSheet({
                                 </div>
                               ) : (
                                 <>
-                                  <div className="mb-3">
+                                  <div 
+                                    onClick={() => setSelectedServiceModal(svc)}
+                                    className="mb-3 cursor-pointer group"
+                                  >
                                     <div className="flex items-center gap-2 mb-1">
-                                      <h5 className="font-bold text-brand-text text-[15px] leading-tight line-clamp-1">{svc.name}</h5>
+                                      <h5 className="font-bold text-brand-text text-[15px] leading-tight line-clamp-1 group-hover:text-brand-primary transition-colors">{svc.name}</h5>
                                       {isAdmin && (
                                         <button
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingServiceIndex(index);
                                             setEditedServiceName(svc.name);
                                             setEditedServicePrice(String(svc.price));
@@ -972,6 +984,7 @@ export default function VendorDetailSheet({
                                       {svc.description}
                                     </p>
                                   </div>
+
 
                                   <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                                     <div>
@@ -1968,6 +1981,127 @@ export default function VendorDetailSheet({
               </div>
             )}
           </AnimatePresence>
+
+          {/* Service Detail Modal Popup */}
+          <AnimatePresence>
+            {selectedServiceModal && (
+              <div className="fixed inset-0 z-[125] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl flex flex-col border border-gray-100 max-h-[85vh]"
+                >
+                  {/* Service Image Header */}
+                  <div className="relative h-48 bg-gray-100 w-full overflow-hidden shrink-0">
+                    {selectedServiceModal.image ? (
+                      <img
+                        src={selectedServiceModal.image}
+                        alt={selectedServiceModal.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                        <ImageIcon size={40} />
+                        <span className="text-xs font-semibold mt-1">Service Preview</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setSelectedServiceModal(null)}
+                      className="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-md transition active:scale-95 z-10"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl shadow-md border border-white">
+                      <span className="text-sm font-extrabold text-brand-primary">
+                        ₹{selectedServiceModal.price.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-semibold ml-1.5">
+                        {isCatering ? `/ plate × ${cateringGuestCount} Guests` : selectedServiceModal.unit || 'per event'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-5 overflow-y-auto space-y-4 flex-1">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <h3 className="text-base font-extrabold text-gray-900 leading-tight">
+                          {selectedServiceModal.name}
+                        </h3>
+                        <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase shrink-0">
+                          {vendor.name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed mt-2">
+                        {selectedServiceModal.description || 'Complete customized service curated specifically for your celebrations.'}
+                      </p>
+                    </div>
+
+                    {/* What's Included Breakdown */}
+                    <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-2">
+                      <h4 className="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider">
+                        What's Included in this Service
+                      </h4>
+                      <ul className="space-y-1.5 text-xs text-gray-700">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 size={14} className="text-brand-success shrink-0 mt-0.5" />
+                          <span>Professional setup and direct execution by verified {vendor.name} crew.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 size={14} className="text-brand-success shrink-0 mt-0.5" />
+                          <span>Guaranteed schedule adherence and premium materials.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 size={14} className="text-brand-success shrink-0 mt-0.5" />
+                          <span>Direct in-app communication and full Parva milestone protection.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="p-4 bg-white border-t border-gray-100 flex items-center gap-2.5">
+                    {bundledServices.some(s => s.name === selectedServiceModal.name) ? (
+                      <button
+                        onClick={() => {
+                          onRemoveServiceFromBundle(selectedServiceModal.name);
+                          setSelectedServiceModal(null);
+                          if (onShowNotification) onShowNotification(`Removed ${selectedServiceModal.name} from bundle`);
+                        }}
+                        className="flex-1 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold py-3 rounded-2xl text-xs transition active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 size={14} />
+                        <span>Remove from Plan</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const toAdd = isCatering
+                            ? { ...selectedServiceModal, price: selectedServiceModal.price * cateringGuestCount, unit: `₹${selectedServiceModal.price}/plate × ${cateringGuestCount} Guests` }
+                            : selectedServiceModal;
+                          onAddServiceToBundle(toAdd);
+                          setSelectedServiceModal(null);
+                          if (onShowNotification) onShowNotification(`Added ${selectedServiceModal.name} to custom bundle!`);
+                        }}
+                        className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-3 rounded-2xl text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5"
+                      >
+                        <ShoppingCart size={14} />
+                        <span>Add Service to Plan</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSelectedServiceModal(null)}
+                      className="px-4 py-3 rounded-2xl border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50 active:scale-95 transition"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
 
           {/* Reels Video Popup Player Modal */}
           <AnimatePresence>

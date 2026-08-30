@@ -61,14 +61,33 @@ export default function NotificationCenterModal({
   const getBadgeStyle = (type: string) => {
     switch (type) {
       case 'offer':
-        return 'bg-[#ff385c]/10 text-[#ff385c] border-[#ff385c]/20';
+        return 'bg-amber-50 text-amber-800 border-amber-200';
       case 'slot':
-        return 'bg-green-50 text-[#008A05] border-green-200';
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
       case 'delivery':
-        return 'bg-blue-50 text-[#0073E6] border-blue-200';
+        return 'bg-sky-50 text-sky-800 border-sky-200';
       default:
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
+  };
+
+  const getNotificationCardStyle = (notif: AppNotification) => {
+    if (notif.type === 'slot') {
+      return notif.read 
+        ? 'bg-white hover:bg-emerald-50/30 border border-gray-100' 
+        : 'bg-emerald-50/60 hover:bg-emerald-50 border border-emerald-200/80';
+    }
+    if (notif.type === 'delivery') {
+      return notif.read 
+        ? 'bg-white hover:bg-sky-50/30 border border-gray-100' 
+        : 'bg-sky-50/50 hover:bg-sky-50 border border-sky-200/80';
+    }
+    if (notif.type === 'offer') {
+      return notif.read 
+        ? 'bg-white hover:bg-amber-50/30 border border-gray-100' 
+        : 'bg-amber-50/50 hover:bg-amber-50 border border-amber-200/80';
+    }
+    return notif.read ? 'bg-white hover:bg-gray-50 border border-gray-100' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200';
   };
 
   return (
@@ -88,7 +107,7 @@ export default function NotificationCenterModal({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-md mx-auto bg-white rounded-t-[32px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md mx-auto bg-white rounded-t-[32px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
       >
         {/* Top Handle Bar */}
         <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-1" />
@@ -96,12 +115,12 @@ export default function NotificationCenterModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary">
-              <Bell size={16} />
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800">
+              <Bell size={15} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900 leading-tight">Notifications</h2>
-              <p className="text-[11px] text-gray-500">Live slot updates, offers & deliveries</p>
+              <h2 className="text-sm font-extrabold text-gray-900 leading-tight">Notifications</h2>
+              <p className="text-[10px] text-gray-500">Live booking updates and status</p>
             </div>
           </div>
 
@@ -109,7 +128,7 @@ export default function NotificationCenterModal({
             {notifications.length > 0 && (
               <button
                 onClick={onClearAll}
-                className="text-xs text-gray-500 hover:text-gray-800 font-semibold hover:underline"
+                className="text-[11px] text-gray-500 hover:text-gray-900 font-semibold hover:underline"
               >
                 Clear All
               </button>
@@ -118,44 +137,23 @@ export default function NotificationCenterModal({
               onClick={onClose}
               className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* Permission Notification Banner */}
-        {permissionStatus !== 'granted' && permissionStatus !== 'unsupported' && (
-          <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-brand-primary text-white flex items-center justify-center shrink-0">
-                <Volume2 size={14} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-900 leading-tight">Enable Phone Pop-ups</p>
-                <p className="text-[10px] text-gray-600">Get instant lock-screen slot confirmations</p>
-              </div>
-            </div>
-            <button
-              onClick={onRequestPermission}
-              className="bg-brand-primary text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-sm hover:bg-brand-primary-dark active:scale-95 transition-all shrink-0"
-            >
-              Enable
-            </button>
-          </div>
-        )}
-
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto no-scrollbar border-b border-gray-50">
+        <div className="flex items-center gap-1.5 px-4 py-2 overflow-x-auto no-scrollbar border-b border-gray-50">
           {[
-            { id: 'all', label: 'All Alerts' },
-            { id: 'slot', label: 'Slot Confirmations' },
-            { id: 'delivery', label: 'Delivery & Status' },
-            { id: 'offer', label: 'Offers & Deals' }
+            { id: 'all', label: 'All' },
+            { id: 'slot', label: 'Bookings' },
+            { id: 'delivery', label: 'Status' },
+            { id: 'offer', label: 'Offers' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveFilter(tab.id as any)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 activeFilter === tab.id
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -167,76 +165,66 @@ export default function NotificationCenterModal({
         </div>
 
         {/* Notification List */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 divide-y divide-gray-50">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {filteredNotifications.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                <Bell size={24} />
+              <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 mb-2">
+                <Bell size={20} />
               </div>
-              <h4 className="text-sm font-bold text-gray-700 mb-1">All Caught Up!</h4>
-              <p className="text-xs text-gray-500 max-w-[220px]">
-                You have no unread notifications for {activeFilter === 'all' ? 'any category' : activeFilter}.
+              <h4 className="text-xs font-bold text-gray-700 mb-0.5">No notifications</h4>
+              <p className="text-[11px] text-gray-400">
+                You're all caught up!
               </p>
             </div>
           ) : (
-            filteredNotifications.map((notif) => (
-              <div
-                key={notif.id}
-                onClick={() => {
-                  onMarkAsRead(notif.id);
-                  if (onActionClick) onActionClick(notif);
-                }}
-                className={`pt-2.5 pb-2 px-3 rounded-2xl transition-all cursor-pointer ${
-                  notif.read ? 'bg-white hover:bg-gray-50' : 'bg-rose-50/40 hover:bg-rose-50/70 border border-rose-100/60'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    {getIcon(notif.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${getBadgeStyle(notif.type)}`}>
-                        {notif.type === 'slot' ? 'Slot Confirmed' : notif.type === 'delivery' ? 'Live Status' : notif.type === 'offer' ? 'Special Deal' : 'System'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium">{notif.timestamp}</span>
+            filteredNotifications.map((notif) => {
+              const cleanTitle = (notif.title || '').replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+              const cleanMsg = (notif.message || '').replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+
+              return (
+                <div
+                  key={notif.id}
+                  onClick={() => {
+                    onMarkAsRead(notif.id);
+                    if (onActionClick) onActionClick(notif);
+                  }}
+                  className={`p-3 rounded-2xl transition-all cursor-pointer ${getNotificationCardStyle(notif)}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${getBadgeStyle(notif.type)}`}>
+                          {notif.type === 'slot' ? 'Booking Confirmed' : notif.type === 'delivery' ? 'Status' : notif.type === 'offer' ? 'Special Deal' : 'System'}
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-medium">{notif.timestamp}</span>
+                      </div>
+
+                      <h4 className="text-xs font-bold text-gray-900 leading-snug mb-0.5">
+                        {cleanTitle}
+                      </h4>
+                      <p className="text-[11px] text-gray-600 leading-normal">
+                        {cleanMsg}
+                      </p>
+
+                      {notif.actionText && (
+                        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-brand-primary">
+                          <span>{notif.actionText}</span>
+                          <ArrowRight size={11} />
+                        </div>
+                      )}
                     </div>
 
-                    <h4 className="text-xs font-bold text-gray-900 leading-snug mb-0.5">
-                      {notif.title}
-                    </h4>
-                    <p className="text-[11px] text-gray-600 leading-normal">
-                      {notif.message}
-                    </p>
-
-                    {notif.actionText && (
-                      <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-brand-primary">
-                        <span>{notif.actionText}</span>
-                        <ArrowRight size={12} />
-                      </div>
+                    {!notif.read && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
                     )}
                   </div>
-
-                  {!notif.read && (
-                    <span className="w-2 h-2 rounded-full bg-brand-primary shrink-0 mt-2" />
-                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
-          <button
-            onClick={onTriggerTestNotification}
-            className="flex-1 bg-white border border-gray-200 hover:border-gray-300 text-gray-800 text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-          >
-            <Sparkles size={14} className="text-amber-500" />
-            <span>Send Test Phone Pop-up</span>
-          </button>
         </div>
       </motion.div>
     </div>
   );
 }
+
