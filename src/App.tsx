@@ -1075,8 +1075,8 @@ export default function App() {
   const [vendorEditOccasions, setVendorEditOccasions] = useState<string[]>([]);
   const [vendorNewImage, setVendorNewImage] = useState('');
   const [vendorNewBusyDate, setVendorNewBusyDate] = useState('');
-  const [vendorEditFounderImage, setVendorEditFounderImage] = useState('');
-  const [vendorSubTab, setVendorSubTab] = useState<'catalogue' | 'dates_leads'>('catalogue');
+  const [vendorSubTab, setVendorSubTab] = useState<'catalogue' | 'bookings' | 'dates_leads'>('bookings');
+
 
   const [adminSubTab, setAdminSubTab] = useState<'dashboard' | 'onboard' | 'categories' | 'leads' | 'approval' | 'email_logs' | 'settings'>('dashboard');
   const [adminEmailLogs, setAdminEmailLogs] = useState<any[]>([]);
@@ -4446,7 +4446,17 @@ export default function App() {
                     </div>
 
                     {/* Vendor Sub-Tab selection */}
-                    <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-50 rounded-xl border border-brand-border">
+                    <div className="grid grid-cols-3 gap-1 p-1 bg-gray-50 rounded-xl border border-brand-border">
+                      <button
+                        onClick={() => setVendorSubTab('bookings')}
+                        className={`py-2 rounded-lg text-xs font-black transition ${
+                          vendorSubTab === 'bookings'
+                            ? 'bg-brand-primary text-white shadow-sm'
+                            : 'text-brand-text-secondary hover:text-brand-text'
+                        }`}
+                      >
+                        Orders ({bookings.filter(b => b.vendor?.id === currentUser?.vendorId || (b as any).vendorId === currentUser?.vendorId).length})
+                      </button>
                       <button
                         onClick={() => setVendorSubTab('catalogue')}
                         className={`py-2 rounded-lg text-xs font-black transition ${
@@ -4455,7 +4465,7 @@ export default function App() {
                             : 'text-brand-text-secondary hover:text-brand-text'
                         }`}
                       >
-                        Catalogue & Portfolio
+                        Catalogue
                       </button>
                       <button
                         onClick={() => setVendorSubTab('dates_leads')}
@@ -4465,14 +4475,181 @@ export default function App() {
                             : 'text-brand-text-secondary hover:text-brand-text'
                         }`}
                       >
-                        Enquiries & Calendar
+                        Calendar
                       </button>
                     </div>
+
+                    {/* SUB-TAB 0: DIRECT BOOKINGS & ORDERS */}
+                    {vendorSubTab === 'bookings' && (
+                      <div className="space-y-4 text-xs">
+                        <div className="bg-white rounded-[24px] border border-brand-border p-5 space-y-3.5 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <h4 className="font-black text-brand-primary uppercase tracking-wider text-[10px]">
+                              Direct Customer Orders ({bookings.filter(b => b.vendor?.id === currentUser?.vendorId || (b as any).vendorId === currentUser?.vendorId).length})
+                            </h4>
+                            <span className="bg-emerald-50 text-emerald-700 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase border border-emerald-100">
+                              Payment Secured
+                            </span>
+                          </div>
+
+                          {bookings.filter(b => b.vendor?.id === currentUser?.vendorId || (b as any).vendorId === currentUser?.vendorId).length === 0 ? (
+                            <div className="text-center py-8 space-y-1.5">
+                              <p className="text-sm font-bold text-gray-700">No active direct orders yet.</p>
+                              <p className="text-[11px] text-gray-400">When customers book your services and complete payment, their orders will appear here instantly for your review and confirmation!</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {bookings.filter(b => b.vendor?.id === currentUser?.vendorId || (b as any).vendorId === currentUser?.vendorId).map((b) => (
+                                <div key={b.id} className="bg-gray-50/80 rounded-2xl p-4 border border-brand-border space-y-3">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h5 className="font-black text-brand-text text-sm">{b.customerName || 'Valued Customer'}</h5>
+                                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                          b.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                          b.status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                                          b.status === 'Cancelled' ? 'bg-gray-200 text-gray-700' :
+                                          'bg-amber-100 text-amber-800'
+                                        }`}>
+                                          {b.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-brand-text-secondary mt-0.5">
+                                        Phone: <a href={`tel:${b.customerPhone}`} className="font-bold text-brand-primary">{b.customerPhone || 'N/A'}</a> • Email: <b>{b.customerEmail || 'N/A'}</b>
+                                      </p>
+                                    </div>
+                                    <span className="font-black text-brand-primary text-sm">
+                                      ₹{Number(b.finalPrice || b.totalPrice || 0).toLocaleString('en-IN')}
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-white rounded-xl p-3 border border-gray-200/70 space-y-1.5">
+                                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                      <div>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Date</span>
+                                        <span className="font-extrabold text-gray-800">{b.eventDate}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Time Slot</span>
+                                        <span className="font-extrabold text-gray-800 uppercase">{b.eventTimeSlot || 'Full Day'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Type</span>
+                                        <span className="font-bold text-gray-700">{b.eventType || 'Celebration'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Guests</span>
+                                        <span className="font-bold text-gray-700">{b.guestCount || 100} Guests</span>
+                                      </div>
+                                    </div>
+
+                                    {b.selectedServices && b.selectedServices.length > 0 && (
+                                      <div className="border-t border-gray-100 pt-2 mt-2">
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block mb-1">Selected Services</span>
+                                        <div className="space-y-1">
+                                          {b.selectedServices.map((svc: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between text-[10px]">
+                                              <span className="text-gray-700 font-semibold">• {svc.name} {svc.unit ? `(${svc.unit})` : ''}</span>
+                                              <span className="font-mono font-bold text-gray-900">₹{Number(svc.price).toLocaleString('en-IN')}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Action Buttons for Vendor */}
+                                  <div className="flex gap-2 pt-1">
+                                    {b.customerPhone && (
+                                      <a
+                                        href={`https://wa.me/91${b.customerPhone.replace(/\D/g, '')}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition"
+                                      >
+                                        💬 WhatsApp
+                                      </a>
+                                    )}
+
+                                    {b.status !== 'Rejected' && b.status !== 'Cancelled' && (
+                                      <>
+                                        {b.status !== 'Confirmed' && (
+                                          <button
+                                            onClick={async () => {
+                                              try {
+                                                showNotification('⏳ Confirming booking acceptance...');
+                                                const res = await fetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
+                                                  method: 'POST',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({
+                                                    action: 'accept',
+                                                    vendorId: currentUser.vendorId
+                                                  })
+                                                });
+                                                const data = await res.json();
+                                                if (data.success) {
+                                                  showNotification('🎉 Order accepted! Customer notified.');
+                                                  setBookings(prev => prev.map(item => item.id === b.id ? { ...item, status: 'Confirmed' } : item));
+                                                } else {
+                                                  showNotification('❌ ' + (data.error || 'Could not accept order'));
+                                                }
+                                              } catch (e) {
+                                                showNotification('❌ Network error accepting order');
+                                              }
+                                            }}
+                                            className="bg-brand-primary hover:bg-brand-primary-dark text-white font-black py-1.5 px-3.5 rounded-xl text-xs transition"
+                                          >
+                                            ✓ Accept Order
+                                          </button>
+                                        )}
+
+                                        <button
+                                          onClick={async () => {
+                                            const reason = window.prompt('Please enter the reason for rejecting this order (e.g. fully booked):');
+                                            if (reason !== null) {
+                                              try {
+                                                showNotification('⏳ Processing rejection & refund request...');
+                                                const res = await fetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
+                                                  method: 'POST',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({
+                                                    action: 'reject',
+                                                    vendorId: currentUser.vendorId,
+                                                    reason: reason || 'Vendor schedule conflict'
+                                                  })
+                                                });
+                                                const data = await res.json();
+                                                if (data.success) {
+                                                  showNotification('⚠️ Order rejected. Refund request submitted for support@parvaevents.com.');
+                                                  setBookings(prev => prev.map(item => item.id === b.id ? { ...item, status: 'Rejected' } : item));
+                                                } else {
+                                                  showNotification('❌ ' + (data.error || 'Could not reject order'));
+                                                }
+                                              } catch (e) {
+                                                showNotification('❌ Network error rejecting order');
+                                              }
+                                            }
+                                          }}
+                                          className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold py-1.5 px-3 rounded-xl text-xs transition"
+                                        >
+                                          Decline Order
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* SUB-TAB 1: CATALOGUE & PORTFOLIO */}
                     {vendorSubTab === 'catalogue' && (
                       <div className="bg-white rounded-[24px] border border-brand-border p-5 space-y-4 animate-in fade-in duration-200 text-xs">
                         <h4 className="font-black text-brand-primary uppercase tracking-wider text-[10px]">Edit Business Profile</h4>
+
                         
                         <div className="space-y-3">
                           <div>
