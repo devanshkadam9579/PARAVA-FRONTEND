@@ -35,9 +35,28 @@ import VendorDetailSheet from './components/VendorDetailSheet';
 import SplashCarousel from './components/SplashCarousel';
 import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
-import SharedPlanView from './components/SharedPlanView';
 import ParvaLogin from './components/LoginScreen';
 import { Share2 } from 'lucide-react';
+import {
+  trackPageView,
+  trackLoginStarted,
+  trackLoginSuccess,
+  trackLoginFailed,
+  trackCategorySelected,
+  trackSearchPerformed,
+  trackFilterApplied,
+  trackVendorViewed,
+  trackServiceSelected,
+  trackCartOpened,
+  trackCheckoutStarted,
+  trackPaymentInitiated,
+  trackPaymentSuccess,
+  trackPaymentFailed,
+  trackBookingConfirmed,
+  trackReceiptDownloaded,
+  trackBookingCancelled
+} from './lib/analytics';
+
 
 export const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'Kolhapur': { lat: 16.7050, lng: 74.2433 },
@@ -266,16 +285,14 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile'>(() => {
     return (sessionStorage.getItem('parva_activeTab') as any) || 'home';
+  });
+
   useEffect(() => {
     sessionStorage.setItem('parva_activeTab', activeTab);
   }, [activeTab]);
 
-  useEffect(() => {
-    sessionStorage.setItem('parva_bundledItems', JSON.stringify(bundledItems));
-  }, [bundledItems]);
-
-  });
   const [currentCity, setCurrentCity] = useState('Kolhapur');
+
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
@@ -920,7 +937,23 @@ export default function App() {
   // Vendor Detail Sheet State
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
+  // SPA Page Tracking via GA4
+  useEffect(() => {
+    if (selectedVendor) {
+      trackPageView(`vendor/${selectedVendor.id}`, `PARVA | ${selectedVendor.name}`);
+      trackVendorViewed({
+        id: selectedVendor.id,
+        name: selectedVendor.name,
+        category: selectedVendor.category,
+        location: selectedVendor.location
+      });
+    } else {
+      trackPageView(activeTab);
+    }
+  }, [activeTab, selectedVendor]);
+
   // Share Booking State
+
   const [sharingBooking, setSharingBooking] = useState<Booking | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [sharedBookingData, setSharedBookingData] = useState<any | null>(null);
@@ -1353,6 +1386,7 @@ export default function App() {
 
     setIsPaymentProcessing(true);
     showNotification('🔒 Initializing secure Cashfree checkout...');
+    trackCheckoutStarted(params.bookingData?.selectedServices?.length || 1, params.amount || 0);
 
     const CashfreeSDK = await loadCashfreeScript();
     if (!CashfreeSDK) {
@@ -1386,10 +1420,12 @@ export default function App() {
       if (!orderData.success || !orderData.paymentSessionId) {
         setIsPaymentProcessing(false);
         showNotification(`❌ Error creating Cashfree order: ${orderData.error || 'Gateway offline'}`);
+        trackPaymentFailed('unassigned', orderData.error || 'Gateway offline');
         return;
       }
 
       const { orderId, paymentSessionId, amount, environment } = orderData;
+      trackPaymentInitiated(orderId, amount);
 
       // 2. Initialize Cashfree Web SDK Instance
       const cashfree = new CashfreeSDK({
@@ -1408,6 +1444,7 @@ export default function App() {
 
         if (result.error) {
           showNotification(`⚠️ Payment cancelled or failed: ${result.error.message || 'Dismissed'}`);
+          trackPaymentFailed(orderId, result.error.message || 'dismissed');
           return;
         }
 
@@ -1436,6 +1473,8 @@ export default function App() {
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
             showNotification('🎉 Payment Confirmed via Cashfree! Receipt dispatched to your email.');
+            trackPaymentSuccess(orderId, verifyData.transaction?.id || orderId, amount);
+            trackBookingConfirmed(verifyData.booking?.id || orderId, params.vendorId || params.bookingData?.vendor?.id || 'vendor', amount);
 
             // Clear draft cart
             setBundledItems([]);
@@ -1448,17 +1487,21 @@ export default function App() {
             }
           } else {
             showNotification('⚠️ Payment verified with notice: ' + (verifyData.error || 'Pending gateway sync'));
+            trackPaymentFailed(orderId, verifyData.error || 'unverified');
           }
-        } catch (vErr) {
+        } catch (vErr: any) {
           console.error('[Cashfree Verify Error]:', vErr);
           showNotification('🎉 Payment captured! Syncing booking record in background.');
+          trackPaymentSuccess(orderId, `pending_sync_${orderId}`, amount);
           setActiveTab('bookings');
         }
       }).catch((chkErr: any) => {
         setIsPaymentProcessing(false);
         console.error('[Cashfree Checkout Modal Error]:', chkErr);
         showNotification('⚠️ Payment window closed.');
+        trackPaymentFailed(orderId, 'modal_closed');
       });
+
 
     } catch (error: any) {
       setIsPaymentProcessing(false);
@@ -1807,8 +1850,15 @@ export default function App() {
       : service;
 
     setBundledItems((prev) => [...prev, { vendor, service: finalService }]);
+    trackServiceSelected(vendor.id, {
+      name: finalService.name,
+      price: finalService.price,
+      unit: finalService.unit || 'fixed',
+      quantity: 1
+    });
 
     // Synchronize to planner slot
+
     if (vendor.category === 'Banquet Hall') setPlannerHall(vendor);
     else if (vendor.category === 'Catering') setPlannerCatering(vendor);
     else if (vendor.category === 'DJ') setPlannerDJ(vendor);
@@ -2284,8 +2334,10 @@ export default function App() {
 
       // Save PDF
       doc.save(`Parva_Receipt_${booking.id}.pdf`);
+      trackReceiptDownloaded(booking.id || 'booking');
       showNotification('📥 Transaction receipt PDF downloaded successfully with official branding!');
     } catch (e) {
+
       console.error(e);
       showNotification('❌ Error exporting receipt to PDF.');
     }
@@ -2474,6 +2526,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={async () => {
+                        trackLoginStarted('google');
                         try {
                           const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
                           const provider = new GoogleAuthProvider();
@@ -2503,14 +2556,17 @@ export default function App() {
                           setCurrentUser(loggedUser);
                           localStorage.setItem('parva_user', JSON.stringify(loggedUser));
 
+                          trackLoginSuccess('google');
                           setIsLoginModalOpen(false);
                           showNotification(`🎉 Welcome, ${finalName}!`);
                         } catch (err: any) {
                           console.error("Google sign in error:", err);
+                          trackLoginFailed('google', err.message);
                           showNotification(`⚠️ Sign-in cancelled: ${err.message}`);
                         }
                       }}
                       className="w-full bg-white hover:bg-gray-50 text-gray-900 font-black py-4 px-4 rounded-2xl border-2 border-gray-200 hover:border-brand-primary flex items-center justify-center gap-3 transition shadow-md active:scale-98 text-xs uppercase tracking-wider mt-2"
+
                     >
                       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                       <span>Continue with Google</span>
@@ -3379,10 +3435,12 @@ export default function App() {
                       setSelectedExploreCategory(cat.name);
                       setExploreOccasion('all');
                       setActiveTab('explore');
+                      trackCategorySelected(cat.name);
                     }}
                     className="flex flex-col items-center shrink-0 snap-center group"
                     id={`home-category-${cat.id}`}
                   >
+
                     <div className="w-16 h-16 rounded-[24px] overflow-hidden relative shadow-lg border border-white/60 mb-2 bg-gray-100">
                       <img
                         src={cat.image}
@@ -3557,7 +3615,10 @@ export default function App() {
               {categoriesList.map((catObj) => (
                 <button
                   key={catObj.id}
-                  onClick={() => setSelectedExploreCategory(catObj.name)}
+                  onClick={() => {
+                    setSelectedExploreCategory(catObj.name);
+                    trackCategorySelected(catObj.name);
+                  }}
                   className={`px-4 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition ${
                     selectedExploreCategory.toLowerCase() === catObj.name.toLowerCase()
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
@@ -3568,6 +3629,7 @@ export default function App() {
                   {catObj.name}
                 </button>
               ))}
+
             </div>
 
 
@@ -4122,8 +4184,10 @@ export default function App() {
                                     const cData = await cRes.json();
                                     if (cData.success) {
                                       showNotification('✓ Booking Cancelled successfully. Email notice dispatched.');
+                                      trackBookingCancelled(b.id, 'Customer requested cancellation');
                                       setBookings(prev => prev.map(item => item.id === b.id ? { ...item, status: 'Cancelled' } : item));
                                     } else {
+
                                       showNotification('❌ Cancellation error: ' + (cData.error || 'Server rejected'));
                                     }
                                   } catch (e) {
@@ -4818,6 +4882,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={async () => {
+                            trackLoginStarted('google');
                             try {
                               const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
                               const provider = new GoogleAuthProvider();
@@ -4846,13 +4911,16 @@ export default function App() {
                               await setDoc(doc(db, 'users', user.uid), loggedUser, { merge: true });
                               setCurrentUser(loggedUser);
                               localStorage.setItem('parva_user', JSON.stringify(loggedUser));
+                              trackLoginSuccess('google');
                               showNotification(`🎉 Welcome, ${finalName}!`);
                             } catch (err: any) {
                               console.error("Google sign in error:", err);
+                              trackLoginFailed('google', err.message);
                               showNotification(`⚠️ Sign-in failed: ${err.message}`);
                             }
                           }}
                           className="w-full bg-white hover:bg-gray-50 text-gray-900 font-black py-3.5 px-4 rounded-2xl border-2 border-gray-200 hover:border-brand-primary flex items-center justify-center gap-3 transition shadow-md active:scale-98 text-xs uppercase tracking-wider mt-2"
+
                         >
                           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                           <span>Sign in with Google</span>
@@ -5296,8 +5364,17 @@ export default function App() {
           setActiveFilterMaxPrice(filters.max ? Number(filters.max) : null);
           setActiveFilterTypes(filters.types || []);
           setActiveTab('explore');
+          trackFilterApplied({
+            category: selectedExploreCategory,
+            min_price: filters.min ? Number(filters.min) : null,
+            max_price: filters.max ? Number(filters.max) : null,
+            guest_count: planningGuestSize,
+            filter_types: filters.types || [],
+            sort_mode: filters.sort || 'Distance'
+          });
           showNotification('Filters applied successfully');
         }}
+
       />
 
       <NotificationCenterModal
@@ -5539,9 +5616,14 @@ export default function App() {
       <CartFloatingBar
         itemCount={bundledItems.length}
         totalPrice={bundledItems.reduce((acc, item) => acc + (item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price), 0)}
-        onClick={() => setActiveTab('bookings')}
+        onClick={() => {
+          const totalVal = bundledItems.reduce((acc, item) => acc + (item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price), 0);
+          trackCartOpened(bundledItems.length, totalVal);
+          setActiveTab('bookings');
+        }}
         isVisible={bundledItems.length > 0 && activeTab !== 'bookings' && activeTab !== 'profile' && !selectedVendor}
       />
+
 
       {/* 7. SHARE EVENT PLAN OVERLAYS */}
       <ShareBookingModal
