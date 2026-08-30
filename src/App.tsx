@@ -57,23 +57,26 @@ export const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'Lucknow': { lat: 26.8467, lng: 80.9462 }
 };
 
-const loadRazorpayScript = (): Promise<boolean> => {
+const loadCashfreeScript = (): Promise<any> => {
   return new Promise((resolve) => {
+    if ((window as any).Cashfree) {
+      return resolve((window as any).Cashfree);
+    }
     const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.onload = () => resolve((window as any).Cashfree);
+    script.onerror = () => resolve(null);
     document.body.appendChild(script);
   });
 };
 
-// Deterministic availability evaluator
+// Deterministic availability evaluator strictly based on Firestore busyDates
 export const isVendorAvailable = (vendorId: string, startDateStr: string, endDateStr?: string, vendorsList?: any[]): boolean => {
   if (!startDateStr) return true;
   
   if (vendorsList) {
     const v = vendorsList.find(item => item.id === vendorId);
-    if (v && v.busyDates && v.busyDates.length > 0) {
+    if (v && v.busyDates && Array.isArray(v.busyDates) && v.busyDates.length > 0) {
       const start = new Date(startDateStr);
       const end = endDateStr ? new Date(endDateStr) : start;
       const current = new Date(start);
@@ -90,25 +93,9 @@ export const isVendorAvailable = (vendorId: string, startDateStr: string, endDat
     }
   }
 
-  const start = new Date(startDateStr);
-  const end = endDateStr ? new Date(endDateStr) : start;
-  
-  const current = new Date(start);
-  while (current <= end) {
-    const day = current.getDate();
-    if (!isNaN(day)) {
-      if (vendorId === 'v1' && (day % 10 === 5 || day % 10 === 0)) return false;
-      if (vendorId === 'v7' && (day % 10 === 3 || day % 10 === 7)) return false;
-      if (vendorId === 'v3' && day % 10 === 0) return false;
-      if (vendorId === 'v4' && day % 10 === 8) return false;
-      if (vendorId === 'v5' && day % 10 === 4) return false;
-      if (vendorId === 'v6' && day % 10 === 9) return false;
-      if (vendorId === 'v8' && day % 10 === 6) return false;
-    }
-    current.setDate(current.getDate() + 1);
-  }
   return true;
 };
+
 
 const getUserName = (user: any) => {
   if (!user) return 'Guest Planner';
@@ -1351,144 +1338,138 @@ export default function App() {
     }
   };
 
-  const handlePayWithRazorpay = async (params: {
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+
+  const handlePayWithCashfree = async (params: {
     vendorId?: string;
     type: 'connection' | 'booking';
     amount?: number;
     bookingData?: any;
   }) => {
-    if (!paymentsEnabled) {
-      showNotification('⚡ Payments Gateway is turned OFF by Admin - Free Access Granted!');
-      if (params.type === 'connection' && params.vendorId && currentUser?.uid) {
-        try {
-          const db = getDb();
-          const { doc, setDoc } = await import('firebase/firestore');
-          const connId = `${currentUser?.uid || 'user'}_${params.vendorId}`;
-          await setDoc(doc(db, 'connections', connId), {
-            id: connId,
-            userId: currentUser.uid,
-            vendorId: params.vendorId,
-            unlocked: true,
-            timestamp: new Date().toISOString()
-          });
-          setUnlockedConnections(prev => [...prev, params.vendorId!]);
-        } catch (e) {
-          console.error('Error unlocking connection when payments disabled:', e);
-        }
-      } else if (params.type === 'booking' && params.bookingData) {
-        try {
-          const db = getDb();
-          const { doc, setDoc } = await import('firebase/firestore');
-          const finalBooking = {
-            ...params.bookingData,
-            status: 'Confirmed',
-            paymentStatus: 'Paid (Bypassed)'
-          };
-          await setDoc(doc(db, 'bookings', params.bookingData.id), finalBooking);
-        } catch (e) {
-          console.error('Error saving booking when payments disabled:', e);
-        }
-      }
+    if (isPaymentProcessing) {
+      showNotification('⏳ Payment is currently being initialized, please wait...');
       return;
     }
 
-    const loaded = await loadRazorpayScript();
-    if (!loaded) {
-      showNotification('❌ Failed to load Razorpay SDK. Please check your internet connection.');
+    setIsPaymentProcessing(true);
+    showNotification('🔒 Initializing secure Cashfree checkout...');
+
+    const CashfreeSDK = await loadCashfreeScript();
+    if (!CashfreeSDK) {
+      setIsPaymentProcessing(false);
+      showNotification('❌ Could not load Cashfree Web SDK. Please check your connection.');
       return;
     }
 
     try {
-      const response = await fetch(`${BACKEND_API_URL}/api/payments/initiate`, {
+      // 1. Request Order & Payment Session ID from Secure Backend
+      const response = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: currentUser?.uid || 'guest-uid',
-          vendorId: params.vendorId || 'system',
+          vendorId: params.vendorId || params.bookingData?.vendor?.id || 'system',
           type: params.type,
-          amount: params.amount || 0
+          amount: params.amount || 0,
+          selectedServices: params.bookingData?.selectedServices || [],
+          planningGuestSize: planningGuestSize || 100,
+          couponCode: couponApplied ? couponCode : undefined,
+          customerName: currentUser?.name || params.bookingData?.customerName || 'Parva Customer',
+          customerPhone: currentUser?.phone || params.bookingData?.customerPhone || '9999999999',
+          customerEmail: currentUser?.email || params.bookingData?.customerEmail || 'customer@parvaevents.com',
+          eventDate: params.bookingData?.eventDate || planningStartDate,
+          eventTimeSlot: params.bookingData?.eventTimeSlot || 'full_day'
         })
       });
-      
+
       const orderData = await response.json();
-      if (!orderData.success) {
-        showNotification(`❌ Error initiating payment: ${orderData.error}`);
+      if (!orderData.success || !orderData.paymentSessionId) {
+        setIsPaymentProcessing(false);
+        showNotification(`❌ Error creating Cashfree order: ${orderData.error || 'Gateway offline'}`);
         return;
       }
 
-      const { orderId, keyId, amount, connectionFee, commissionAmount, gstAmount } = orderData;
+      const { orderId, paymentSessionId, amount, environment } = orderData;
 
-      const options = {
-        key: keyId,
-        amount: Math.round(amount * 100),
-        currency: "INR",
-        name: "MyParva App",
-        description: params.type === 'connection' ? 'Vendor Connection Fee' : 'Booking Commission Fee',
-        order_id: orderId,
-        handler: async function (response: any) {
-          try {
-            const verifyResponse = await fetch(`${BACKEND_API_URL}/api/payments/verify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                userId: currentUser?.uid || 'guest-uid',
-                vendorId: params.vendorId || 'system',
-                type: params.type,
-                commissionAmount,
-                gstAmount,
-                connectionFee,
-                totalAmount: amount,
-                bookingData: params.bookingData || null,
-                customerData: {
-                  name: currentUser?.name || 'Valued Customer',
-                  email: currentUser?.email || 'customer@gmail.com',
-                  phone: currentUser?.phone || 'N/A'
-                }
-              })
-            });
+      // 2. Initialize Cashfree Web SDK Instance
+      const cashfree = new CashfreeSDK({
+        mode: environment === 'PRODUCTION' ? 'production' : 'sandbox'
+      });
 
-            const verifyData = await verifyResponse.json();
-            if (verifyData.success) {
-              showNotification('🎉 Payment Secured and Transaction Logged successfully!');
-              
-              if (params.type === 'booking' && params.bookingData) {
-                const db = getDb();
-                const { doc, setDoc } = await import('firebase/firestore');
-                const finalBooking = {
-                  ...params.bookingData,
-                  status: 'Confirmed',
-                  paymentStatus: 'Paid'
-                };
-                await setDoc(doc(db, 'bookings', params.bookingData.id), finalBooking);
-              }
-            } else {
-              showNotification('❌ Payment verification failed on server.');
-            }
-          } catch (err) {
-            console.error(err);
-            showNotification('❌ Error verifying payment.');
-          }
-        },
-        prefill: {
-          name: currentUser?.name || '',
-          email: currentUser?.email || '',
-          contact: currentUser?.phone || ''
-        },
-        theme: {
-          color: "#9d174d"
+      console.log(`[Cashfree Checkout] Opening checkout modal for order: ${orderId}`);
+
+      // 3. Launch Cashfree Native Responsive Modal
+      cashfree.checkout({
+        paymentSessionId: paymentSessionId,
+        redirectTarget: '_modal'
+      }).then(async (result: any) => {
+        setIsPaymentProcessing(false);
+        console.log(`[Cashfree Result]:`, result);
+
+        if (result.error) {
+          showNotification(`⚠️ Payment cancelled or failed: ${result.error.message || 'Dismissed'}`);
+          return;
         }
-      };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      console.error('Razorpay Error:', error);
-      showNotification('❌ Payment initiation error.');
+        // 4. Verify Payment Server-side Upon Successful Payment
+        showNotification('⏳ Verifying payment with Cashfree...');
+        try {
+          const verifyRes = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId,
+              paymentId: result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+              userId: currentUser?.uid || 'guest-uid',
+              vendorId: params.vendorId || params.bookingData?.vendor?.id || 'system',
+              type: params.type,
+              totalAmount: amount,
+              bookingData: params.bookingData || null,
+              customerData: {
+                name: currentUser?.name || 'Valued Customer',
+                email: currentUser?.email || 'customer@parvaevents.com',
+                phone: currentUser?.phone || 'N/A'
+              }
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            showNotification('🎉 Payment Confirmed via Cashfree! Receipt dispatched to your email.');
+
+            // Clear draft cart
+            setBundledItems([]);
+            sessionStorage.removeItem('parva_bundled_items');
+            setActiveTab('bookings');
+
+            // Set state for fresh booking view
+            if (verifyData.booking) {
+              setBookings(prev => [verifyData.booking, ...prev.filter(b => b.id !== verifyData.booking.id)]);
+            }
+          } else {
+            showNotification('⚠️ Payment verified with notice: ' + (verifyData.error || 'Pending gateway sync'));
+          }
+        } catch (vErr) {
+          console.error('[Cashfree Verify Error]:', vErr);
+          showNotification('🎉 Payment captured! Syncing booking record in background.');
+          setActiveTab('bookings');
+        }
+      }).catch((chkErr: any) => {
+        setIsPaymentProcessing(false);
+        console.error('[Cashfree Checkout Modal Error]:', chkErr);
+        showNotification('⚠️ Payment window closed.');
+      });
+
+    } catch (error: any) {
+      setIsPaymentProcessing(false);
+      console.error('[Cashfree Initiation Error]:', error);
+      showNotification('❌ Payment initiation error. Please try again.');
     }
   };
+
+  // Backward-compatible alias for any child component calling handlePayWithRazorpay
+  const handlePayWithRazorpay = handlePayWithCashfree;
+
 
   // Helper to show temporary notification
   const showNotification = (msg: string) => {
@@ -4096,7 +4077,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 flex-wrap">
                           <button
                             onClick={() => handleSelectThread(b.vendor.id)}
                             className="border border-brand-border hover:border-brand-primary text-brand-text font-semibold py-1.5 px-2.5 rounded-lg hover:bg-gray-50 transition text-xs"
@@ -4123,12 +4104,46 @@ export default function App() {
                             <Download size={11} />
                             <span>Download Receipt</span>
                           </button>
+                          {b.status !== 'Cancelled' && b.status !== 'Completed' && (
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('Are you sure you want to cancel this booking request?')) {
+                                  try {
+                                    showNotification('⏳ Processing cancellation request...');
+                                    const cRes = await fetch(`${BACKEND_API_URL}/api/bookings/${b.id}/cancel`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        reason: 'Customer requested cancellation from Bookings Tab',
+                                        customer: { name: currentUser?.name, email: currentUser?.email, phone: currentUser?.phone },
+                                        vendor: b.vendor
+                                      })
+                                    });
+                                    const cData = await cRes.json();
+                                    if (cData.success) {
+                                      showNotification('✓ Booking Cancelled successfully. Email notice dispatched.');
+                                      setBookings(prev => prev.map(item => item.id === b.id ? { ...item, status: 'Cancelled' } : item));
+                                    } else {
+                                      showNotification('❌ Cancellation error: ' + (cData.error || 'Server rejected'));
+                                    }
+                                  } catch (e) {
+                                    showNotification('❌ Could not process cancellation.');
+                                  }
+                                }
+                              }}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-1.5 px-2.5 rounded-lg transition text-xs"
+                              id={`cancel-booking-btn-${b.id}`}
+                            >
+                              Cancel
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
+
             )}
           </div>
         )}
@@ -5420,226 +5435,44 @@ export default function App() {
         />
       )}
 
-      {/* 6. HIGH-FIDELITY SIMULATED RAZORPAY PAYMENT GATEWAY OVERLAY */}
+      {/* 6. CASHFREE SECURE CHECKOUT TRIGGER OVERLAY */}
       {isRazorpayOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-[24px] overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+          <div className="bg-white w-full max-w-sm rounded-[24px] overflow-hidden shadow-2xl border border-gray-100 flex flex-col p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mx-auto text-xl font-black">
+                💳
+              </div>
+              <h4 className="font-black text-sm text-gray-900">Secure Cashfree Checkout</h4>
+              <p className="text-xs text-gray-500 font-medium">
+                Amount payable: <span className="font-black text-brand-primary">₹{razorpayAmount.toLocaleString('en-IN')}.00</span>
+              </p>
+            </div>
             
-            {/* Razorpay Slate Header */}
-            <div className="bg-[#1F2430] p-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-xs text-white">
-                  R
-                </div>
-                <div>
-                  <h4 className="font-extrabold text-[11px] leading-tight text-gray-300">PARVA CELEBRATIONS</h4>
-                  <p className="text-[10px] text-gray-400 font-medium">elite concierge upgrade</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-[9px] text-gray-400 uppercase font-bold block">Amount due</span>
-                <span className="font-black text-xs text-white">₹{razorpayAmount.toLocaleString('en-IN')}.00</span>
-              </div>
-            </div>
+            <button
+              onClick={() => {
+                setIsRazorpayOpen(false);
+                handlePayWithCashfree({
+                  type: razorpayPurpose === 'premium' ? 'connection' : 'booking',
+                  amount: razorpayAmount,
+                  bookingData: pendingCheckoutBooking
+                });
+              }}
+              className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-md shadow-brand-primary/20"
+            >
+              Launch Cashfree Payment Window ⚡
+            </button>
 
-            {/* Merchant Details */}
-            <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex justify-between items-center text-[10px] text-brand-text-secondary">
-              <span>Order Ref: PRV-ELITE-920</span>
-              <span>support@parva.com</span>
-            </div>
-
-            {/* Content Portal */}
-            <div className="p-5 flex-1 overflow-y-auto space-y-4">
-              {razorpayStatus === 'idle' ? (
-                <>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-brand-text-secondary uppercase tracking-widest block">Choose Payment Method</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setRazorpayMethod('upi')}
-                        className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
-                          razorpayMethod === 'upi'
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
-                            : 'bg-white border-brand-border text-brand-text-secondary hover:bg-gray-50'
-                        }`}
-                      >
-                        ⚡ UPI / GPay
-                      </button>
-                      <button
-                        onClick={() => setRazorpayMethod('card')}
-                        className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
-                          razorpayMethod === 'card'
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
-                            : 'bg-white border-brand-border text-brand-text-secondary hover:bg-gray-50'
-                        }`}
-                      >
-                        💳 Credit/Debit Card
-                      </button>
-                    </div>
-                  </div>
-
-                  {razorpayMethod === 'upi' ? (
-                    <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-gray-100 animate-in fade-in duration-150">
-                      <div>
-                        <label className="text-[9px] font-bold text-brand-text-secondary uppercase block mb-1">Enter your UPI ID</label>
-                        <input
-                          type="text"
-                          value={razorpayUpi}
-                          onChange={(e) => setRazorpayUpi(e.target.value)}
-                          placeholder="devansh@okhdfcbank"
-                          className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-blue-500"
-                        />
-                      </div>
-                      <p className="text-[9px] text-brand-text-secondary leading-normal">
-                        💡 Razorpay Secure UPI: A push notification request will be triggered instantly to your UPI app once you click Pay.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-gray-100 animate-in fade-in duration-150">
-                      <div>
-                        <label className="text-[9px] font-bold text-brand-text-secondary uppercase block mb-1">Card Number</label>
-                        <input
-                          type="text"
-                          placeholder="4111 2222 3333 4444"
-                          defaultValue="4111 2222 3333 4444"
-                          disabled
-                          className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none text-gray-500"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[9px] font-bold text-brand-text-secondary uppercase block mb-1">Expiry Date</label>
-                          <input
-                            type="text"
-                            placeholder="12/28"
-                            defaultValue="12/28"
-                            disabled
-                            className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none text-gray-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-bold text-brand-text-secondary uppercase block mb-1">CVV / Code</label>
-                          <input
-                            type="password"
-                            placeholder="•••"
-                            defaultValue="123"
-                            disabled
-                            className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none text-gray-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Payment Lock assurance */}
-                  <div className="flex items-center gap-1.5 justify-center text-gray-400 text-[9px] font-bold">
-                    <ShieldCheck size={14} className="text-blue-500" />
-                    <span>RAZORPAY SECURE • PCI-DSS CERTIFIED</span>
-                  </div>
-
-                  <button
-                    onClick={async () => {
-                      setRazorpayStatus('processing');
-
-                      // Dynamically load Razorpay SDK if not already in window
-                      if (!(window as any).Razorpay) {
-                        const loaded = await new Promise((resolve) => {
-                          const script = document.createElement('script');
-                          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-                          script.onload = () => resolve(true);
-                          script.onerror = () => resolve(false);
-                          document.body.appendChild(script);
-                        });
-                        if (!loaded) {
-                          showNotification('❌ Failed to load Razorpay SDK. Falling back to offline simulation.');
-                          setTimeout(() => {
-                            handlePaymentSuccess(razorpayPurpose);
-                          }, 1500);
-                          return;
-                        }
-                      }
-
-                      const options = {
-                        key: 'rzp_test_TE7IEPsVrpMrj7',
-                        amount: razorpayAmount * 100, // paise
-                        currency: 'INR',
-                        name: 'PARVA Events',
-                        description: razorpayPurpose === 'premium' ? 'PARVA Elite Concierge Upgrade' : 'Unlock Vendor Connection Fee',
-                        image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=200',
-                        handler: function (response: any) {
-                          showNotification(`🎉 Razorpay Payment Authorized! ID: ${response.razorpay_payment_id}`);
-                          handlePaymentSuccess(razorpayPurpose);
-                        },
-                        prefill: {
-                          name: currentUser?.name || 'Devansh',
-                          email: currentUser?.email || 'devansh@parva.com',
-                          contact: currentUser?.phone || '9579000000'
-                        },
-                        notes: {
-                          address: 'PARVA Office, Mumbai'
-                        },
-                        theme: {
-                          color: '#B08E5B'
-                        },
-                        modal: {
-                          ondismiss: function () {
-                            showNotification('⚠️ Payment gateway closed by user.');
-                            setRazorpayStatus('idle');
-                          }
-                        }
-                      };
-
-                      try {
-                        const rzp = new (window as any).Razorpay(options);
-                        rzp.open();
-                      } catch (err) {
-                        console.error('Razorpay Instance Error:', err);
-                        showNotification('❌ Gateway error. Falling back to simulated verification.');
-                        handlePaymentSuccess(razorpayPurpose);
-                      }
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-3.5 rounded-xl transition duration-300 shadow-md shadow-blue-600/10"
-                  >
-                    Pay ₹{razorpayAmount.toLocaleString('en-IN')}.00 Securely
-                  </button>
-                </>
-              ) : razorpayStatus === 'processing' ? (
-                <div className="py-10 text-center space-y-4 animate-in fade-in">
-                  <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto" />
-                  <div>
-                    <h5 className="font-extrabold text-xs text-brand-text">Authenticating Payment Gateway</h5>
-                    <p className="text-[10px] text-brand-text-secondary mt-1">Waiting for UPI bank response callback... Do not refresh</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-10 text-center space-y-4 animate-in zoom-in duration-300">
-                  <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mx-auto shadow-inner">
-                    <CheckCircle2 size={32} />
-                  </div>
-                  <div>
-                    <h5 className="font-extrabold text-xs text-emerald-800">Payment Successfully Received!</h5>
-                    <p className="text-[10px] text-brand-text-secondary mt-1">Transaction Ref: pay_RU94J31M0D3N2</p>
-                    <p className="text-[10px] text-brand-text font-extrabold mt-1">
-                      {razorpayPurpose === 'premium' ? 'Premium Account Activated! 👑' : 'Direct Vendor Connection Unlocked! 📲'}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal footer close */}
-            <div className="bg-gray-50 p-3 text-center border-t border-gray-100">
-              <button
-                onClick={() => setIsRazorpayOpen(false)}
-                className="text-[10px] font-bold text-brand-text-secondary hover:text-brand-text"
-              >
-                Cancel and return to PARVA
-              </button>
-            </div>
-
+            <button
+              onClick={() => setIsRazorpayOpen(false)}
+              className="text-[11px] font-bold text-gray-400 hover:text-gray-600 text-center"
+            >
+              Cancel and return
+            </button>
           </div>
         </div>
       )}
+
 
       {/* 6. PRIVACY POLICY MODAL */}
       {isPrivacyOpen && (
@@ -5657,7 +5490,8 @@ export default function App() {
               <h4 className="font-bold text-brand-text uppercase">1. Information We Collect</h4>
               <p>We collect personal information that you provide to us directly, such as your contact details, and transactions related to your event bookings and connection fees.</p>
               <h4 className="font-bold text-brand-text uppercase">2. How We Use Information</h4>
-              <p>We use your information to operate our marketplace, process secure payments via Razorpay, allow chat features, and prevent unauthorized operations.</p>
+              <p>We use your information to operate our marketplace, process secure payments via Cashfree Payments, allow chat features, and prevent unauthorized operations.</p>
+
               <h4 className="font-bold text-brand-text uppercase">3. Security</h4>
               <p>Your database transactions and user profiles are stored securely in Firestore. We do not sell your personal data to third parties.</p>
             </div>

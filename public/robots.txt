@@ -1,0 +1,5 @@
+﻿# robots.txt for PARVA Celebrations Event Marketplace
+User-agent: *
+Allow: /
+
+Sitemap: https://parava-frontend.onrender.com/sitemap.xml
