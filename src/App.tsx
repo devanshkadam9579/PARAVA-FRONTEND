@@ -2189,12 +2189,7 @@ export default function App() {
     if (bundledItems.length === 0) return;
 
     // Calculate bundle original & discount
-    const originalTotal = bundledItems.reduce((acc, item) => {
-      const itemVal = item.vendor.category === 'Catering'
-        ? item.service.price * (planningGuestSize || 100)
-        : item.service.price;
-      return acc + itemVal;
-    }, 0);
+    const originalTotal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
     let discountPercentage = 0;
     if (bundledItems.length === 2) discountPercentage = 8;
     else if (bundledItems.length === 3) discountPercentage = 15;
@@ -4101,42 +4096,7 @@ export default function App() {
                   </span>
                 </div>
 
-                {/* Interactive Catering Guest Count Adjuster in Cart */}
-                {bundledItems.some(i => i.vendor.category === 'Catering') && (
-                  <div className="bg-amber-50/90 border border-amber-200 p-3 rounded-2xl flex items-center justify-between shadow-2xs">
-                    <div>
-                      <span className="text-[10px] font-black text-amber-950 uppercase tracking-wider block flex items-center gap-1">
-                        <span>🍽️</span>
-                        <span>Catering Guest Count</span>
-                      </span>
-                      <p className="text-[10px] text-amber-800 font-medium">Auto-multiplies per-plate catering rates</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => setPlanningGuestSize(prev => Math.max(10, prev - 50))}
-                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min={1}
-                        max={10000}
-                        value={planningGuestSize}
-                        onChange={(e) => setPlanningGuestSize(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-14 text-center font-black text-xs text-amber-950 outline-none bg-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPlanningGuestSize(prev => prev + 50)}
-                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                )}
+
 
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                   {bundledItems.map((item, idx) => (
@@ -4148,11 +4108,11 @@ export default function App() {
                       <div className="flex items-center gap-2 shrink-0 text-right">
                         <div>
                           <span className="font-extrabold text-brand-text block">
-                            ₹{(item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price).toLocaleString('en-IN')}
+                            ₹{item.service.price.toLocaleString('en-IN')}
                           </span>
-                          {item.vendor.category === 'Catering' && (
-                            <span className="text-[8px] font-bold text-amber-800 block">
-                              ₹{item.service.price}/plt × {planningGuestSize || 100} Guests
+                          {item.service.unit && (
+                            <span className="text-[8.5px] font-bold text-amber-800 block">
+                              {item.service.unit}
                             </span>
                           )}
                         </div>
@@ -4376,12 +4336,7 @@ export default function App() {
 
                 {/* Estimate checkout total and Connection Fee Details */}
                 {(() => {
-                  const servicesTotal = bundledItems.reduce((sum, item) => {
-                    const itemVal = item.vendor.category === 'Catering'
-                      ? item.service.price * (planningGuestSize || 100)
-                      : item.service.price;
-                    return sum + itemVal;
-                  }, 0);
+                  const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
                   const calculatedBookingFee = Math.round(servicesTotal * (bookingFeePercentage / 100));
                   const gstAmount = Math.round(calculatedBookingFee * 0.18);
                   const finalPayableTotal = Math.max(0, calculatedBookingFee + gstAmount - couponDiscount);
@@ -6702,9 +6657,9 @@ export default function App() {
       {/* Persistent Bottom Selection Bar */}
       <CartFloatingBar
         itemCount={bundledItems.length}
-        totalPrice={bundledItems.reduce((acc, item) => acc + (item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price), 0)}
+        totalPrice={bundledItems.reduce((acc, item) => acc + item.service.price, 0)}
         onClick={() => {
-          const totalVal = bundledItems.reduce((acc, item) => acc + (item.vendor.category === 'Catering' ? item.service.price * (planningGuestSize || 100) : item.service.price), 0);
+          const totalVal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
           trackCartOpened(bundledItems.length, totalVal);
           setActiveTab('bookings');
         }}
