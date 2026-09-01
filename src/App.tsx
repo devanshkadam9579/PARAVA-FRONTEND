@@ -37,6 +37,10 @@ import SplashCarousel from './components/SplashCarousel';
 import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
 import ParvaLogin from './components/LoginScreen';
+import SlidablePromoBanner from './components/SlidablePromoBanner';
+import AuthModal from './components/AuthModal';
+import ChatTab from './components/ChatTab';
+
 import { Share2 } from 'lucide-react';
 import {
   trackPageView,
@@ -1003,6 +1007,7 @@ export default function App() {
 
   // Filter Modal & Dynamic Sorting State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
   const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
   const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
@@ -1980,7 +1985,12 @@ export default function App() {
     
     if (validCoupon) {
       setCouponApplied(true);
-      const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+      const servicesTotal = bundledItems.reduce((sum, item) => {
+                    const itemVal = item.vendor.category === 'Catering'
+                      ? item.service.price * (planningGuestSize || 100)
+                      : item.service.price;
+                    return sum + itemVal;
+                  }, 0);
       const currentFeePct = bookingFeePercentage || 5;
       const calculatedBookingFee = Math.round(servicesTotal * (currentFeePct / 100));
       
@@ -2179,7 +2189,12 @@ export default function App() {
     if (bundledItems.length === 0) return;
 
     // Calculate bundle original & discount
-    const originalTotal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
+    const originalTotal = bundledItems.reduce((acc, item) => {
+      const itemVal = item.vendor.category === 'Catering'
+        ? item.service.price * (planningGuestSize || 100)
+        : item.service.price;
+      return acc + itemVal;
+    }, 0);
     let discountPercentage = 0;
     if (bundledItems.length === 2) discountPercentage = 8;
     else if (bundledItems.length === 3) discountPercentage = 15;
@@ -3751,16 +3766,31 @@ export default function App() {
               </div>
             </div>
 
-            {/* Section: Top Event Planners Near You */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-brand-text text-sm uppercase tracking-wider">Top Event Planners Near You</h3>
-                <span 
-                  onClick={() => { setSelectedExploreCategory('Event Planner'); setActiveTab('explore'); }}
-                  className="text-xs text-brand-primary font-semibold hover:underline cursor-pointer"
-                >
-                  View All
-                </span>
+            {/* Section: Recommended Verified Vendors in City */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                <div>
+                  <h3 className="font-extrabold text-base text-gray-900 font-display">
+                    {filteredVendors.length} Verified {filteredVendors.length === 1 ? 'Partner' : 'Partners'} in {currentCity}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    {selectedExploreCategory === 'all' ? 'Showing all categories' : `Filtered by: ${selectedExploreCategory}`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <select
+                    value={activeSortOption}
+                    onChange={(e) => setActiveSortOption(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 outline-none cursor-pointer"
+                  >
+                    <option value="Distance">📍 Nearest Distance</option>
+                    <option value="Popularity">🏆 Most Popular</option>
+                    <option value="Rating - High to Low">⭐ Top Rated</option>
+                    <option value="Price - Low to High">₹ Price: Low to High</option>
+                    <option value="Price - High to Low">₹ Price: High to Low</option>
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-4">
                 {vendors
@@ -4036,6 +4066,19 @@ export default function App() {
           </div>
         )}
 
+                {/* ==================== TAB: CHAT (Real-Time Vendor Messaging) ==================== */}
+        {activeTab === 'chat' && (
+          <div className="space-y-4" id="chat-tab-container">
+            <ChatTab
+              vendors={vendors}
+              bookings={bookings}
+              currentUser={currentUser}
+              onOpenLogin={() => setIsAuthModalOpen(true)}
+              onShowNotification={showNotification}
+            />
+          </div>
+        )}
+
         {/* ==================== TAB: BOOKINGS ==================== */}
         {activeTab === 'bookings' && (
           <div className="space-y-5" id="bookings-view-container">
@@ -4057,6 +4100,43 @@ export default function App() {
                     {bundledItems.length} Added
                   </span>
                 </div>
+
+                {/* Interactive Catering Guest Count Adjuster in Cart */}
+                {bundledItems.some(i => i.vendor.category === 'Catering') && (
+                  <div className="bg-amber-50/90 border border-amber-200 p-3 rounded-2xl flex items-center justify-between shadow-2xs">
+                    <div>
+                      <span className="text-[10px] font-black text-amber-950 uppercase tracking-wider block flex items-center gap-1">
+                        <span>🍽️</span>
+                        <span>Catering Guest Count</span>
+                      </span>
+                      <p className="text-[10px] text-amber-800 font-medium">Auto-multiplies per-plate catering rates</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-amber-200 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setPlanningGuestSize(prev => Math.max(10, prev - 50))}
+                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10000}
+                        value={planningGuestSize}
+                        onChange={(e) => setPlanningGuestSize(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-14 text-center font-black text-xs text-amber-950 outline-none bg-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPlanningGuestSize(prev => prev + 50)}
+                        className="w-7 h-7 rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-black text-xs flex items-center justify-center active:scale-95 transition"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                   {bundledItems.map((item, idx) => (
@@ -4296,7 +4376,12 @@ export default function App() {
 
                 {/* Estimate checkout total and Connection Fee Details */}
                 {(() => {
-                  const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+                  const servicesTotal = bundledItems.reduce((sum, item) => {
+                    const itemVal = item.vendor.category === 'Catering'
+                      ? item.service.price * (planningGuestSize || 100)
+                      : item.service.price;
+                    return sum + itemVal;
+                  }, 0);
                   const calculatedBookingFee = Math.round(servicesTotal * (bookingFeePercentage / 100));
                   const gstAmount = Math.round(calculatedBookingFee * 0.18);
                   const finalPayableTotal = Math.max(0, calculatedBookingFee + gstAmount - couponDiscount);
@@ -5904,8 +5989,8 @@ export default function App() {
       <nav className="fixed bottom-4 inset-x-4 max-w-sm mx-auto glass-panel border border-brand-border rounded-[24px] shadow-lg py-2.5 px-4 z-40 flex items-center justify-between" id="bottom-floating-navigation">
         {[
           { id: 'home', label: 'Home', icon: Home, badge: 0 },
-          { id: 'explore', label: 'Explore', icon: Compass, badge: 0 },
-          { id: 'bookings', label: 'Bookings', icon: Calendar, badge: 0 },
+          { id: 'bookings', label: 'Bookings', icon: Calendar, badge: bundledItems.length },
+          { id: 'chat', label: 'Chat', icon: MessageSquare, badge: 0 },
           { id: 'profile', label: 'Profile', icon: User, badge: 0 }
         ].map((item) => {
           const IconComponent = item.icon;
@@ -5963,6 +6048,17 @@ export default function App() {
       </nav>
 
       {/* 4. DIALOGS & MODAL DRAWER PORTALS */}
+      {/* High-Fidelity Multi-Tab Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(user) => {
+          setCurrentUser(user);
+          localStorage.setItem('parva_user', JSON.stringify(user));
+        }}
+        onShowNotification={showNotification}
+      />
+
       {/* Filter and Sorting Modal */}
       <FilterModal
         isOpen={isFilterModalOpen}

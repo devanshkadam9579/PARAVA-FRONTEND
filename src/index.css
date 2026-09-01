@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Outfit", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Courier New", monospace;
   
   --color-brand-primary: #a21c54;
   --color-brand-primary-dark: #7a0e3a;
@@ -12,33 +12,37 @@
   --color-brand-accent: #ffc300;
   --color-brand-bg: #fffbfd;
   --color-brand-card: #FFFFFF;
-  --color-brand-border: #f8e8f0;
-  --color-brand-success: #1b8a4f;
-  --color-brand-warning: #ffc300;
-  --color-brand-danger: #d32f2f;
-  --color-brand-text: #1f0b14;
-  --color-brand-text-secondary: #6e5863;
+  --color-brand-border: #f2e4ec;
+  --color-brand-success: #10b981;
+  --color-brand-warning: #f59e0b;
+  --color-brand-danger: #ef4444;
+  --color-brand-text: #1a0812;
+  --color-brand-text-secondary: #5c4753;
   
   --radius-card: 20px;
-  --radius-button: 18px;
-  --radius-input: 16px;
+  --radius-button: 16px;
+  --radius-input: 14px;
   --radius-nav: 24px;
 }
 
-/* Custom styles for high-fidelity interactive elements */
+/* Base Body Styles - Clean Light Mode with Open Sans */
 body {
   font-family: var(--font-sans);
-  background-color: #fffbfd;
-  color: #1f0b14;
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Custom scrollbar styling to feel premium and subtle */
+/* Smooth subtle scrollbars */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -49,26 +53,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #EADDCB;
-  border-radius: 4px;
+  background: #e5d5de;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand-primary);
 }
 
-/* Glass morphism helper */
+/* Hide scrollbar for clean carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Subtle Glass Surface */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(242, 228, 236, 0.9);
 }
-
-.glass-panel-dark {
-  background: rgba(33, 33, 33, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
