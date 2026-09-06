@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AirbnbNavbar } from './AirbnbNavbar';
+import { HeroSection } from './HeroSection';
 import { AirbnbSearchCapsule } from './AirbnbSearchCapsule';
 import { AirbnbVendorCard } from './AirbnbVendorCard';
 import { AirbnbVendorDetailView } from './AirbnbVendorDetailView';
@@ -7,6 +8,7 @@ import { AirbnbCheckoutView } from './AirbnbCheckoutView';
 import { MyBookingsView } from './MyBookingsView';
 import { CustomerProfileView } from './CustomerProfileView';
 import { HorizontalSection } from './HorizontalSection';
+import { HowItWorksSection } from './HowItWorksSection';
 import ChatTab from '../ChatTab';
 import { Vendor, VendorServiceItem, Booking } from '../../types';
 import { 
@@ -117,7 +119,7 @@ export function AirbnbDesktopMarketplace({
     });
 
   // Categorized vendor rails
-  const popularVendors = filteredVendors.slice(0, 8);
+  const popularVendors = filteredVendors.slice(0, 10);
   const banquetHalls = vendors.filter(v => (v.category || '').toLowerCase().includes('hall') || (v.category || '').toLowerCase().includes('venue'));
   const caterers = vendors.filter(v => (v.category || '').toLowerCase().includes('cater'));
   const decorators = vendors.filter(v => (v.category || '').toLowerCase().includes('decor'));
@@ -245,8 +247,8 @@ export function AirbnbDesktopMarketplace({
     <div className="min-h-screen bg-white text-gray-900 font-sans">
       {renderNavbar()}
 
-      {/* Signature Floating Search Capsule */}
-      <AirbnbSearchCapsule
+      {/* Hero Section with Celebration Photography & Embedded Search */}
+      <HeroSection
         currentCity={currentCity}
         onSelectCity={onSelectCity}
         cities={cities}
@@ -352,7 +354,43 @@ export function AirbnbDesktopMarketplace({
           </HorizontalSection>
         )}
 
-        {/* Section 5: All Verified Specialists (Ultra-Responsive Grid) */}
+        {/* Section 5: Horizontal Rail — Photography & Videography */}
+        {photographers.length > 0 && (
+          <HorizontalSection
+            title="Celebration Photographers & Drone Cinematography"
+            subtitle="Candid wedding photographers, pre-wedding shoots, and 4K aerial drone coverage"
+          >
+            {photographers.map((vendor) => (
+              <AirbnbVendorCard
+                key={vendor.id}
+                vendor={vendor}
+                onSelect={onSelectVendor}
+                isWishlisted={wishlist.includes(vendor.id)}
+                onToggleWishlist={onToggleWishlist}
+              />
+            ))}
+          </HorizontalSection>
+        )}
+
+        {/* Section 6: Horizontal Rail — Trending DJ & Sound */}
+        {djs.length > 0 && (
+          <HorizontalSection
+            title="Trending DJ & Live Acoustic Bands"
+            subtitle="Concert grade line-array sound systems, moving head beam lasers, and club DJs"
+          >
+            {djs.map((vendor) => (
+              <AirbnbVendorCard
+                key={vendor.id}
+                vendor={vendor}
+                onSelect={onSelectVendor}
+                isWishlisted={wishlist.includes(vendor.id)}
+                onToggleWishlist={onToggleWishlist}
+              />
+            ))}
+          </HorizontalSection>
+        )}
+
+        {/* Section 7: All Verified Specialists (Ultra-Responsive Grid) */}
         <section className="space-y-6 pt-4 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -378,67 +416,8 @@ export function AirbnbDesktopMarketplace({
           </div>
         </section>
 
-        {/* Trust & Guarantee Section */}
-        <section className="bg-gray-50 rounded-3xl p-8 sm:p-12 border border-gray-200/80 shadow-xs">
-          <div className="max-w-4xl mx-auto text-center mb-10 space-y-2">
-            <h3 className="text-2xl font-black text-gray-900 font-display">
-              The Parva Celebration Guarantee
-            </h3>
-            <p className="text-xs text-gray-500 max-w-xl mx-auto font-medium">
-              Every specialist is physically audited and verified to ensure your celebration runs flawlessly.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-                <ShieldCheck size={24} />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">100% Verified Partners</h4>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Physically inspected, GST & Aadhaar verified background checks.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-                <Sparkles size={24} />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">5% Escrow Advance</h4>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Lock your date with only 5% advance fee. Pay remaining at the event.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-                <Headphones size={24} />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">24/7 Concierge Support</h4>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Dedicated celebration specialist to assist you every step of the way.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-                <Star size={24} />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">Direct Price Assurance</h4>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                  Zero middleman markups. Direct wholesale vendor pricing guaranteed.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* How It Works & Escrow Guarantee */}
+        <HowItWorksSection />
       </main>
 
       {/* Comprehensive Marketplace Footer */}
