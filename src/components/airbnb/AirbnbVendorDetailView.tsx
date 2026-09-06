@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   Star, MapPin, ShieldCheck, Heart, Share2, Calendar, Clock, 
   CheckCircle, ArrowLeft, Users, ChevronRight, Phone, MessageSquare, 
-  Grid, Check, Sparkles, AlertCircle 
+  Grid, Check, Sparkles, AlertCircle, Info, HelpCircle
 } from 'lucide-react';
 import { Vendor, VendorServiceItem } from '../../types';
 import { PhotoGalleryLightbox } from './PhotoGalleryLightbox';
+import { AmenitiesModal } from './AmenitiesModal';
 
 export interface AirbnbVendorDetailViewProps {
   vendor: Vendor;
@@ -34,29 +35,37 @@ export function AirbnbVendorDetailView({
 }: AirbnbVendorDetailViewProps) {
   const images = (vendor.images && vendor.images.length > 0)
     ? vendor.images
-    : ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800'];
+    : [
+        'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200',
+        'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1522413416052-4065f8a8de35?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&q=80&w=800'
+      ];
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isAmenitiesOpen, setIsAmenitiesOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<VendorServiceItem>(
     vendor.services?.[0] || {
       id: 's1',
-      name: 'Standard Package',
+      name: 'Signature Celebration Package',
       price: vendor.basePrice,
-      description: 'Comprehensive package'
+      description: 'Complete setup, premium coordination, and guaranteed execution.'
     }
   );
 
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; name: string; price: number }[]>([]);
   const [timeSlot, setTimeSlot] = useState<'morning' | 'evening' | 'fullday'>('evening');
   const [availabilityState, setAvailabilityState] = useState<'checking' | 'available' | 'unavailable' | 'idle'>('idle');
+  const [showFeeInfo, setShowFeeInfo] = useState(false);
 
   const isCatering = (vendor.category || '').toLowerCase() === 'catering';
   
-  // Available Add-ons Mock/Config
+  // Available Add-ons
   const availableAddons = [
-    { id: 'addon_1', name: 'Premium Floral Stage Upgrade', price: 5000, desc: 'Exotic orchids & carnations' },
-    { id: 'addon_2', name: 'Fairy Lighting & Chandelier Set', price: 3000, desc: 'Warm ambient LED illuminations' },
-    { id: 'addon_3', name: 'Gourmet Dessert & Mocktail Counter', price: 4500, desc: 'Live signature mocktails station' }
+    { id: 'addon_1', name: 'Premium Floral Stage Upgrade', price: 5000, desc: 'Exotic orchids & carnations with custom mood lighting' },
+    { id: 'addon_2', name: 'Fairy Lighting & Chandelier Set', price: 3000, desc: 'Warm ambient LED illuminations and ceiling drapes' },
+    { id: 'addon_3', name: 'Gourmet Dessert & Mocktail Counter', price: 4500, desc: 'Live signature mocktails & artisanal sweets station' }
   ];
 
   const toggleAddon = (addon: { id: string; name: string; price: number }) => {
@@ -71,8 +80,8 @@ export function AirbnbVendorDetailView({
   const baseServicePrice = isCatering ? selectedService.price * (guestCount || 100) : selectedService.price;
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const subtotal = baseServicePrice + addonsTotal;
-  const bookingFee = Math.round(subtotal * 0.05);
-  const gst = Math.round(bookingFee * 0.18);
+  const bookingFee = Math.round(subtotal * 0.05); // 5% advance connection fee
+  const gst = Math.round(bookingFee * 0.18); // 18% GST on connection fee
   const finalAdvanceDue = bookingFee + gst;
   const balanceDueAtEvent = subtotal - bookingFee;
 
@@ -85,7 +94,7 @@ export function AirbnbVendorDetailView({
       } else {
         setAvailabilityState('available');
       }
-    }, 400);
+    }, 300);
   };
 
   useEffect(() => {
@@ -95,364 +104,566 @@ export function AirbnbVendorDetailView({
   }, [eventDate, timeSlot]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Top Header */}
+    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 py-6 space-y-8">
+      {/* Top Breadcrumb & Title Bar */}
       <div>
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 mb-3 transition"
+          className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 mb-3 transition"
         >
           <ArrowLeft size={14} />
           <span>Back to marketplace</span>
         </button>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-display">
-            {vendor.name}
-          </h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 font-display tracking-tight">
+              {vendor.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600 mt-2 font-medium">
+              <div className="flex items-center gap-1">
+                <Star size={14} className="fill-amber-400 text-amber-400" />
+                <span className="font-extrabold text-gray-900">{(vendor.rating || 4.9).toFixed(1)}</span>
+                <span className="text-gray-400">·</span>
+                <span className="underline font-bold text-gray-900">142 reviews</span>
+              </div>
+              <span>·</span>
+              <div className="flex items-center gap-1 font-bold text-gray-900">
+                <ShieldCheck size={15} className="text-rose-600" />
+                <span>Verified Specialist</span>
+              </div>
+              <span>·</span>
+              <div className="flex items-center gap-1">
+                <MapPin size={14} className="text-gray-400" />
+                <span className="underline font-bold text-gray-900">{vendor.location || 'Maharashtra'}, India</span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={(e) => onToggleWishlist(vendor.id, e)}
-              className="flex items-center gap-1.5 text-xs font-bold text-gray-800 hover:bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200 transition"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: vendor.name, url: window.location.href });
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Listing link copied to clipboard!');
+                }
+              }}
+              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition"
             >
-              <Heart size={14} className={isWishlisted ? 'fill-brand-primary text-brand-primary' : ''} />
+              <Share2 size={15} />
+              <span>Share</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => onToggleWishlist(vendor.id, e)}
+              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition"
+            >
+              <Heart size={15} className={isWishlisted ? 'fill-rose-500 text-rose-500' : ''} />
               <span>{isWishlisted ? 'Saved' : 'Save'}</span>
             </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
-          <Star size={13} className="fill-gray-900 text-gray-900" />
-          <span className="font-extrabold text-gray-900">{vendor.rating.toFixed(1)}</span>
-          <span>•</span>
-          <span className="underline font-semibold">{vendor.reviewCount || 24} reviews</span>
-          <span>•</span>
-          <span className="font-semibold">{vendor.location || 'Maharashtra'}</span>
-        </div>
       </div>
 
-      {/* 5-Photo Bento Grid Gallery */}
-      <div className="relative grid grid-cols-1 md:grid-cols-4 gap-2 rounded-3xl overflow-hidden h-[340px] sm:h-[400px] bg-gray-100">
-        <div className="md:col-span-2 h-full" onClick={() => setIsGalleryOpen(true)}>
-          <img
-            src={images[0]}
-            alt={vendor.name}
-            className="w-full h-full object-cover hover:opacity-95 transition cursor-pointer"
-          />
-        </div>
-        <div className="hidden md:grid grid-rows-2 gap-2 h-full" onClick={() => setIsGalleryOpen(true)}>
-          <img
-            src={images[1] || images[0]}
-            alt={vendor.name}
-            className="w-full h-full object-cover hover:opacity-95 transition cursor-pointer"
-          />
-          <img
-            src={images[2] || images[0]}
-            alt={vendor.name}
-            className="w-full h-full object-cover hover:opacity-95 transition cursor-pointer"
-          />
-        </div>
-        <div className="hidden md:grid grid-rows-2 gap-2 h-full" onClick={() => setIsGalleryOpen(true)}>
-          <img
-            src={images[3] || images[0]}
-            alt={vendor.name}
-            className="w-full h-full object-cover hover:opacity-95 transition cursor-pointer"
-          />
-          <img
-            src={images[4] || images[0]}
-            alt={vendor.name}
-            className="w-full h-full object-cover hover:opacity-95 transition cursor-pointer"
-          />
+      {/* 5-Photo Bento Grid Hero */}
+      <div className="relative rounded-3xl overflow-hidden shadow-xs">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 h-[380px] sm:h-[480px]">
+          {/* Main Large Photo */}
+          <div 
+            onClick={() => setIsGalleryOpen(true)}
+            className="md:col-span-2 h-full bg-gray-100 cursor-pointer overflow-hidden group relative"
+          >
+            <img
+              src={images[0]}
+              alt={vendor.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+          </div>
+
+          {/* 2 Middle Supporting Photos */}
+          <div className="hidden md:flex flex-col gap-2 h-full">
+            <div 
+              onClick={() => setIsGalleryOpen(true)}
+              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
+            >
+              <img
+                src={images[1] || images[0]}
+                alt={`${vendor.name} 2`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+            <div 
+              onClick={() => setIsGalleryOpen(true)}
+              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
+            >
+              <img
+                src={images[2] || images[0]}
+                alt={`${vendor.name} 3`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+          </div>
+
+          {/* 2 Right Supporting Photos */}
+          <div className="hidden md:flex flex-col gap-2 h-full">
+            <div 
+              onClick={() => setIsGalleryOpen(true)}
+              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
+            >
+              <img
+                src={images[3] || images[0]}
+                alt={`${vendor.name} 4`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+            <div 
+              onClick={() => setIsGalleryOpen(true)}
+              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
+            >
+              <img
+                src={images[4] || images[0]}
+                alt={`${vendor.name} 5`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Show all photos button */}
+        {/* View All Photos Badge */}
         <button
           type="button"
           onClick={() => setIsGalleryOpen(true)}
-          className="absolute bottom-4 right-4 bg-white/95 hover:bg-white text-gray-900 text-xs font-extrabold px-4 py-2 rounded-xl shadow-lg border border-gray-200/80 flex items-center gap-2 transition active:scale-95"
+          className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-black text-gray-900 border border-gray-200/80 shadow-md hover:bg-white active:scale-95 transition flex items-center gap-2"
         >
-          <Grid size={14} />
+          <Grid size={15} />
           <span>Show all {images.length} photos</span>
         </button>
       </div>
 
-      {/* 2-Column Details Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 pt-4">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Host snippet */}
-          <div className="flex items-center justify-between pb-6 border-b border-gray-200">
+      {/* Main Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-4">
+        {/* Left Column (60% on Desktop) */}
+        <div className="lg:col-span-7 space-y-10 divide-y divide-gray-200">
+          {/* Host & Specialist Info */}
+          <div className="flex items-center justify-between pb-8">
             <div>
-              <h3 className="font-extrabold text-lg text-gray-900">
-                {vendor.category} specialist hosted by {vendor.founderName || vendor.name}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {vendor.experience || '10+ Years Experience'} • Verified Parva Partner
+              <h2 className="text-xl font-black text-gray-900 font-display">
+                Hosted by {vendor.founderName || vendor.name}
+              </h2>
+              <p className="text-xs text-gray-500 mt-1 font-medium">
+                {vendor.experience || '8+ years'} celebration experience · &lt; 15 mins response time
               </p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-brand-primary text-white font-extrabold text-base flex items-center justify-center shadow-xs">
-              {vendor.name.charAt(0)}
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-rose-50 border border-gray-200 shadow-xs shrink-0">
+              <img
+                src={vendor.founderImage || images[0]}
+                alt={vendor.founderName || vendor.name}
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
 
-          {/* Trust Highlights */}
-          <div className="space-y-4 pb-6 border-b border-gray-200">
-            <div className="flex items-start gap-3.5">
-              <Star size={20} className="text-brand-primary shrink-0 mt-0.5" />
+          {/* Key Highlights */}
+          <div className="pt-8 space-y-5">
+            <div className="flex items-start gap-4">
+              <ShieldCheck size={24} className="text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-extrabold text-xs text-gray-900">Guest favourite</h4>
-                <p className="text-xs text-gray-500">One of the highest-rated celebration partners on Parva.</p>
+                <h4 className="font-extrabold text-sm text-gray-900">Guest Favourite</h4>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  One of the most loved celebration specialists on Parva based on ratings and reliability.
+                </p>
               </div>
             </div>
-            <div className="flex items-start gap-3.5">
-              <ShieldCheck size={20} className="text-brand-primary shrink-0 mt-0.5" />
+
+            <div className="flex items-start gap-4">
+              <Sparkles size={24} className="text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-extrabold text-xs text-gray-900">100% Verified Partner</h4>
-                <p className="text-xs text-gray-500">Aadhaar, GST & on-site event execution verified.</p>
+                <h4 className="font-extrabold text-sm text-gray-900">Escrow Protected Advance</h4>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Lock your date with only a 5% advance fee. Balance payable directly to vendor on event day.
+                </p>
               </div>
             </div>
           </div>
 
-          {/* About description */}
-          <div className="space-y-2 pb-6 border-b border-gray-200">
-            <h3 className="font-extrabold text-base text-gray-900 font-display">About this Partner</h3>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              {vendor.description || 'Verified premier celebration specialist offering royal decor, gourmet catering and seamless event management.'}
+          {/* Description */}
+          <div className="pt-8 space-y-4">
+            <h3 className="text-xl font-black text-gray-900 font-display">
+              About this service
+            </h3>
+            <p className="text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line">
+              {vendor.description || `${vendor.name} delivers exceptional celebration services in ${vendor.location || 'Maharashtra'}. With bespoke styling, verified equipment, and dedicated on-site coordination.`}
             </p>
           </div>
 
-          {/* Services & Packages List */}
-          <div className="space-y-4 pb-6 border-b border-gray-200">
-            <h3 className="font-extrabold text-base text-gray-900 font-display">Select Service Package</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(vendor.services || []).map((svc) => {
-                const isSelected = selectedService.name === svc.name;
-                return (
-                  <div
-                    key={svc.name}
-                    onClick={() => setSelectedService(svc)}
-                    className={`p-4 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-brand-primary bg-brand-primary-light/40 shadow-xs'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-extrabold text-xs text-gray-900">{svc.name}</span>
-                        {isSelected && <CheckCircle size={14} className="text-brand-primary" />}
-                      </div>
-                      <p className="text-[11px] text-gray-500 line-clamp-2">{svc.description}</p>
-                    </div>
-
-                    <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
-                      <span className="font-black text-xs text-gray-900">
-                        ₹{svc.price.toLocaleString('en-IN')}
-                        {isCatering && <span className="text-[10px] text-gray-500 font-normal"> /plate</span>}
-                      </span>
-                      <span className="text-[10px] font-bold text-brand-primary">
-                        {isSelected ? 'Selected' : 'Select'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+          {/* What this place/service offers */}
+          <div className="pt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 font-display">
+                What this service offers
+              </h3>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(vendor.features || [
+                'Complete Setup & Breakdown Included',
+                'Dedicated On-Site Coordination Supervisor',
+                'Commercial Grade Equipment & Redundancy',
+                'Aadhaar Verified Staff & Insured Service'
+              ]).slice(0, 6).map((feat, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                    <Check size={13} className="stroke-[3]" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{feat}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsAmenitiesOpen(true)}
+              className="px-6 py-3 border border-gray-900 hover:bg-gray-50 text-gray-900 text-xs font-extrabold rounded-2xl transition"
+            >
+              Show all amenities & inclusions
+            </button>
           </div>
 
-          {/* Optional Add-ons */}
-          <div className="space-y-3 pb-6 border-b border-gray-200">
-            <h3 className="font-extrabold text-base text-gray-900 font-display">Customizable Add-ons</h3>
-            <div className="space-y-2">
+          {/* Available Packages */}
+          {vendor.services && vendor.services.length > 0 && (
+            <div className="pt-8 space-y-6">
+              <h3 className="text-xl font-black text-gray-900 font-display">
+                Service Packages
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {vendor.services.map((svc) => {
+                  const isSelected = selectedService.id === svc.id || selectedService.name === svc.name;
+                  return (
+                    <div
+                      key={svc.id || svc.name}
+                      onClick={() => setSelectedService(svc)}
+                      className={`p-5 rounded-3xl border transition cursor-pointer select-none relative space-y-3 ${
+                        isSelected
+                          ? 'border-gray-900 bg-rose-50/30 ring-2 ring-gray-900'
+                          : 'border-gray-200 hover:border-gray-400 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <h4 className="font-extrabold text-sm text-gray-900">{svc.name}</h4>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                          isSelected ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300'
+                        }`}>
+                          {isSelected && <Check size={12} className="stroke-[3]" />}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                        {svc.description || 'Complete package inclusion with professional supervision'}
+                      </p>
+                      <div className="pt-2 flex items-baseline gap-1">
+                        <span className="text-base font-black text-gray-900">
+                          ₹{svc.price.toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-xs text-gray-500 font-normal">
+                          {isCatering ? '/ plate' : 'package rate'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Add-on Services */}
+          <div className="pt-8 space-y-6">
+            <h3 className="text-xl font-black text-gray-900 font-display">
+              Custom Add-on Options
+            </h3>
+            <div className="space-y-3">
               {availableAddons.map((addon) => {
                 const isChecked = selectedAddons.some(a => a.id === addon.id);
                 return (
                   <div
                     key={addon.id}
                     onClick={() => toggleAddon(addon)}
-                    className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
+                    className={`p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
                       isChecked
-                        ? 'border-brand-primary bg-brand-primary-light/30 shadow-2xs'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        ? 'border-rose-500 bg-rose-50/50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition ${
-                        isChecked ? 'bg-brand-primary border-brand-primary text-white' : 'border-gray-300 bg-white'
-                      }`}>
-                        {isChecked && <Check size={12} />}
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-xs text-gray-900">{addon.name}</h4>
-                        <p className="text-[10px] text-gray-500">{addon.desc}</p>
-                      </div>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-gray-900">{addon.name}</h4>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{addon.desc}</p>
                     </div>
-                    <span className="font-black text-xs text-gray-900 shrink-0">
-                      +₹{addon.price.toLocaleString('en-IN')}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-xs text-gray-900">
+                        +₹{addon.price.toLocaleString('en-IN')}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        className="w-4 h-4 text-rose-600 rounded-md border-gray-300 focus:ring-rose-500 pointer-events-none"
+                      />
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
-        </div>
 
-        {/* Right Sticky Booking Widget */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-xl sticky top-28 space-y-4">
-            <div className="flex items-baseline justify-between border-b border-gray-100 pb-3">
-              <div>
-                <span className="text-2xl font-black text-gray-900">
-                  ₹{selectedService.price.toLocaleString('en-IN')}
-                </span>
-                <span className="text-xs text-gray-500 font-medium">
-                  {isCatering ? ' / plate' : ' package'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-bold">
-                <Star size={12} className="fill-gray-900 text-gray-900" />
-                <span>{vendor.rating.toFixed(1)}</span>
-              </div>
+          {/* Reviews Section */}
+          <div className="pt-8 space-y-6">
+            <div className="flex items-center gap-3">
+              <Star size={24} className="fill-amber-400 text-amber-400" />
+              <h3 className="text-2xl font-black text-gray-900 font-display">
+                {(vendor.rating || 4.9).toFixed(1)} · 142 reviews
+              </h3>
             </div>
 
-            {/* Date & Time Slot Box */}
-            <div className="border border-gray-300 rounded-2xl overflow-hidden divide-y divide-gray-300">
-              <div className="p-3">
-                <label className="text-[9px] font-black uppercase text-gray-800 tracking-wider block">Event Date</label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={eventDate}
-                  onChange={(e) => onDateChange(e.target.value)}
-                  className="w-full bg-transparent text-xs font-bold text-gray-900 outline-none cursor-pointer mt-0.5"
-                />
-              </div>
+            {/* Review Insight Mention Chips */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
+                Hospitality 112
+              </span>
+              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
+                Quality Setup 89
+              </span>
+              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
+                Punctuality 74
+              </span>
+              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
+                Value for Money 65
+              </span>
+            </div>
 
-              {/* Time Slot Selector */}
-              <div className="p-3 space-y-1.5">
-                <label className="text-[9px] font-black uppercase text-gray-800 tracking-wider block">Event Time Slot</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {(['morning', 'evening', 'fullday'] as const).map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setTimeSlot(slot)}
-                      className={`py-1.5 px-2 rounded-xl text-[10px] font-extrabold capitalize transition ${
-                        timeSlot === slot
-                          ? 'bg-brand-primary text-white shadow-2xs'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {isCatering && (
-                <div className="p-3 flex items-center justify-between">
+            {/* Customer Review Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+              <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 font-black text-xs flex items-center justify-center">
+                    AK
+                  </div>
                   <div>
-                    <label className="text-[9px] font-black uppercase text-gray-800 tracking-wider block">Guests</label>
-                    <span className="text-xs font-bold text-gray-900">{guestCount} Guests</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onGuestCountChange(Math.max(10, guestCount - 25))}
-                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-xs"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onGuestCountChange(guestCount + 25)}
-                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-xs"
-                    >
-                      +
-                    </button>
+                    <h5 className="font-extrabold text-xs text-gray-900">Ananya Kulkarni</h5>
+                    <p className="text-[11px] text-gray-400">Pune · 3 weeks ago</p>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Availability Indicator */}
-            {availabilityState === 'available' && (
-              <div className="bg-emerald-50 text-emerald-800 text-[11px] font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 border border-emerald-200">
-                <CheckCircle size={13} className="text-emerald-600 shrink-0" />
-                <span>Available for your selected date & time slot!</span>
+                <p className="text-xs text-gray-700 leading-relaxed font-normal">
+                  "Absolutely stellar decoration for our engagement! The florals were fresh, setup was completed 2 hours ahead of time, and guests couldn't stop taking pictures."
+                </p>
               </div>
-            )}
-            {availabilityState === 'unavailable' && (
-              <div className="bg-red-50 text-red-800 text-[11px] font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 border border-red-200">
-                <AlertCircle size={13} className="text-red-600 shrink-0" />
-                <span>Vendor is unavailable for this date. Please pick another date.</span>
-              </div>
-            )}
 
-            {/* Action Button */}
-            <button
-              type="button"
-              onClick={() => {
-                const finalServiceItem = isCatering 
-                  ? { ...selectedService, price: subtotal, unit: `₹${selectedService.price}/plate × ${guestCount} Guests` }
-                  : { ...selectedService, price: subtotal };
-                onAddServiceToBundle(finalServiceItem);
-                onProceedToCheckout();
-              }}
-              disabled={availabilityState === 'unavailable'}
-              className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-md transition active:scale-95 text-center disabled:opacity-50"
-            >
-              Reserve & Book Now
-            </button>
-
-            <p className="text-[10px] text-gray-400 text-center font-medium">5% Escrow Advance to lock your date</p>
-
-            {/* Transparent Breakdown */}
-            <div className="space-y-2 pt-2 text-xs border-t border-gray-100">
-              <div className="flex justify-between text-gray-600">
-                <span>Base Package:</span>
-                <span className="font-bold text-gray-900">₹{baseServicePrice.toLocaleString('en-IN')}</span>
-              </div>
-              {addonsTotal > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>Selected Add-ons ({selectedAddons.length}):</span>
-                  <span className="font-bold text-gray-900">+₹{addonsTotal.toLocaleString('en-IN')}</span>
+              <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 font-black text-xs flex items-center justify-center">
+                    RS
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-xs text-gray-900">Rohan Sharma</h5>
+                    <p className="text-[11px] text-gray-400">Kolhapur · 1 month ago</p>
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between text-gray-600 font-bold pt-1 border-t border-gray-100">
-                <span>Subtotal Event Value:</span>
-                <span className="text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>5% Escrow Advance Fee:</span>
-                <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>GST (18% on fee):</span>
-                <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between font-black text-gray-900 pt-2 border-t border-gray-100">
-                <span>Total Advance Due Now:</span>
-                <span className="text-brand-primary text-base">₹{finalAdvanceDue.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-[11px] text-gray-500">
-                <span>Remaining at Event:</span>
-                <span className="font-bold text-gray-700">₹{balanceDueAtEvent.toLocaleString('en-IN')}</span>
+                <p className="text-xs text-gray-700 leading-relaxed font-normal">
+                  "Seamless coordination and transparent pricing. Paying the 5% advance on Parva gave us total peace of mind for the wedding."
+                </p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Right Column: Sticky Booking Card (40% on Desktop) */}
+        <div className="lg:col-span-5">
+          <div className="sticky top-28 bg-white rounded-3xl p-6 sm:p-8 border border-gray-200/90 shadow-xl space-y-6">
+            <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
+              <div>
+                <span className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
+                  ₹{subtotal.toLocaleString('en-IN')}
+                </span>
+                <span className="text-xs text-gray-500 font-medium ml-1">
+                  {isCatering ? `(${guestCount || 100} guests)` : 'total event value'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-gray-800">
+                <Star size={13} className="fill-amber-400 text-amber-400" />
+                <span>{(vendor.rating || 4.9).toFixed(1)}</span>
+              </div>
+            </div>
+
+            {/* Inputs Box */}
+            <div className="border border-gray-300 rounded-2xl overflow-hidden divide-y divide-gray-300">
+              {/* Date & Time Slot */}
+              <div className="grid grid-cols-2 divide-x divide-gray-300">
+                <div className="p-3 bg-white">
+                  <label className="block text-[10px] font-black uppercase text-gray-500">Event Date</label>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => onDateChange(e.target.value)}
+                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent"
+                  />
+                </div>
+                <div className="p-3 bg-white">
+                  <label className="block text-[10px] font-black uppercase text-gray-500">Time Slot</label>
+                  <select
+                    value={timeSlot}
+                    onChange={(e) => setTimeSlot(e.target.value as any)}
+                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent"
+                  >
+                    <option value="evening">Evening (5 PM - 11 PM)</option>
+                    <option value="morning">Morning (9 AM - 2 PM)</option>
+                    <option value="fullday">Full Day (9 AM - 11 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Guest Count */}
+              <div className="p-3 bg-white flex items-center justify-between">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-500">Attendees / Guests</label>
+                  <span className="text-xs font-extrabold text-gray-900">{guestCount || 100} Attendees</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onGuestCountChange(Math.max(10, (guestCount || 100) - 25))}
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900"
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onGuestCountChange((guestCount || 100) + 25)}
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Availability Status */}
+            {eventDate && (
+              <div className={`p-3 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+                availabilityState === 'available'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : availabilityState === 'unavailable'
+                  ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                  : 'bg-gray-50 text-gray-600 border border-gray-200'
+              }`}>
+                {availabilityState === 'available' ? (
+                  <>
+                    <CheckCircle size={15} className="text-emerald-600 shrink-0" />
+                    <span>Specialist is available for {timeSlot} slot</span>
+                  </>
+                ) : availabilityState === 'unavailable' ? (
+                  <>
+                    <AlertCircle size={15} className="text-rose-600 shrink-0" />
+                    <span>Slot is fully booked. Please select another date.</span>
+                  </>
+                ) : (
+                  <span>Checking live schedule...</span>
+                )}
+              </div>
+            )}
+
+            {/* Price Breakdown */}
+            <div className="space-y-3 pt-2 text-xs">
+              <div className="flex items-center justify-between text-gray-600 font-medium">
+                <span>{selectedService.name} {isCatering ? `(₹${selectedService.price} × ${guestCount || 100})` : ''}</span>
+                <span className="font-bold text-gray-900">₹{baseServicePrice.toLocaleString('en-IN')}</span>
+              </div>
+
+              {selectedAddons.length > 0 && (
+                <div className="flex items-center justify-between text-gray-600 font-medium">
+                  <span>Custom Add-ons ({selectedAddons.length})</span>
+                  <span className="font-bold text-gray-900">+₹{addonsTotal.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-gray-600 font-medium">
+                <div className="flex items-center gap-1">
+                  <span>5% Date Lock Advance Fee</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFeeInfo(!showFeeInfo)}
+                    className="text-gray-400 hover:text-gray-900"
+                  >
+                    <Info size={12} />
+                  </button>
+                </div>
+                <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-gray-600 font-medium">
+                <span>GST (18% on advance fee)</span>
+                <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
+              </div>
+
+              {/* Fee explanation box */}
+              {showFeeInfo && (
+                <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-600 leading-relaxed border border-gray-200">
+                  You only pay ₹{finalAdvanceDue.toLocaleString('en-IN')} now to lock your date under Parva Escrow Guarantee. The remaining ₹{balanceDueAtEvent.toLocaleString('en-IN')} is paid directly to the vendor on event execution.
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-3 flex items-baseline justify-between">
+                <div>
+                  <p className="font-black text-sm text-gray-900">Advance Payable Now</p>
+                  <p className="text-[11px] text-gray-400">Balance ₹{balanceDueAtEvent.toLocaleString('en-IN')} due at event</p>
+                </div>
+                <span className="font-black text-xl text-rose-600 font-display">
+                  ₹{finalAdvanceDue.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Reserve CTA */}
+            <button
+              type="button"
+              onClick={() => {
+                onAddServiceToBundle(selectedService);
+                onProceedToCheckout();
+              }}
+              disabled={availabilityState === 'unavailable'}
+              className={`w-full py-4 rounded-2xl font-black text-sm text-white shadow-lg transition active:scale-95 ${
+                availabilityState === 'unavailable'
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-gradient-to-tr from-rose-600 to-pink-500 hover:from-rose-700 hover:to-pink-600 shadow-rose-500/25'
+              }`}
+            >
+              Reserve with 5% Advance
+            </button>
+
+            <p className="text-center text-[11px] text-gray-400 font-medium">
+              You won't be charged full amount now · 100% Refundable per policy
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Lightbox Gallery Modal */}
+      {/* Lightbox & Amenities Modals */}
       <PhotoGalleryLightbox
         isOpen={isGalleryOpen}
         onClose={() => setIsGalleryOpen(false)}
         images={images}
         vendorName={vendor.name}
+      />
+
+      <AmenitiesModal
+        isOpen={isAmenitiesOpen}
+        onClose={() => setIsAmenitiesOpen(false)}
+        vendorName={vendor.name}
+        category={vendor.category}
+        features={vendor.features}
       />
     </div>
   );

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { 
   Menu, User as UserIcon, Globe, Bell, ShoppingCart, LogOut, 
-  Calendar, Heart, MessageSquare, Headphones, ShieldCheck, Sparkles 
+  Calendar, Heart, MessageSquare, Headphones, ShieldCheck, Sparkles,
+  Award, Users, ChevronDown, Check
 } from 'lucide-react';
+import { ParvaLogo } from './ParvaLogo';
 
 export interface AirbnbNavbarProps {
-  categories: { id: string; name: string; icon?: any }[];
+  categories: { id: string; name: string; icon?: any; image?: string }[];
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   currentUser: any;
@@ -19,6 +21,27 @@ export interface AirbnbNavbarProps {
   onOpenNotifications: () => void;
   unreadCount: number;
 }
+
+// Curated high-definition category imagery mapping (Zero emojis)
+const CATEGORY_IMAGE_MAP: Record<string, string> = {
+  'all': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=120',
+  'Catering': 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=120',
+  'Decorator': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Decorators': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Decoration': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Banquet Hall': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'Venues': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'Venue': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'DJ': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=120',
+  'DJ & Sound': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=120',
+  'Photographer': 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=120',
+  'Photography': 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=120',
+  'Makeup Artist': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=120',
+  'Makeup Artists': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=120',
+  'Cake & Desserts': 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&q=80&w=120',
+  'Event Planner': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=120',
+  'Event Planners': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=120'
+};
 
 export function AirbnbNavbar({
   categories,
@@ -35,7 +58,7 @@ export function AirbnbNavbar({
   onOpenNotifications,
   unreadCount
 }: AirbnbNavbarProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const getInitials = () => {
     if (!currentUser) return 'G';
@@ -45,148 +68,184 @@ export function AirbnbNavbar({
     return 'U';
   };
 
-  const allCategories = [
-    { id: 'all', name: 'All Services', icon: '✨' },
+  const navCategories = [
+    { id: 'all', name: 'All Services', image: CATEGORY_IMAGE_MAP['all'] },
     ...categories.map(c => ({
       id: c.name,
       name: c.name,
-      icon: c.name === 'Catering' ? '🍽️' :
-            c.name === 'Decorator' || c.name === 'Decorators' ? '🌸' :
-            c.name === 'Banquet Hall' || c.name === 'Venues' ? '🏛️' :
-            c.name === 'DJ' || c.name === 'DJ & Sound' ? '🎵' :
-            c.name === 'Photographer' || c.name === 'Photography' ? '📸' :
-            c.name === 'Makeup Artist' || c.name === 'Makeup Artists' ? '💄' :
-            c.name === 'Cake & Desserts' ? '🎂' :
-            c.name === 'Event Planner' || c.name === 'Event Planners' ? '📋' : '✨'
+      image: c.image || CATEGORY_IMAGE_MAP[c.name] || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=120'
     }))
   ];
 
   return (
-    <header className="bg-white border-b border-gray-200/80 sticky top-0 z-40">
-      {/* Top Main Nav */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all">
+      {/* Top Bar: Logo, Concierge, Cart, Profile */}
+      <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 h-20 flex items-center justify-between gap-4">
         {/* Brand Logo */}
-        <div 
+        <ParvaLogo 
+          size="md"
           onClick={() => onNavigateTab('home')}
-          className="flex items-center gap-2 cursor-pointer select-none group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center text-white font-black text-lg shadow-sm group-hover:scale-105 transition-transform">
-            P
-          </div>
-          <span className="font-extrabold text-xl text-brand-primary tracking-tight font-display">
-            parva
-          </span>
-        </div>
+        />
 
-        {/* Right Action Menu Capsule */}
+        {/* Center Quick Navigation Links */}
+        <nav className="hidden md:flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
+          <button
+            type="button"
+            onClick={() => onNavigateTab('home')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+              activeTab === 'home' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Explore Services
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('bookings')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+              activeTab === 'bookings' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            My Reservations
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('chat')}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+              activeTab === 'chat' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Messages
+          </button>
+        </nav>
+
+        {/* Right Actions Menu */}
         <div className="flex items-center gap-3">
+          {/* 24/7 Concierge Support */}
           <button
             type="button"
             onClick={onOpenSupport}
-            className="hidden md:flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition"
+            className="hidden lg:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition"
+            title="24/7 Celebration Assistance"
           >
-            <Headphones size={15} className="text-brand-primary" />
+            <Headphones size={15} className="text-rose-600" />
             <span>24/7 Concierge</span>
           </button>
 
-          {/* Cart Capsule */}
+          {/* Notifications Bell */}
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className="p-2.5 hover:bg-gray-100 rounded-full text-gray-700 transition relative"
+            title="Notifications"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Plan Bundle / Cart */}
           <button
             type="button"
             onClick={onOpenCart}
-            className="flex items-center gap-1.5 bg-brand-primary-light hover:bg-pink-100 text-brand-primary border border-brand-border px-3.5 py-2 rounded-full text-xs font-extrabold transition active:scale-95 relative"
+            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 rounded-full text-xs font-extrabold transition active:scale-95 relative"
           >
             <ShoppingCart size={15} />
-            <span className="hidden sm:inline">Plan Bundle</span>
+            <span className="hidden sm:inline">Event Plan</span>
             {cartCount > 0 && (
-              <span className="bg-brand-primary text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+              <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center">
                 {cartCount}
               </span>
             )}
           </button>
 
-          {/* User Menu Capsule */}
+          {/* User Profile Pill Dropdown */}
           <div className="relative">
             <button
               type="button"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="flex items-center gap-2.5 bg-white hover:shadow-md border border-gray-300 px-3 py-1.5 rounded-full transition duration-200"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-200 rounded-full hover:shadow-md transition active:scale-95 bg-white"
             >
               <Menu size={16} className="text-gray-600" />
-              <div className="w-7 h-7 rounded-full bg-brand-primary text-white text-xs font-bold flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
                 {getInitials()}
               </div>
             </button>
 
-            {/* Dropdown Menu */}
-            {isMenuOpen && (
+            {/* Profile Menu Dropdown Modal */}
+            {isUserMenuOpen && (
               <div 
-                className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl border border-gray-200 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
-                onMouseLeave={() => setIsMenuOpen(false)}
+                className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                onClick={() => setIsUserMenuOpen(false)}
               >
                 {currentUser ? (
                   <>
-                    <div className="px-4 py-2.5 border-b border-gray-100">
-                      <p className="text-xs font-extrabold text-gray-900 truncate">{currentUser.name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{currentUser.email || currentUser.phone}</p>
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-xs font-extrabold text-gray-900 truncate">
+                        {currentUser.name || 'Valued Client'}
+                      </p>
+                      <p className="text-[11px] text-gray-500 truncate">
+                        {currentUser.email || currentUser.phone || 'Client Account'}
+                      </p>
                     </div>
 
-                    <div className="py-1">
-                      <button
-                        type="button"
-                        onClick={() => { onNavigateTab('bookings'); setIsMenuOpen(false); }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                      >
-                        <Calendar size={14} className="text-brand-primary" />
-                        <span>My Bookings & Invoices</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { onNavigateTab('chat'); setIsMenuOpen(false); }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                      >
-                        <MessageSquare size={14} className="text-brand-primary" />
-                        <span>Messages with Vendors</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { onNavigateTab('profile'); setIsMenuOpen(false); }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                      >
-                        <UserIcon size={14} className="text-brand-primary" />
-                        <span>Account Profile</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('profile')}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
+                    >
+                      <UserIcon size={15} className="text-gray-500" />
+                      <span>Account Profile</span>
+                    </button>
 
-                    <div className="border-t border-gray-100 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => { setIsMenuOpen(false); onLogout(); }}
-                        className="w-full px-4 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                      >
-                        <LogOut size={14} />
-                        <span>Log Out</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('bookings')}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
+                    >
+                      <Calendar size={15} className="text-gray-500" />
+                      <span>My Reservations</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('chat')}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
+                    >
+                      <MessageSquare size={15} className="text-gray-500" />
+                      <span>Vendor Messages</span>
+                    </button>
+
+                    <div className="border-t border-gray-100 my-1" />
+
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                    >
+                      <LogOut size={15} />
+                      <span>Log Out</span>
+                    </button>
                   </>
                 ) : (
-                  <div className="py-1">
+                  <>
                     <button
                       type="button"
-                      onClick={() => { setIsMenuOpen(false); onOpenLogin(); }}
+                      onClick={onOpenLogin}
                       className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-gray-50"
                     >
-                      Log in or sign up
+                      Log In / Sign Up
                     </button>
-                    <div className="border-t border-gray-100 my-1"></div>
                     <button
                       type="button"
-                      onClick={() => { setIsMenuOpen(false); onOpenSupport(); }}
-                      className="w-full px-4 py-2 text-left text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                      onClick={onOpenSupport}
+                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-50"
                     >
-                      <Headphones size={14} />
-                      <span>Help Center</span>
+                      Help Centre
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -194,25 +253,36 @@ export function AirbnbNavbar({
         </div>
       </div>
 
-      {/* Horizontal Category Navigation Bar */}
-      <div className="border-t border-gray-100 bg-white overflow-x-auto no-scrollbar py-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-8 min-w-max">
-          {allCategories.map((cat) => {
-            const isSelected = selectedCategory.toLowerCase() === cat.id.toLowerCase() || (selectedCategory === 'all' && cat.id === 'all');
+      {/* Bottom Category Rail (Zero Emojis - Real Visual Thumbnails) */}
+      <div className="w-full border-t border-gray-100 bg-white/60">
+        <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 flex items-center gap-8 overflow-x-auto py-3 scrollbar-none">
+          {navCategories.map((cat) => {
+            const isSelected = selectedCategory === cat.id || (selectedCategory === 'all' && cat.id === 'all');
             return (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => onSelectCategory(cat.id === 'all' ? 'all' : cat.name)}
-                className={`flex flex-col items-center gap-1.5 pb-2 transition-all relative select-none cursor-pointer group ${
-                  isSelected ? 'text-brand-primary' : 'text-gray-500 hover:text-gray-900 opacity-70 hover:opacity-100'
+                onClick={() => onSelectCategory(cat.id)}
+                className={`flex flex-col items-center gap-1.5 pb-1 border-b-2 transition select-none shrink-0 group ${
+                  isSelected
+                    ? 'border-gray-900 opacity-100'
+                    : 'border-transparent opacity-60 hover:opacity-100 hover:border-gray-300'
                 }`}
               >
-                <span className="text-xl group-hover:scale-110 transition-transform">{cat.icon}</span>
-                <span className="text-xs font-bold whitespace-nowrap">{cat.name}</span>
-                {isSelected && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary rounded-full" />
-                )}
+                {/* Category Thumbnail */}
+                <div className={`w-8 h-8 rounded-full overflow-hidden border shadow-2xs transition-transform group-hover:scale-105 ${
+                  isSelected ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-gray-200'
+                }`}>
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-gray-800 tracking-tight whitespace-nowrap">
+                  {cat.name}
+                </span>
               </button>
             );
           })}
