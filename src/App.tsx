@@ -38,6 +38,7 @@ import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
 import ParvaLogin from './components/LoginScreen';
 import SlidablePromoBanner from './components/SlidablePromoBanner';
+import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarketplace';
 import AuthModal from './components/AuthModal';
 import ChatTab from './components/ChatTab';
 
@@ -3490,6 +3491,99 @@ export default function App() {
   }
 
 
+  // Booking management helpers for Customer Web & Airbnb Experience
+  const handleDownloadVoucher = (booking: Booking) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showNotification('Please allow popups to download voucher.');
+      return;
+    }
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Parva Booking Voucher - ${booking.bookingIdString || booking.id}</title>
+          <style>
+            body { font-family: 'Open Sans', Arial, sans-serif; padding: 40px; color: #1a0812; line-height: 1.6; }
+            .header { border-bottom: 2px solid #a21c54; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+            .logo { font-size: 28px; font-weight: 900; color: #a21c54; }
+            .title { font-size: 20px; font-weight: 800; }
+            .box { background: #faf5f8; border: 1px solid #f2e4ec; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .label { font-weight: 600; color: #666; font-size: 14px; }
+            .val { font-weight: 800; font-size: 14px; }
+            .total { font-size: 18px; font-weight: 900; color: #a21c54; border-top: 2px dashed #a21c54; padding-top: 10px; margin-top: 10px; }
+            .footer { font-size: 12px; color: #888; text-align: center; margin-top: 40px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">PARVA</div>
+            <div class="title">EVENT RESERVATION VOUCHER</div>
+          </div>
+          <div class="box">
+            <div class="row"><span class="label">Booking ID:</span><span class="val">${booking.bookingIdString || booking.id}</span></div>
+            <div class="row"><span class="label">Vendor Name:</span><span class="val">${booking.vendor?.name}</span></div>
+            <div class="row"><span class="label">Category:</span><span class="val">${booking.vendor?.category}</span></div>
+            <div class="row"><span class="label">Service / Package:</span><span class="val">${booking.serviceName || 'Standard Package'}</span></div>
+            <div class="row"><span class="label">Event Date:</span><span class="val">${booking.eventDate}</span></div>
+            <div class="row"><span class="label">Time Slot:</span><span class="val">${booking.eventTimeSlot || 'Evening'}</span></div>
+            <div class="row"><span class="label">Status:</span><span class="val">${booking.status}</span></div>
+          </div>
+          <div class="box">
+            <div class="row"><span class="label">Total Event Value:</span><span class="val">₹${(booking.totalPrice || 0).toLocaleString('en-IN')}</span></div>
+            <div class="row"><span class="label">Advance Escrow Paid (5% + GST):</span><span class="val">₹${Math.round((booking.totalPrice || 0) * 0.05 * 1.18).toLocaleString('en-IN')}</span></div>
+            <div class="row total"><span class="label">Balance Due at Event:</span><span class="val">₹${Math.round((booking.totalPrice || 0) * 0.95).toLocaleString('en-IN')}</span></div>
+          </div>
+          <div class="footer">
+            <p>Thank you for choosing PARVA — India's Premier Event Services Marketplace.</p>
+            <p>24/7 Concierge Support: support@myparva.com | www.myparva.com</p>
+          </div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleCancelBooking = async (bookingId: string, reason: string) => {
+    try {
+      if (db) {
+        await updateDoc(doc(db, 'bookings', bookingId), {
+          status: 'CANCELLED',
+          cancellationReason: reason,
+          cancelledAt: new Date().toISOString()
+        });
+      }
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'CANCELLED' } : b));
+      showNotification('Booking cancelled successfully.');
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      showNotification('Failed to cancel booking. Please try again.');
+    }
+  };
+
+  const handleSubmitReview = async (bookingId: string, vendorId: string, rating: number, comment: string) => {
+    try {
+      if (db) {
+        await addDoc(collection(db, 'reviews'), {
+          bookingId,
+          vendorId,
+          customerUid: currentUser?.uid || 'guest',
+          customerName: currentUser?.name || 'Client',
+          rating,
+          comment,
+          createdAt: new Date().toISOString()
+        });
+      }
+      showNotification('⭐ Review submitted successfully. Thank you!');
+    } catch (error) {
+      console.error('Review submit error:', error);
+      showNotification('Failed to submit review.');
+    }
+  };
+
   const isDashboardExpanded = false;
 
   
@@ -3502,6 +3596,90 @@ export default function App() {
   );
 
   return (
+    <>
+      {/* ========================================================================= */}
+      {/* AIRBNB-INSPIRED DESKTOP & WEB MARKETPLACE (Visible ONLY on Desktop >= lg) */}
+      {/* ========================================================================= */}
+      <div className="hidden lg:block min-h-screen bg-white">
+        <AirbnbDesktopMarketplace
+          vendors={vendors}
+          categories={categoriesList.map(c => ({ id: c.name, name: c.name }))}
+          currentCity={currentCity}
+          onSelectCity={(c) => setCurrentCity(c)}
+          cities={CITIES}
+          selectedCategory={selectedExploreCategory}
+          onSelectCategory={(cat) => setSelectedExploreCategory(cat)}
+          planningStartDate={planningStartDate}
+          onDateChange={(d) => setPlanningStartDate(d)}
+          planningGuestSize={planningGuestSize}
+          onGuestCountChange={(g) => setPlanningGuestSize(g)}
+          currentUser={currentUser}
+          onOpenLogin={() => setIsAuthModalOpen(true)}
+          onLogout={() => {
+            setCurrentUser(null);
+            setIsAdmin(false);
+            localStorage.removeItem('parva_user');
+            showNotification('🚪 Logged out successfully.');
+          }}
+          onNavigateTab={(tab) => setActiveTab(tab as any)}
+          activeTab={activeTab}
+          cartCount={bundledItems.length}
+          onOpenCart={() => setActiveTab('bookings')}
+          onOpenSupport={() => setIsSupportModalOpen(true)}
+          onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+          unreadCount={unreadNotificationsCount}
+          wishlist={wishlist || []}
+          onToggleWishlist={handleToggleWishlist}
+          onSelectVendor={(v) => handleVendorSelect(v)}
+          selectedVendor={selectedVendor}
+          onCloseVendorDetail={() => setSelectedVendor(null)}
+          onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor || vendors[0], service)}
+          bundledItems={bundledItems}
+          onPay={() => {
+            const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+            const bookingFee = Math.round(servicesTotal * 0.05);
+            const gst = Math.round(bookingFee * 0.18);
+            const finalPayableTotal = Math.max(0, bookingFee + gst - couponDiscount);
+
+            const newBooking: Booking = {
+              id: `b-new-${Date.now()}`,
+              vendor: bundledItems[0].vendor,
+              selectedServices: bundledItems.map(item => item.service),
+              eventDate: planningStartDate,
+              eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
+              customTime: customDeliveryTime || '',
+              eventType: planningEventType,
+              status: 'Pending',
+              totalPrice: servicesTotal,
+              bundleDiscount: 0,
+              finalPrice: servicesTotal,
+              paymentStatus: 'Paid',
+              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
+            };
+
+            handlePayWithRazorpay({
+              vendorId: newBooking.vendor.id,
+              type: 'booking',
+              amount: finalPayableTotal,
+              bookingData: newBooking
+            });
+          }}
+          couponDiscount={couponDiscount}
+          couponCode={couponCode}
+          setCouponCode={setCouponCode}
+          onApplyCoupon={handleApplyCoupon}
+          couponMessage={couponMessage}
+          bookings={bookings}
+          onDownloadVoucher={handleDownloadVoucher}
+          onCancelBooking={handleCancelBooking}
+          onSubmitReview={handleSubmitReview}
+        />
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MOBILE APPLICATION INTERFACE (Visible ONLY on Mobile < lg)                */}
+      {/* ========================================================================= */}
+      <div className="block lg:hidden min-h-screen bg-brand-bg">
     <div className={`min-h-screen bg-brand-bg flex flex-col mx-auto shadow-2xl relative border-x border-brand-border overflow-hidden pb-24 transition-all duration-500 ${
       isDashboardExpanded ? 'max-w-6xl w-full' : 'max-w-md w-full'
     }`} id="parva-app-container">
@@ -6691,5 +6869,7 @@ export default function App() {
         />
       )}
     </div>
+    </div>
+    </>
   );
 }
