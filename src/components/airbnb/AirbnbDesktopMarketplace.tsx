@@ -458,7 +458,7 @@ export function AirbnbDesktopMarketplace({
                 ))}
               </div>
             </section>
-          </>
+          </div>
         )}
 
         {/* Events take place with MyParva - Accordion Gallery */}
