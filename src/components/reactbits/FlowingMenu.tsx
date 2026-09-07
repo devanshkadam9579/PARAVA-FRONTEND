@@ -60,13 +60,14 @@ function MenuItem({ link, text, image, speed, textColor, marqueeBgColor, marquee
       const marqueeContent = marqueeInnerRef.current.querySelector('.marquee__part');
       if (!marqueeContent) return;
 
-      const contentWidth = marqueeContent.offsetWidth;
+      const contentWidth = (marqueeContent as HTMLElement).offsetWidth || 200; // fallback to 200 if width is 0
       const viewportWidth = window.innerWidth;
 
       // Calculate how many copies we need to fill viewport + extra for seamless loop
       // We need at least 2, but calculate based on content vs viewport
       const needed = Math.ceil(viewportWidth / contentWidth) + 2;
-      setRepetitions(Math.max(4, needed));
+      // Protect against infinity or insanely high numbers
+      setRepetitions(Math.min(20, Math.max(4, needed)));
     };
 
     calculateRepetitions();
