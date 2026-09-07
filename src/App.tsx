@@ -4675,9 +4675,10 @@ export default function App() {
                             : 'bg-brand-primary-light text-brand-primary-dark'
                         }`}>
                           {b.status === 'Pending' ? 'Awaiting Confirmation' : b.status}
-                            </span>
-                            <button onClick={() => setActiveTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">?? Message Vendor</button>
                         </span>
+                        <div className="flex justify-end w-full">
+                          <button onClick={() => setActiveTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">💬 Message Vendor</button>
+                        </div>
                       </div>
 
                       {/* Event Schedule & Exact Time */}
