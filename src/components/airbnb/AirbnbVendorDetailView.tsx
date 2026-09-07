@@ -5,6 +5,7 @@ import {
   Grid, Check, Sparkles, AlertCircle, Info, HelpCircle
 } from 'lucide-react';
 import { Vendor, VendorServiceItem } from '../../types';
+import AnimatedList from '../reactbits/AnimatedList';
 import { PhotoGalleryLightbox } from './PhotoGalleryLightbox';
 import { AmenitiesModal } from './AmenitiesModal';
 import CalendarRangeSelect, { DateRange } from '../ui/calendar-range-select';
@@ -307,20 +308,19 @@ export function AirbnbVendorDetailView({
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(vendor.features || [
-                'Complete Setup & Breakdown Included',
-                'Dedicated On-Site Coordination Supervisor',
-                'Commercial Grade Equipment & Redundancy',
-                'Aadhaar Verified Staff & Insured Service'
-              ]).slice(0, 6).map((feat, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">{feat}</span>
-                </div>
-              ))}
+            <div className="w-full">
+              <AnimatedList
+                items={vendor.features || [
+                  'Complete Setup & Breakdown Included',
+                  'Dedicated On-Site Coordination Supervisor',
+                  'Commercial Grade Equipment & Redundancy',
+                  'Aadhaar Verified Staff & Insured Service',
+                  'Premium Backup Available'
+                ]}
+                showGradients={true}
+                enableArrowNavigation={true}
+                displayScrollbar={false}
+              />
             </div>
 
             <button
