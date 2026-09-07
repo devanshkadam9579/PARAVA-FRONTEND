@@ -25,6 +25,15 @@ export function HeroSection({
   onGuestCountChange,
   onSearch
 }: HeroSectionProps) {
+  const [animationKey, setAnimationKey] = React.useState(0);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationKey(prev => prev + 1);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 font-sans text-center">
       {/* Clean Open Marketplace Hero - No dark boxes, no floating containers */}
@@ -38,7 +47,8 @@ export function HeroSection({
         {/* Main Headline */}
         <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
           <BlurText
-            text="Plan your perfect celebration"
+            key={animationKey}
+            text="plan less and celebrate more"
             delay={100}
             animateBy="words"
             direction="top"

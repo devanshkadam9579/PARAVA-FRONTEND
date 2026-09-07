@@ -483,6 +483,7 @@ export function AirbnbDesktopMarketplace({
               defaultIndex={2}
               expandRatio={0.5}
               trigger="hover"
+              grayscale={false}
             />
           </div>
         </section>
@@ -496,11 +497,11 @@ export function AirbnbDesktopMarketplace({
           </div>
           <LogoLoop
             logos={[
-              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1200px-Amazon_logo.svg.png', alt: 'Amazon', title: 'Amazon' },
-              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png', alt: 'Google', title: 'Google' },
-              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/1200px-Slack_Technologies_Logo.svg.png', alt: 'Slack', title: 'Slack' },
-              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/IBM_logo.svg/1200px-IBM_logo.svg.png', alt: 'IBM', title: 'IBM' },
-              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/1200px-Microsoft_logo_%282012%29.svg.png', alt: 'Microsoft', title: 'Microsoft' }
+              { src: '/parva-logo.png', alt: 'MyParva', title: 'MyParva' },
+              { src: '/parva-logo.png', alt: 'MyParva', title: 'MyParva' },
+              { src: '/parva-logo.png', alt: 'MyParva', title: 'MyParva' },
+              { src: '/parva-logo.png', alt: 'MyParva', title: 'MyParva' },
+              { src: '/parva-logo.png', alt: 'MyParva', title: 'MyParva' }
             ]}
             speed={40}
             direction="left"
