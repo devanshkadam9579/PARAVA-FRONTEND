@@ -10,6 +10,9 @@ import { HorizontalSection } from './HorizontalSection';
 import { AirbnbCategoryRail } from './AirbnbCategoryRail';
 import { HowItWorksSection } from './HowItWorksSection';
 import ChatTab from '../ChatTab';
+import AccordionGallery from '../reactbits/AccordionGallery';
+import LogoLoop from '../reactbits/LogoLoop';
+import FlowingMenu from '../reactbits/FlowingMenu';
 import { Vendor, VendorServiceItem, Booking } from '../../types';
 import { 
   ChevronRight, ChevronLeft, Sparkles, ShieldCheck, Headphones, Star, 
@@ -371,43 +374,7 @@ export function AirbnbDesktopMarketplace({
               </HorizontalSection>
             )}
 
-            {/* Section 4: Explore More Services Section with Consistent Image Cards */}
-            <section className="space-y-4 pt-2">
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 font-display">
-                    Explore More Celebration Services
-                  </h2>
-                  <p className="text-xs text-gray-500 font-medium mt-0.5">
-                    Complete your celebration checklist with verified add-on specialists
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none snap-x">
-                {ADDITIONAL_SERVICES.map((svc) => (
-                  <div
-                    key={svc.id}
-                    className="group flex flex-col shrink-0 w-[200px] sm:w-[220px] rounded-3xl border border-gray-200/90 hover:border-gray-400 p-3 bg-white shadow-2xs hover:shadow-sm transition-all duration-300 select-none snap-start cursor-pointer"
-                  >
-                    <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-gray-100 mb-2.5">
-                      <img
-                        src={svc.image}
-                        alt={svc.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                    </div>
-                    <h4 className="font-extrabold text-xs sm:text-sm text-gray-900 truncate group-hover:text-rose-600 transition-colors">
-                      {svc.title}
-                    </h4>
-                    <p className="text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                      {svc.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
 
             {/* Section 5: Horizontal Rail — Luxury Floral Decor */}
             {decorators.length > 0 && (
@@ -493,6 +460,81 @@ export function AirbnbDesktopMarketplace({
             </section>
           </>
         )}
+
+        {/* Events take place with MyParva - Accordion Gallery */}
+        <section className="space-y-6 pt-10 pb-6 border-t border-gray-100">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
+              Events That Came to Life with MyParva
+            </h2>
+            <p className="text-sm text-gray-500 font-medium">
+              Explore some of the stunning celebrations made possible by our verified vendor partners.
+            </p>
+          </div>
+          <div className="w-full max-w-5xl mx-auto h-[400px]">
+            <AccordionGallery
+              items={[
+                { image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=900', label: 'Grand Weddings', link: '#' },
+                { image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=900', label: 'Luxury Decor', link: '#' },
+                { image: 'https://images.unsplash.com/photo-1533147670608-2a2f9776d3ac?auto=format&fit=crop&q=80&w=900', label: 'Birthday Bashes', link: '#' },
+                { image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=900', label: 'Catering Extravaganza', link: '#' },
+                { image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=900', label: 'Live DJ Nights', link: '#' }
+              ]}
+              defaultIndex={2}
+              expandRatio={0.5}
+              trigger="hover"
+            />
+          </div>
+        </section>
+
+        {/* Logo Loop - Tech / Partners */}
+        <section className="py-8 border-y border-gray-100 bg-gray-50 overflow-hidden">
+          <div className="text-center mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Trusted by the best event partners
+            </h3>
+          </div>
+          <LogoLoop
+            logos={[
+              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1200px-Amazon_logo.svg.png', alt: 'Amazon', title: 'Amazon' },
+              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png', alt: 'Google', title: 'Google' },
+              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/1200px-Slack_Technologies_Logo.svg.png', alt: 'Slack', title: 'Slack' },
+              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/IBM_logo.svg/1200px-IBM_logo.svg.png', alt: 'IBM', title: 'IBM' },
+              { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/1200px-Microsoft_logo_%282012%29.svg.png', alt: 'Microsoft', title: 'Microsoft' }
+            ]}
+            speed={40}
+            direction="left"
+            logoHeight={24}
+            gap={60}
+            fadeOut={true}
+            fadeOutColor="#f9fafb"
+          />
+        </section>
+
+        {/* Flowing Menu - Popular Destinations */}
+        <section className="space-y-6 pt-10 pb-6">
+          <div className="text-center max-w-2xl mx-auto space-y-2 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
+              Trending Destinations
+            </h2>
+          </div>
+          <div style={{ height: '400px', position: 'relative' }}>
+            <FlowingMenu 
+              items={[
+                { link: '#', text: 'Kolhapur', image: 'https://images.unsplash.com/photo-1596706443729-28c067e7d692?q=80&w=600&h=400&fit=crop' },
+                { link: '#', text: 'Pune', image: 'https://images.unsplash.com/photo-1593026775323-a55e2e8e97a3?q=80&w=600&h=400&fit=crop' },
+                { link: '#', text: 'Mumbai', image: 'https://images.unsplash.com/photo-1522211984282-588267026df9?q=80&w=600&h=400&fit=crop' },
+                { link: '#', text: 'Goa', image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=600&h=400&fit=crop' }
+              ]} 
+              speed={20}
+              bgColor="#ffffff"
+              textColor="#111827"
+              marqueeBgColor="#f3f4f6"
+              marqueeTextColor="#f43f5e"
+              borderColor="#e5e7eb"
+            />
+          </div>
+        </section>
 
         {/* How It Works & Escrow Guarantee */}
         <HowItWorksSection />

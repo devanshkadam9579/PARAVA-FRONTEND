@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { AirbnbSearchCapsule } from './AirbnbSearchCapsule';
+import BlurText from '../reactbits/BlurText';
 
 export interface HeroSectionProps {
   currentCity: string;
@@ -35,8 +36,13 @@ export function HeroSection({
         </div>
 
         {/* Main Headline */}
-        <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900">
-          Plan your perfect celebration
+        <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
+          <BlurText
+            text="Plan your perfect celebration"
+            delay={100}
+            animateBy="words"
+            direction="top"
+          />
         </h1>
 
         {/* Subtitle */}

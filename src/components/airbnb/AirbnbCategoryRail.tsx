@@ -112,7 +112,7 @@ export function AirbnbCategoryRail({
                 }`}
               >
                 {/* Category Icon / Admin Image */}
-                <div className={`w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-all duration-200 ${
+                <div className={`w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center transition-all duration-200 ${
                   isSelected 
                     ? 'ring-2 ring-rose-600 ring-offset-2 scale-105 shadow-xs' 
                     : 'ring-1 ring-gray-200 group-hover:ring-gray-400 group-hover:scale-105'
