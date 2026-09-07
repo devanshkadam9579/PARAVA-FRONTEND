@@ -44,11 +44,14 @@ export function HeroSection({
           <span>India's Curated Celebration Marketplace</span>
         </div>
 
-        {/* Main Headline */}
+        {/* Logo and Main Headline */}
+        <div className="flex justify-center mb-4">
+          <img src="/parva-logo.png" alt="MyParva" className="h-14 sm:h-20 object-contain" />
+        </div>
         <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
           <BlurText
             key={animationKey}
-            text="plan less and celebrate more"
+            text="Plan less, celebrate more.."
             delay={100}
             animateBy="words"
             direction="top"

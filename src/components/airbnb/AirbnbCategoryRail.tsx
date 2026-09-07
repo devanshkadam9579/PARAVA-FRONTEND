@@ -112,10 +112,10 @@ export function AirbnbCategoryRail({
                 }`}
               >
                 {/* Category Icon / Admin Image */}
-                <div className={`w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center transition-all duration-200 ${
+                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden flex items-center justify-center transition-all duration-200 ${
                   isSelected 
-                    ? 'ring-2 ring-rose-600 ring-offset-2 scale-105 shadow-xs' 
-                    : 'ring-1 ring-gray-200 group-hover:ring-gray-400 group-hover:scale-105'
+                    ? 'ring-2 ring-rose-600 ring-offset-2 scale-105 shadow-md' 
+                    : 'ring-1 ring-gray-200 group-hover:ring-gray-400 group-hover:scale-105 shadow-sm'
                 }`}>
                   {cat.image ? (
                     <img
@@ -128,13 +128,13 @@ export function AirbnbCategoryRail({
                     <div className={`w-full h-full flex items-center justify-center ${
                       isSelected ? 'bg-rose-50 text-rose-600' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200 group-hover:text-gray-900'
                     }`}>
-                      <IconComponent size={18} className="stroke-[2]" />
+                      <IconComponent size={32} className="stroke-[2]" />
                     </div>
                   )}
                 </div>
 
                 {/* Category Name Label */}
-                <span className={`text-xs whitespace-nowrap tracking-tight ${isSelected ? 'text-gray-900 font-extrabold' : 'text-gray-600 font-medium group-hover:text-gray-900'}`}>
+                <span className={`text-sm sm:text-base whitespace-nowrap tracking-tight ${isSelected ? 'text-gray-900 font-extrabold' : 'text-gray-600 font-semibold group-hover:text-gray-900'}`}>
                   {cat.name}
                 </span>
 

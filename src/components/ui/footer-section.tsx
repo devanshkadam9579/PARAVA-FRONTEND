@@ -63,6 +63,14 @@ export function FooterSection({
               <p className="text-xs text-gray-500 mt-0.5 font-medium leading-relaxed">
                 Real celebration managers ready to coordinate your big day.
               </p>
+              <div className="mt-2 space-y-1">
+                <a href="mailto:support@myparva.com?subject=Concierge Request" className="block text-xs font-bold text-rose-600 hover:underline">
+                  support@myparva.com
+                </a>
+                <a href="tel:9579812694" className="block text-xs font-bold text-rose-600 hover:underline">
+                  +91 9579812694
+                </a>
+              </div>
             </div>
           </div>
         </div>

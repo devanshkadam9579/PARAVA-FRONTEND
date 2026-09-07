@@ -4675,6 +4675,8 @@ export default function App() {
                             : 'bg-brand-primary-light text-brand-primary-dark'
                         }`}>
                           {b.status === 'Pending' ? 'Awaiting Confirmation' : b.status}
+                            </span>
+                            <button onClick={() => setActiveTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">?? Message Vendor</button>
                         </span>
                       </div>
 
@@ -5145,8 +5147,8 @@ export default function App() {
                                     </span>
                                   </div>
 
-                                  <div className="bg-white rounded-xl p-3 border border-gray-200/70 space-y-1.5">
-                                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                  <div className="bg-white rounded-xl p-3 border border-gray-200/70 space-y-2">
+                                    <div className="grid grid-cols-2 gap-3 text-[11px]">
                                       <div>
                                         <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Date</span>
                                         <span className="font-extrabold text-gray-800">{b.eventDate}</span>
@@ -5157,18 +5159,18 @@ export default function App() {
                                       </div>
 
                                       <div>
-                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Event Type</span>
-                                        <span className="font-bold text-gray-700">{b.eventType || 'Celebration'}</span>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Location / Address</span>
+                                        <span className="font-bold text-gray-700">{(b as any).customerLocation || 'Venue / Provided Address'}</span>
                                       </div>
                                       <div>
-                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Guests</span>
-                                        <span className="font-bold text-gray-700">{b.guestCount || 100} Guests</span>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block">Guests / Age Group</span>
+                                        <span className="font-bold text-gray-700">{b.guestCount || 100} Guests { (b as any).customerAge ? `• ${(b as any).customerAge} yrs` : '' }</span>
                                       </div>
                                     </div>
 
                                     {b.selectedServices && b.selectedServices.length > 0 && (
                                       <div className="border-t border-gray-100 pt-2 mt-2">
-                                        <span className="text-gray-400 text-[9px] uppercase font-bold block mb-1">Selected Services</span>
+                                        <span className="text-gray-400 text-[9px] uppercase font-bold block mb-1">Selected Services & Add-ons</span>
                                         <div className="space-y-1">
                                           {b.selectedServices.map((svc: any, idx: number) => (
                                             <div key={idx} className="flex justify-between text-[10px]">
@@ -5179,19 +5181,30 @@ export default function App() {
                                         </div>
                                       </div>
                                     )}
+
+                                    <div className="border-t border-gray-100 pt-2 mt-2">
+                                      <div className="flex justify-between items-center text-[10px]">
+                                        <span className="text-gray-600 font-bold">Total Amount</span>
+                                        <span className="font-extrabold text-gray-900">₹{Number(b.finalPrice || b.totalPrice || 0).toLocaleString('en-IN')}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center text-[10px] mt-1">
+                                        <span className="text-rose-600 font-bold">Amount to take (Pending)</span>
+                                        <span className="font-extrabold text-rose-600">₹{Number((b.finalPrice || b.totalPrice || 0) * 0.95).toLocaleString('en-IN')}</span>
+                                      </div>
+                                    </div>
                                   </div>
 
                                   {/* Action Buttons for Vendor */}
-                                  <div className="flex gap-2 pt-1">
+                                  <div className="flex gap-2 pt-3">
                                     {b.customerPhone && (
-                                      <a
-                                        href={`https://wa.me/91${b.customerPhone.replace(/\D/g, '')}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition"
+                                      <button
+                                        onClick={() => {
+                                          setActiveTab('chat');
+                                        }}
+                                        className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm"
                                       >
-                                        💬 WhatsApp
-                                      </a>
+                                        💬 Message Customer
+                                      </button>
                                     )}
 
                                     {b.status !== 'Rejected' && b.status !== 'Cancelled' && (
