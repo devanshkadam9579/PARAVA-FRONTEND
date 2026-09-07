@@ -3603,7 +3603,12 @@ export default function App() {
       <div className="hidden lg:block min-h-screen bg-white">
         <AirbnbDesktopMarketplace
           vendors={vendors}
-          categories={categoriesList.map(c => ({ id: c.name, name: c.name }))}
+          categories={categoriesList.map(c => ({ 
+            id: c.name, 
+            name: c.name, 
+            image: c.image || (c as any).imageUrl,
+            description: (c as any).description 
+          }))}
           currentCity={currentCity}
           onSelectCity={(c) => setCurrentCity(c)}
           cities={CITIES}

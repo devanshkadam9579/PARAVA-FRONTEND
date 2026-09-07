@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, Star, ShieldCheck, MapPin } from 'lucide-react';
 import { Vendor } from '../../types';
+import { GlareHover } from '../ui/glare-hover';
 
 export interface AirbnbVendorCardProps {
   vendor: Vendor;
@@ -29,58 +30,60 @@ export function AirbnbVendorCard({
   return (
     <div 
       onClick={() => onSelect(vendor)}
-      className={`group flex flex-col space-y-3 cursor-pointer select-none snap-start shrink-0 w-[260px] sm:w-[280px] md:w-[300px] lg:w-auto ${className}`}
+      className={`group flex flex-col space-y-3 cursor-pointer select-none snap-start shrink-0 w-[270px] sm:w-[285px] md:w-[295px] ${className}`}
     >
-      {/* Photo Container */}
-      <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-gray-100 shadow-xs">
-        <img
-          src={images[currentImgIndex]}
-          alt={vendor.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-
-        {/* Guest favourite pill badge */}
-        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black text-gray-900 border border-gray-200/60 shadow-xs flex items-center gap-1">
-          <ShieldCheck size={12} className="text-rose-600" />
-          <span>Guest favourite</span>
-        </div>
-
-        {/* Wishlist Heart */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleWishlist(vendor.id, e);
-          }}
-          className="absolute top-3 right-3 p-2 rounded-full text-white/90 hover:text-white hover:scale-110 active:scale-90 transition bg-black/20 backdrop-blur-xs"
-          title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
-          aria-label="Wishlist button"
-        >
-          <Heart 
-            size={16} 
-            className={isWishlisted ? 'fill-rose-500 text-rose-500' : 'stroke-[2.5] text-white drop-shadow-md'} 
+      {/* 4:3 Strict Aspect Ratio Photo Container with Subtle Glare */}
+      <GlareHover borderRadius="1.25rem" className="w-full">
+        <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-gray-100 shadow-2xs border border-gray-200/60">
+          <img
+            src={images[currentImgIndex]}
+            alt={vendor.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
           />
-        </button>
 
-        {/* Carousel Dots on Hover */}
-        {images.length > 1 && (
-          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {images.slice(0, 5).map((_, idx) => (
-              <span
-                key={idx}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  idx === currentImgIndex ? 'bg-white w-3' : 'bg-white/60'
-                }`}
-              />
-            ))}
+          {/* Guest favourite pill badge */}
+          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black text-gray-900 border border-gray-200/60 shadow-xs flex items-center gap-1">
+            <ShieldCheck size={12} className="text-rose-600" />
+            <span>Verified Specialist</span>
           </div>
-        )}
-      </div>
 
-      {/* Details info */}
+          {/* Wishlist Heart */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWishlist(vendor.id, e);
+            }}
+            className="absolute top-3 right-3 p-2 rounded-full text-white hover:scale-110 active:scale-90 transition bg-black/20 backdrop-blur-xs cursor-pointer"
+            title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+            aria-label="Wishlist button"
+          >
+            <Heart 
+              size={16} 
+              className={isWishlisted ? 'fill-rose-500 text-rose-500' : 'stroke-[2.5] text-white drop-shadow-md'} 
+            />
+          </button>
+
+          {/* Carousel Dots on Hover */}
+          {images.length > 1 && (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {images.slice(0, 5).map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    idx === currentImgIndex ? 'bg-white w-3' : 'bg-white/60'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </GlareHover>
+
+      {/* Details Info with Consistent Heights & Clamping */}
       <div className="flex flex-col space-y-1">
-        <div className="flex items-start justify-between text-xs gap-2">
+        <div className="flex items-start justify-between text-xs gap-2 min-h-[22px]">
           <h3 className="font-extrabold text-sm text-gray-900 truncate leading-snug group-hover:text-rose-600 transition-colors">
             {vendor.name}
           </h3>
@@ -109,3 +112,4 @@ export function AirbnbVendorCard({
     </div>
   );
 }
+export default AirbnbVendorCard;

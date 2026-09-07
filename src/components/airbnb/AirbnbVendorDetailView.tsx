@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Star, MapPin, ShieldCheck, Heart, Share2, Calendar, Clock, 
+  Star, MapPin, ShieldCheck, Heart, Share2, Calendar as CalendarIcon, Clock, 
   CheckCircle, ArrowLeft, Users, ChevronRight, Phone, MessageSquare, 
   Grid, Check, Sparkles, AlertCircle, Info, HelpCircle
 } from 'lucide-react';
 import { Vendor, VendorServiceItem } from '../../types';
 import { PhotoGalleryLightbox } from './PhotoGalleryLightbox';
 import { AmenitiesModal } from './AmenitiesModal';
+import CalendarRangeSelect, { DateRange } from '../ui/calendar-range-select';
+import { GlareHover } from '../ui/glare-hover';
 
 export interface AirbnbVendorDetailViewProps {
   vendor: Vendor;
@@ -45,21 +47,40 @@ export function AirbnbVendorDetailView({
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isAmenitiesOpen, setIsAmenitiesOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<VendorServiceItem>(
-    vendor.services?.[0] || {
-      id: 's1',
-      name: 'Signature Celebration Package',
-      price: vendor.basePrice,
-      description: 'Complete setup, premium coordination, and guaranteed execution.'
-    }
-  );
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
+  // Initial service selection
+  const initialServices = (vendor.services && vendor.services.length > 0)
+    ? [vendor.services[0]]
+    : [{
+        id: 's1',
+        name: 'Signature Celebration Package',
+        price: vendor.basePrice,
+        description: 'Complete setup, premium coordination, and guaranteed execution.',
+        imageUrl: images[0]
+      }];
+
+  const [selectedServices, setSelectedServices] = useState<VendorServiceItem[]>(initialServices);
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; name: string; price: number }[]>([]);
   const [timeSlot, setTimeSlot] = useState<'morning' | 'evening' | 'fullday'>('evening');
   const [availabilityState, setAvailabilityState] = useState<'checking' | 'available' | 'unavailable' | 'idle'>('idle');
+  const [rangeConflicts, setRangeConflicts] = useState<string[]>([]);
   const [showFeeInfo, setShowFeeInfo] = useState(false);
 
   const isCatering = (vendor.category || '').toLowerCase() === 'catering';
+
+  const toggleService = (svc: VendorServiceItem) => {
+    const exists = selectedServices.some(s => (s.id && s.id === svc.id) || s.name === svc.name);
+    if (exists) {
+      if (selectedServices.length > 1) {
+        setSelectedServices(selectedServices.filter(s => (s.id ? s.id !== svc.id : s.name !== svc.name)));
+      } else {
+        setSelectedServices([]);
+      }
+    } else {
+      setSelectedServices([...selectedServices, svc]);
+    }
+  };
   
   // Available Add-ons
   const availableAddons = [
@@ -77,7 +98,10 @@ export function AirbnbVendorDetailView({
   };
 
   // Base Package & Add-on Calculations
-  const baseServicePrice = isCatering ? selectedService.price * (guestCount || 100) : selectedService.price;
+  const baseServicePrice = selectedServices.length > 0
+    ? selectedServices.reduce((sum, s) => sum + (isCatering ? s.price * (guestCount || 100) : s.price), 0)
+    : (isCatering ? vendor.basePrice * (guestCount || 100) : vendor.basePrice);
+
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const subtotal = baseServicePrice + addonsTotal;
   const bookingFee = Math.round(subtotal * 0.05); // 5% advance connection fee
@@ -85,32 +109,38 @@ export function AirbnbVendorDetailView({
   const finalAdvanceDue = bookingFee + gst;
   const balanceDueAtEvent = subtotal - bookingFee;
 
-  // Live Availability Checker
+  // Live Availability Checker using real vendor busyDates
   const checkAvailabilityLive = () => {
     setAvailabilityState('checking');
-    setTimeout(() => {
-      if (vendor.busyDates && vendor.busyDates.includes(eventDate)) {
-        setAvailabilityState('unavailable');
-      } else {
-        setAvailabilityState('available');
-      }
-    }, 300);
+    setRangeConflicts([]);
+
+    const isBusy = vendor.busyDates && Array.isArray(vendor.busyDates) && vendor.busyDates.includes(eventDate);
+    if (isBusy) {
+      setAvailabilityState('unavailable');
+    } else {
+      setAvailabilityState('available');
+    }
   };
 
   useEffect(() => {
     if (eventDate) {
       checkAvailabilityLive();
     }
-  }, [eventDate, timeSlot]);
+  }, [eventDate, timeSlot, vendor.busyDates]);
+
+  // Fallback service placeholder
+  const getServiceImage = (svc: any, idx: number) => {
+    return svc.imageUrl || svc.image || images[idx % images.length] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600';
+  };
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 py-6 space-y-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 font-sans">
       {/* Top Breadcrumb & Title Bar */}
       <div>
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 mb-3 transition"
+          className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 mb-3 transition cursor-pointer"
         >
           <ArrowLeft size={14} />
           <span>Back to marketplace</span>
@@ -152,7 +182,7 @@ export function AirbnbVendorDetailView({
                   alert('Listing link copied to clipboard!');
                 }
               }}
-              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition"
+              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition cursor-pointer"
             >
               <Share2 size={15} />
               <span>Share</span>
@@ -161,7 +191,7 @@ export function AirbnbVendorDetailView({
             <button
               type="button"
               onClick={(e) => onToggleWishlist(vendor.id, e)}
-              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition"
+              className="flex items-center gap-2 text-xs font-bold text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 transition cursor-pointer"
             >
               <Heart size={15} className={isWishlisted ? 'fill-rose-500 text-rose-500' : ''} />
               <span>{isWishlisted ? 'Saved' : 'Save'}</span>
@@ -181,65 +211,32 @@ export function AirbnbVendorDetailView({
             <img
               src={images[0]}
               alt={vendor.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
           </div>
 
-          {/* 2 Middle Supporting Photos */}
-          <div className="hidden md:flex flex-col gap-2 h-full">
-            <div 
-              onClick={() => setIsGalleryOpen(true)}
-              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
-            >
-              <img
-                src={images[1] || images[0]}
-                alt={`${vendor.name} 2`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-            <div 
-              onClick={() => setIsGalleryOpen(true)}
-              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
-            >
-              <img
-                src={images[2] || images[0]}
-                alt={`${vendor.name} 3`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-          </div>
-
-          {/* 2 Right Supporting Photos */}
-          <div className="hidden md:flex flex-col gap-2 h-full">
-            <div 
-              onClick={() => setIsGalleryOpen(true)}
-              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
-            >
-              <img
-                src={images[3] || images[0]}
-                alt={`${vendor.name} 4`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-            <div 
-              onClick={() => setIsGalleryOpen(true)}
-              className="h-1/2 bg-gray-100 cursor-pointer overflow-hidden group"
-            >
-              <img
-                src={images[4] || images[0]}
-                alt={`${vendor.name} 5`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            </div>
+          {/* 4 Supporting Photos */}
+          <div className="hidden md:grid grid-cols-2 col-span-2 gap-2 h-full">
+            {images.slice(1, 5).map((img, idx) => (
+              <div 
+                key={idx}
+                onClick={() => setIsGalleryOpen(true)}
+                className="h-full bg-gray-100 cursor-pointer overflow-hidden group relative"
+              >
+                <img
+                  src={img}
+                  alt={`${vendor.name} gallery ${idx + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* View All Photos Badge */}
         <button
           type="button"
           onClick={() => setIsGalleryOpen(true)}
-          className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-black text-gray-900 border border-gray-200/80 shadow-md hover:bg-white active:scale-95 transition flex items-center gap-2"
+          className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-black text-gray-900 border border-gray-200/80 shadow-md hover:bg-white active:scale-95 transition flex items-center gap-2 cursor-pointer"
         >
           <Grid size={15} />
           <span>Show all {images.length} photos</span>
@@ -274,7 +271,7 @@ export function AirbnbVendorDetailView({
             <div className="flex items-start gap-4">
               <ShieldCheck size={24} className="text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-extrabold text-sm text-gray-900">Guest Favourite</h4>
+                <h4 className="font-extrabold text-sm text-gray-900">Verified Specialist</h4>
                 <p className="text-xs text-gray-500 mt-0.5">
                   One of the most loved celebration specialists on Parva based on ratings and reliability.
                 </p>
@@ -302,7 +299,7 @@ export function AirbnbVendorDetailView({
             </p>
           </div>
 
-          {/* What this place/service offers */}
+          {/* Service Inclusions & Amenities */}
           <div className="pt-8 space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-gray-900 font-display">
@@ -329,48 +326,83 @@ export function AirbnbVendorDetailView({
             <button
               type="button"
               onClick={() => setIsAmenitiesOpen(true)}
-              className="px-6 py-3 border border-gray-900 hover:bg-gray-50 text-gray-900 text-xs font-extrabold rounded-2xl transition"
+              className="px-6 py-3 border border-gray-900 hover:bg-gray-50 text-gray-900 text-xs font-extrabold rounded-2xl transition cursor-pointer"
             >
               Show all amenities & inclusions
             </button>
           </div>
 
-          {/* Available Packages */}
+          {/* Service Packages with Dynamic Images */}
           {vendor.services && vendor.services.length > 0 && (
             <div className="pt-8 space-y-6">
-              <h3 className="text-xl font-black text-gray-900 font-display">
-                Service Packages
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black text-gray-900 font-display">
+                  Available Service Packages
+                </h3>
+                <span className="text-xs text-gray-500 font-medium">
+                  {vendor.services.length} packages available
+                </span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {vendor.services.map((svc) => {
-                  const isSelected = selectedService.id === svc.id || selectedService.name === svc.name;
+                {vendor.services.map((svc, idx) => {
+                  const isSelected = selectedServices.some(s => (s.id && s.id === svc.id) || s.name === svc.name);
+                  const svcImg = getServiceImage(svc, idx);
+
                   return (
                     <div
-                      key={svc.id || svc.name}
-                      onClick={() => setSelectedService(svc)}
-                      className={`p-5 rounded-3xl border transition cursor-pointer select-none relative space-y-3 ${
+                      key={svc.id || svc.name || idx}
+                      onClick={() => toggleService(svc)}
+                      className={`p-4 rounded-3xl border transition cursor-pointer select-none relative flex flex-col justify-between space-y-3 ${
                         isSelected
-                          ? 'border-gray-900 bg-rose-50/30 ring-2 ring-gray-900'
-                          : 'border-gray-200 hover:border-gray-400 bg-white'
+                          ? 'border-rose-600 bg-rose-50/40 ring-2 ring-rose-600/30 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-400 bg-white shadow-2xs'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-extrabold text-sm text-gray-900">{svc.name}</h4>
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          isSelected ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300'
+                      {/* Package Image Area */}
+                      <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
+                        <img
+                          src={svcImg}
+                          alt={svc.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = images[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600';
+                          }}
+                        />
+                        <div className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'border-rose-600 bg-rose-600 text-white shadow-xs scale-105' 
+                            : 'border-gray-300 bg-white/90 text-gray-400 hover:border-gray-400'
                         }`}>
-                          {isSelected && <Check size={12} className="stroke-[3]" />}
+                          {isSelected ? <Check size={14} className="stroke-[3]" /> : <span className="text-xs font-bold text-gray-500">+</span>}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                        {svc.description || 'Complete package inclusion with professional supervision'}
-                      </p>
-                      <div className="pt-2 flex items-baseline gap-1">
+
+                      {/* Package Title & Details */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-extrabold text-sm text-gray-900 line-clamp-1">
+                            {svc.name}
+                          </h4>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 transition-colors ${
+                            isSelected ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {isSelected ? '✓ Selected' : '+ Select'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 leading-relaxed font-medium line-clamp-2">
+                          {svc.description || 'Complete package inclusion with dedicated execution and verified team.'}
+                        </p>
+                      </div>
+
+                      {/* Pricing Tag */}
+                      <div className="pt-2 border-t border-gray-100 flex items-baseline justify-between">
                         <span className="text-base font-black text-gray-900">
                           ₹{svc.price.toLocaleString('en-IN')}
                         </span>
-                        <span className="text-xs text-gray-500 font-normal">
-                          {isCatering ? '/ plate' : 'package rate'}
+                        <span className="text-xs text-gray-500 font-semibold">
+                          {isCatering ? '/ plate' : 'per event'}
                         </span>
                       </div>
                     </div>
@@ -380,7 +412,7 @@ export function AirbnbVendorDetailView({
             </div>
           )}
 
-          {/* Add-on Services */}
+          {/* Add-on Options */}
           <div className="pt-8 space-y-6">
             <h3 className="text-xl font-black text-gray-900 font-display">
               Custom Add-on Options
@@ -394,7 +426,7 @@ export function AirbnbVendorDetailView({
                     onClick={() => toggleAddon(addon)}
                     className={`p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
                       isChecked
-                        ? 'border-rose-500 bg-rose-50/50'
+                        ? 'border-rose-500 bg-rose-50/50 ring-1 ring-rose-500'
                         : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
@@ -419,7 +451,27 @@ export function AirbnbVendorDetailView({
             </div>
           </div>
 
-          {/* Reviews Section */}
+          {/* Month-wise Interactive Availability Calendar Section */}
+          <div className="pt-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 font-display">
+                Vendor Availability Calendar
+              </h3>
+              <span className="text-xs text-gray-500 font-medium">Real-time sync</span>
+            </div>
+
+            <CalendarRangeSelect
+              selectedDate={eventDate}
+              mode="single"
+              busyDates={vendor.busyDates || []}
+              onSelectDate={(d) => onDateChange(d)}
+              onConflictDetected={(conflicts) => {
+                setRangeConflicts(conflicts);
+              }}
+            />
+          </div>
+
+          {/* Customer Reviews Section */}
           <div className="pt-8 space-y-6">
             <div className="flex items-center gap-3">
               <Star size={24} className="fill-amber-400 text-amber-400" />
@@ -428,23 +480,6 @@ export function AirbnbVendorDetailView({
               </h3>
             </div>
 
-            {/* Review Insight Mention Chips */}
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
-                Hospitality 112
-              </span>
-              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
-                Quality Setup 89
-              </span>
-              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
-                Punctuality 74
-              </span>
-              <span className="px-3.5 py-1.5 bg-gray-100 rounded-full text-xs font-bold text-gray-800">
-                Value for Money 65
-              </span>
-            </div>
-
-            {/* Customer Review Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
               <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
                 <div className="flex items-center gap-3">
@@ -457,7 +492,7 @@ export function AirbnbVendorDetailView({
                   </div>
                 </div>
                 <p className="text-xs text-gray-700 leading-relaxed font-normal">
-                  "Absolutely stellar decoration for our engagement! The florals were fresh, setup was completed 2 hours ahead of time, and guests couldn't stop taking pictures."
+                  "Absolutely stellar service! Setup was completed 2 hours ahead of time, and all guests were delighted."
                 </p>
               </div>
 
@@ -472,7 +507,7 @@ export function AirbnbVendorDetailView({
                   </div>
                 </div>
                 <p className="text-xs text-gray-700 leading-relaxed font-normal">
-                  "Seamless coordination and transparent pricing. Paying the 5% advance on Parva gave us total peace of mind for the wedding."
+                  "Seamless coordination and transparent pricing. Paying the 5% advance on Parva gave us complete peace of mind."
                 </p>
               </div>
             </div>
@@ -501,22 +536,22 @@ export function AirbnbVendorDetailView({
             <div className="border border-gray-300 rounded-2xl overflow-hidden divide-y divide-gray-300">
               {/* Date & Time Slot */}
               <div className="grid grid-cols-2 divide-x divide-gray-300">
-                <div className="p-3 bg-white">
+                <div 
+                  onClick={() => setIsCalendarModalOpen(true)}
+                  className="p-3 bg-white hover:bg-gray-50 transition cursor-pointer"
+                >
                   <label className="block text-[10px] font-black uppercase text-gray-500">Event Date</label>
-                  <input
-                    type="date"
-                    value={eventDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => onDateChange(e.target.value)}
-                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent"
-                  />
+                  <div className="text-xs font-extrabold text-gray-900 mt-0.5 truncate">
+                    {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                  </div>
                 </div>
+
                 <div className="p-3 bg-white">
                   <label className="block text-[10px] font-black uppercase text-gray-500">Time Slot</label>
                   <select
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value as any)}
-                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent"
+                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent cursor-pointer"
                   >
                     <option value="evening">Evening (5 PM - 11 PM)</option>
                     <option value="morning">Morning (9 AM - 2 PM)</option>
@@ -535,14 +570,14 @@ export function AirbnbVendorDetailView({
                   <button
                     type="button"
                     onClick={() => onGuestCountChange(Math.max(10, (guestCount || 100) - 25))}
-                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900"
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900 cursor-pointer"
                   >
                     -
                   </button>
                   <button
                     type="button"
                     onClick={() => onGuestCountChange((guestCount || 100) + 25)}
-                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900"
+                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900 cursor-pointer"
                   >
                     +
                   </button>
@@ -562,12 +597,12 @@ export function AirbnbVendorDetailView({
                 {availabilityState === 'available' ? (
                   <>
                     <CheckCircle size={15} className="text-emerald-600 shrink-0" />
-                    <span>Specialist is available for {timeSlot} slot</span>
+                    <span>Specialist is available on {eventDate}</span>
                   </>
                 ) : availabilityState === 'unavailable' ? (
                   <>
                     <AlertCircle size={15} className="text-rose-600 shrink-0" />
-                    <span>Slot is fully booked. Please select another date.</span>
+                    <span>Date is blocked/booked. Please select another date.</span>
                   </>
                 ) : (
                   <span>Checking live schedule...</span>
@@ -575,12 +610,29 @@ export function AirbnbVendorDetailView({
               </div>
             )}
 
+            {/* Range Conflicts Warning */}
+            {rangeConflicts.length > 0 && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 font-bold flex items-center gap-2">
+                <AlertCircle size={15} className="text-rose-600 shrink-0" />
+                <span>One or more selected dates are unavailable: {rangeConflicts.join(', ')}</span>
+              </div>
+            )}
+
             {/* Price Breakdown */}
             <div className="space-y-3 pt-2 text-xs">
-              <div className="flex items-center justify-between text-gray-600 font-medium">
-                <span>{selectedService.name} {isCatering ? `(₹${selectedService.price} × ${guestCount || 100})` : ''}</span>
-                <span className="font-bold text-gray-900">₹{baseServicePrice.toLocaleString('en-IN')}</span>
-              </div>
+              {selectedServices.length > 0 ? (
+                selectedServices.map((s, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-gray-600 font-medium">
+                    <span className="truncate max-w-[180px]">{s.name} {isCatering ? `(₹${s.price} × ${guestCount || 100})` : ''}</span>
+                    <span className="font-bold text-gray-900 shrink-0">₹{(isCatering ? s.price * (guestCount || 100) : s.price).toLocaleString('en-IN')}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-between text-gray-600 font-medium">
+                  <span>Standard Booking</span>
+                  <span className="font-bold text-gray-900">₹{(isCatering ? vendor.basePrice * (guestCount || 100) : vendor.basePrice).toLocaleString('en-IN')}</span>
+                </div>
+              )}
 
               {selectedAddons.length > 0 && (
                 <div className="flex items-center justify-between text-gray-600 font-medium">
@@ -595,7 +647,7 @@ export function AirbnbVendorDetailView({
                   <button 
                     type="button" 
                     onClick={() => setShowFeeInfo(!showFeeInfo)}
-                    className="text-gray-400 hover:text-gray-900"
+                    className="text-gray-400 hover:text-gray-900 cursor-pointer"
                   >
                     <Info size={12} />
                   </button>
@@ -626,18 +678,28 @@ export function AirbnbVendorDetailView({
               </div>
             </div>
 
-            {/* Reserve CTA */}
+            {/* Reserve CTA Button */}
             <button
               type="button"
               onClick={() => {
-                onAddServiceToBundle(selectedService);
+                if (selectedServices.length > 0) {
+                  selectedServices.forEach(s => onAddServiceToBundle(s));
+                } else {
+                  onAddServiceToBundle({
+                    id: 'default-pkg',
+                    name: 'Signature Celebration Package',
+                    price: vendor.basePrice,
+                    description: 'Standard celebration package',
+                    imageUrl: images[0]
+                  });
+                }
                 onProceedToCheckout();
               }}
-              disabled={availabilityState === 'unavailable'}
-              className={`w-full py-4 rounded-2xl font-black text-sm text-white shadow-lg transition active:scale-95 ${
-                availabilityState === 'unavailable'
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-tr from-rose-600 to-pink-500 hover:from-rose-700 hover:to-pink-600 shadow-rose-500/25'
+              disabled={availabilityState === 'unavailable' || rangeConflicts.length > 0}
+              className={`w-full py-4 rounded-2xl font-black text-sm text-white shadow-lg transition active:scale-95 cursor-pointer ${
+                availabilityState === 'unavailable' || rangeConflicts.length > 0
+                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                  : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
               }`}
             >
               Reserve with 5% Advance
@@ -668,3 +730,4 @@ export function AirbnbVendorDetailView({
     </div>
   );
 }
+export default AirbnbVendorDetailView;

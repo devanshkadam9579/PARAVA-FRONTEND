@@ -80,7 +80,7 @@ export function AirbnbNavbar({
   return (
     <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all">
       {/* Top Bar: Logo, Concierge, Cart, Profile */}
-      <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 h-20 flex items-center justify-between gap-4">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <ParvaLogo 
           size="md"
@@ -250,42 +250,6 @@ export function AirbnbNavbar({
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Category Rail (Zero Emojis - Real Visual Thumbnails) */}
-      <div className="w-full border-t border-gray-100 bg-white/60">
-        <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 2xl:px-16 flex items-center gap-8 overflow-x-auto py-3 scrollbar-none">
-          {navCategories.map((cat) => {
-            const isSelected = selectedCategory === cat.id || (selectedCategory === 'all' && cat.id === 'all');
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => onSelectCategory(cat.id)}
-                className={`flex flex-col items-center gap-1.5 pb-1 border-b-2 transition select-none shrink-0 group ${
-                  isSelected
-                    ? 'border-gray-900 opacity-100'
-                    : 'border-transparent opacity-60 hover:opacity-100 hover:border-gray-300'
-                }`}
-              >
-                {/* Category Thumbnail */}
-                <div className={`w-8 h-8 rounded-full overflow-hidden border shadow-2xs transition-transform group-hover:scale-105 ${
-                  isSelected ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-gray-200'
-                }`}>
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-                <span className="text-[11px] font-bold text-gray-800 tracking-tight whitespace-nowrap">
-                  {cat.name}
-                </span>
-              </button>
-            );
-          })}
         </div>
       </div>
     </header>

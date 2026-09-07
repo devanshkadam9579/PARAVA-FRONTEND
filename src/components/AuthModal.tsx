@@ -161,33 +161,58 @@ export default function AuthModal({
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col relative"
+        className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col md:flex-row relative"
       >
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition z-10"
-        >
-          <X size={18} />
-        </button>
-
-        {/* Modal Header */}
-        <div className="p-6 pb-2 text-center space-y-1 border-b border-gray-100">
-          <div className="w-12 h-12 rounded-2xl bg-brand-primary-light text-brand-primary flex items-center justify-center mx-auto mb-2 font-black text-xl">
-            P
+        {/* Left Side - Visual */}
+        <div className="hidden md:flex md:w-1/2 relative flex-col justify-between p-10 bg-gray-900">
+          <img 
+            src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80" 
+            alt="Event Celebration" 
+            className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+          
+          <div className="relative z-10">
+            <div className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 mb-8">
+              <img src="/parva-logo.png" alt="Parva" className="w-full h-full object-contain" />
+            </div>
           </div>
-          <h3 className="font-extrabold text-lg text-gray-900 font-display">
-            {tab === 'signin' && 'Welcome to Parva'}
-            {tab === 'signup' && 'Create Your Account'}
-            {tab === 'forgot' && 'Reset Password'}
-          </h3>
-          <p className="text-xs text-gray-500 font-medium">
-            {tab === 'signin' && 'Sign in to book events, save favorites & chat'}
-            {tab === 'signup' && 'Join Parva to book verified celebration partners'}
-            {tab === 'forgot' && 'Enter your email to receive a recovery link'}
-          </p>
+          
+          <div className="relative z-10 text-white">
+            <h2 className="text-4xl font-black font-display mb-4 leading-tight">Celebrate with<br/>Parva</h2>
+            <p className="text-white/80 font-medium text-sm max-w-sm">
+              Discover and book the finest verified vendors for your next unforgettable event.
+            </p>
+          </div>
         </div>
+
+        {/* Right Side - Form */}
+        <div className="w-full md:w-1/2 flex flex-col relative bg-white min-h-[500px]">
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 bg-white/80 backdrop-blur-sm rounded-full hover:bg-gray-100 transition z-20 border border-gray-100"
+          >
+            <X size={18} />
+          </button>
+
+          {/* Modal Header */}
+          <div className="p-8 pb-4 text-center space-y-2 mt-4">
+            <div className="md:hidden w-12 h-12 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center p-2 mx-auto mb-4">
+              <img src="/parva-logo.png" alt="Parva" className="w-full h-full object-contain" />
+            </div>
+            <h3 className="font-extrabold text-2xl text-gray-900 font-display">
+              {tab === 'signin' && 'Welcome back'}
+              {tab === 'signup' && 'Create an account'}
+              {tab === 'forgot' && 'Reset Password'}
+            </h3>
+            <p className="text-sm text-gray-500 font-medium">
+              {tab === 'signin' && 'Sign in to your Parva account'}
+              {tab === 'signup' && 'Join Parva to book celebration partners'}
+              {tab === 'forgot' && 'Enter your email for a recovery link'}
+            </p>
+          </div>
 
         {/* Tabs */}
         {tab !== 'forgot' && (
@@ -428,6 +453,7 @@ export default function AuthModal({
               )}
             </form>
           )}
+        </div>
         </div>
       </motion.div>
     </div>
