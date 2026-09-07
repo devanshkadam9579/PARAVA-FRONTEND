@@ -70,68 +70,60 @@ export function HowItWorksSection() {
         </div>
       </section>
 
-      {/* Trust & Escrow Guarantee */}
-      <section className="bg-gradient-to-tr from-gray-900 via-gray-900 to-rose-950 rounded-3xl sm:rounded-4xl p-8 sm:p-14 text-white shadow-xl space-y-10">
-        <div className="max-w-3xl mx-auto text-center space-y-3">
+            {/* Promotional Banners */}
+      <section className="bg-gradient-to-tr from-gray-900 via-gray-900 to-rose-950 rounded-3xl sm:rounded-4xl p-8 sm:p-14 text-white shadow-xl overflow-hidden relative">
+        <div className="max-w-3xl mx-auto text-center space-y-3 mb-10 relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-black uppercase tracking-widest text-rose-300">
-            <Award size={14} />
-            <span>The Parva Escrow Guarantee</span>
+            <Sparkles size={14} />
+            <span>Exclusive Offers</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black font-display leading-tight">
-            Book with 100% confidence & zero stress
+            Celebrate more, spend less
           </h2>
           <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto font-medium">
-            Every vendor is physically audited, prices are guaranteed, and your advance payment is held safely in escrow until service delivery.
+            Unlock premium celebration packages with our exclusive limited-time vendor promotions.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pt-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center shrink-0 border border-white/10 shadow-xs">
-              <ShieldCheck size={24} />
-            </div>
-            <div>
-              <h4 className="font-extrabold text-sm text-white">100% Verified Partners</h4>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed font-normal">
-                Physically inspected, GST & Aadhaar verified celebration specialists.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center shrink-0 border border-white/10 shadow-xs">
-              <Sparkles size={24} />
-            </div>
-            <div>
-              <h4 className="font-extrabold text-sm text-white">5% Date-Lock Advance</h4>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed font-normal">
-                Lock your date with only a 5% advance fee. Pay remaining at event.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center shrink-0 border border-white/10 shadow-xs">
-              <Headphones size={24} />
-            </div>
-            <div>
-              <h4 className="font-extrabold text-sm text-white">24/7 Parva Concierge</h4>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed font-normal">
-                Dedicated celebration manager to assist your coordination at every step.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-rose-400 flex items-center justify-center shrink-0 border border-white/10 shadow-xs">
-              <Star size={24} />
-            </div>
-            <div>
-              <h4 className="font-extrabold text-sm text-white">Direct Wholesale Rates</h4>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed font-normal">
-                Zero middleman markups. Genuine direct vendor pricing guaranteed.
-              </p>
-            </div>
+        {/* CSS Marquee Loop */}
+        <div className="relative flex overflow-x-hidden w-full group mask-image-fade">
+          <div className="animate-marquee flex gap-6 whitespace-nowrap min-w-full">
+            {[1, 2].map((loopIdx) => (
+              <React.Fragment key={loopIdx}>
+                {/* Promo Card 1 */}
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white mb-2 shadow-inner">
+                    <Star size={20} className="fill-white" />
+                  </div>
+                  <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">50% Off Pre-Wedding Drone Shoots</h4>
+                  <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Book any premium photographer today and get a complimentary 4K cinematic drone shoot.</p>
+                </div>
+                {/* Promo Card 2 */}
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center text-white mb-2 shadow-inner">
+                    <Sparkles size={20} />
+                  </div>
+                  <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">Free Royal Mandap Upgrade</h4>
+                  <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Valid on all luxury banquet hall bookings this month. Elevate your wedding decor.</p>
+                </div>
+                {/* Promo Card 3 */}
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white mb-2 shadow-inner">
+                    <Award size={20} />
+                  </div>
+                  <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">Complimentary Live Counters</h4>
+                  <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Get 2 premium live catering counters absolutely free on bookings above 200 guests.</p>
+                </div>
+                {/* Promo Card 4 */}
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white mb-2 shadow-inner">
+                    <HeartHandshake size={20} />
+                  </div>
+                  <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">Bridal Makeup Trial Free</h4>
+                  <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Secure your HD Bridal Makeup package and get a 100% free personalized trial session.</p>
+                </div>
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </section>
