@@ -24,6 +24,7 @@ import { ScrollVelocity } from '../ui/scroll-velocity';
 import { VendorGridSkeleton } from '../ui/skeleton-cards';
 
 export interface AirbnbDesktopMarketplaceProps {
+  promos?: any[];
   vendors: Vendor[];
   categories: { id: string; name: string; image?: string; description?: string }[];
   currentCity: string;
@@ -78,6 +79,7 @@ const ADDITIONAL_SERVICES = [
 ];
 
 export function AirbnbDesktopMarketplace({
+  promos = [],
   vendors,
   categories,
   currentCity,
@@ -538,7 +540,7 @@ export function AirbnbDesktopMarketplace({
         </section>
 
         {/* How It Works & Escrow Guarantee */}
-        <HowItWorksSection />
+        <HowItWorksSection promos={promos} />
       </main>
 
       {/* Polished Light Marketplace Footer */}

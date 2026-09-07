@@ -530,7 +530,7 @@ export function AirbnbVendorDetailView({
                 scrolling="no"
                 marginHeight={0}
                 marginWidth={0}
-                src={https://maps.google.com/maps?q=&t=&z=13&ie=UTF8&iwloc=&output=embed}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(vendor.location || 'Maharashtra, India')}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                 className="absolute inset-0"
                 style={{ filter: 'grayscale(0.1) contrast(1.1)' }}
               />

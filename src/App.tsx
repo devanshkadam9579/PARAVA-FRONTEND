@@ -3602,6 +3602,7 @@ export default function App() {
       {/* ========================================================================= */}
       <div className="hidden lg:block min-h-screen bg-white">
         <AirbnbDesktopMarketplace
+          promos={promosList}
           vendors={vendors}
           categories={categoriesList.map(c => ({ 
             id: c.name, 
