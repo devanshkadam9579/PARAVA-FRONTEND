@@ -16,19 +16,16 @@
   --color-brand-bg: #FFFFFF;
   --color-brand-card: #FFFFFF;
   --color-brand-border: #f2e4ec;
-  --color-brand-success: #10b981;
-  --color-brand-warning: #f59e0b;
-  --color-brand-danger: #ef4444;
   --color-brand-text: #1a0812;
   --color-brand-text-secondary: #5c4753;
-  
-  --radius-card: 20px;
-  --radius-button: 16px;
-  --radius-input: 14px;
-  --radius-nav: 24px;
 }
 
-/* Base Body Styles - Clean Light Mode with Open Sans */
+/* Base Document Geometry */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-brand-bg);
@@ -39,16 +36,33 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+/* Unified Desktop Container */
+.parva-container {
+  width: 100%;
+  max-width: 1320px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
-/* Smooth subtle scrollbars */
+@media (min-width: 640px) {
+  .parva-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .parva-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
