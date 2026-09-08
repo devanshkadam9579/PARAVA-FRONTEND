@@ -122,14 +122,37 @@ export function AirbnbDesktopMarketplace({
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'price_high' | 'rating'>('recommended');
 
+  // Flexible category matching helper
+  const isCategoryMatch = (vendor: Vendor, targetCategory: string) => {
+    if (!targetCategory || targetCategory === 'all' || targetCategory.toLowerCase() === 'all services') return true;
+    const target = targetCategory.toLowerCase().trim();
+    const vCat = (vendor.category || '').toLowerCase().trim();
+    
+    if (vCat === target || vCat.includes(target) || target.includes(vCat)) return true;
+
+    // Keyword synonyms
+    if (target.includes('cater') && vCat.includes('cater')) return true;
+    if ((target.includes('decor') || target.includes('mandap')) && (vCat.includes('decor') || vCat.includes('mandap'))) return true;
+    if ((target.includes('photo') || target.includes('camera') || target.includes('video')) && (vCat.includes('photo') || vCat.includes('cinematography'))) return true;
+    if ((target.includes('dj') || target.includes('music') || target.includes('sound') || target.includes('band')) && (vCat.includes('dj') || vCat.includes('music') || vCat.includes('sound'))) return true;
+    if ((target.includes('hall') || target.includes('venue') || target.includes('banquet') || target.includes('lawn')) && (vCat.includes('hall') || vCat.includes('venue') || vCat.includes('banquet'))) return true;
+    if ((target.includes('makeup') || target.includes('make-up') || target.includes('beauty') || target.includes('salon')) && (vCat.includes('makeup') || vCat.includes('beauty'))) return true;
+    if ((target.includes('pandit') || target.includes('priest') || target.includes('puja')) && (vCat.includes('pandit') || vCat.includes('priest'))) return true;
+    if ((target.includes('cake') || target.includes('dessert') || target.includes('baker')) && (vCat.includes('cake') || vCat.includes('dessert') || vCat.includes('baker'))) return true;
+
+    if (vendor.categories && Array.isArray(vendor.categories)) {
+      return vendor.categories.some(c => {
+        const cLower = c.toLowerCase().trim();
+        return cLower === target || cLower.includes(target) || target.includes(cLower);
+      });
+    }
+    return false;
+  };
+
   // Filter & Sort vendors
   const filteredVendors = vendors
     .filter((v) => {
-      const matchesCategory =
-        selectedCategory === 'all' ||
-        (v.category || '').toLowerCase() === selectedCategory.toLowerCase() ||
-        (v.categories && v.categories.some(c => c.toLowerCase() === selectedCategory.toLowerCase()));
-      
+      const matchesCategory = isCategoryMatch(v, selectedCategory);
       const matchesCity = !currentCity || (v.location || '').toLowerCase().includes(currentCity.toLowerCase());
       return matchesCategory && matchesCity;
     })
@@ -294,7 +317,7 @@ export function AirbnbDesktopMarketplace({
       />
 
       {/* Main Centered Marketplace Content */}
-      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+      <main id="marketplace-cards-section" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 scroll-mt-6">
 
         {/* Sort & Results Bar */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">

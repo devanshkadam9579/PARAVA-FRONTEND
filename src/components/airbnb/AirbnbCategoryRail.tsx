@@ -95,15 +95,28 @@ export function AirbnbCategoryRail({
           {allCategories.map((cat) => {
             const isSelected = selectedCategory === cat.id || 
               (selectedCategory === 'all' && (cat.id === 'all' || cat.name === 'All Services')) ||
-              (selectedCategory.toLowerCase() === cat.name.toLowerCase());
+              (selectedCategory.toLowerCase() === cat.name.toLowerCase()) ||
+              (selectedCategory.toLowerCase().includes(cat.name.toLowerCase())) ||
+              (cat.name.toLowerCase().includes(selectedCategory.toLowerCase()));
             
             const IconComponent = getCategoryIcon(cat.name);
+
+            const handleCategoryClick = () => {
+              const target = cat.id === 'all' ? 'all' : cat.name;
+              onSelectCategory(target);
+              setTimeout(() => {
+                const el = document.getElementById('marketplace-cards-section');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 60);
+            };
 
             return (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => onSelectCategory(cat.id === 'all' ? 'all' : cat.name)}
+                onClick={handleCategoryClick}
                 className={`group flex flex-col items-center gap-2 shrink-0 py-1 px-1.5 relative transition cursor-pointer ${
                   isSelected
                     ? 'text-gray-900 font-bold'
