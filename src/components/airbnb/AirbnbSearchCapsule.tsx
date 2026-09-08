@@ -65,13 +65,11 @@ export function AirbnbSearchCapsule({
   return (
     <div ref={capsuleRef} className={`relative w-full max-w-4xl mx-auto ${className}`}>
       {/* Floating Pill Search Bar */}
-      <div className="bg-white rounded-full border border-gray-200/90 shadow-md hover:shadow-lg transition-all p-2 flex flex-col md:flex-row items-center divide-y md:divide-y-0 md:divide-x divide-gray-200/80">
+      <div className="bg-white rounded-[32px] md:rounded-full border-2 border-gray-100 shadow-lg hover:shadow-xl transition-all p-2 flex flex-col md:flex-row items-center gap-2 md:gap-0 shadow-gray-200/50 relative z-40">
         {/* 1. Location / Where */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === 'location' ? 'none' : 'location')}
-          className={`w-full md:w-1/3 px-6 py-2.5 rounded-full transition cursor-pointer select-none text-left ${
-            activeDropdown === 'location' ? 'bg-rose-50/60 ring-2 ring-rose-500/20' : 'hover:bg-gray-50'
-          }`}
+          className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'location' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
         >
           <div className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
             <MapPin size={12} className="text-rose-600" />
@@ -85,9 +83,7 @@ export function AirbnbSearchCapsule({
         {/* 2. When / Date */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === 'date' ? 'none' : 'date')}
-          className={`w-full md:w-1/3 px-6 py-2.5 rounded-full transition cursor-pointer select-none text-left ${
-            activeDropdown === 'date' ? 'bg-rose-50/60 ring-2 ring-rose-500/20' : 'hover:bg-gray-50'
-          }`}
+          className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'date' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
         >
           <div className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
             <CalendarIcon size={12} className="text-rose-600" />

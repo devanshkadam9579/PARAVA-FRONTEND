@@ -1,7 +1,32 @@
-import React from 'react';
-import { Search, Sparkles, ShieldCheck, HeartHandshake, Award, Headphones, Star } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Search, Sparkles, ShieldCheck, HeartHandshake, Award, Headphones, Star, ChevronLeft, ChevronRight, Tag, ArrowRight } from 'lucide-react';
 
 export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
+  const promoScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkPromoScroll = () => {
+    if (promoScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkPromoScroll();
+    window.addEventListener('resize', checkPromoScroll);
+    return () => window.removeEventListener('resize', checkPromoScroll);
+  }, [promos]);
+
+  const scrollPromos = (direction: 'left' | 'right') => {
+    if (promoScrollRef.current) {
+      const amount = direction === 'left' ? -480 : 480;
+      promoScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
+
   const steps = [
     {
       step: '01',
@@ -28,6 +53,43 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
       icon: HeartHandshake
     }
   ];
+
+  const defaultPromos = [
+    {
+      id: 'promo_def_1',
+      title: '50% Off Pre-Wedding Drone Shoots',
+      subtitle: 'Book any premium photographer today and get a complimentary 4K cinematic drone shoot.',
+      badge: 'Special Deal',
+      discount: '50% OFF',
+      image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      id: 'promo_def_2',
+      title: 'Free Royal Mandap Upgrade',
+      subtitle: 'Valid on all luxury banquet hall bookings this month. Elevate your wedding decor.',
+      badge: 'Free Upgrade',
+      discount: 'Complimentary',
+      image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      id: 'promo_def_3',
+      title: 'Complimentary Live Dessert Counters',
+      subtitle: 'Get 2 premium live catering counters absolutely free on bookings above 200 guests.',
+      badge: 'Catering Offer',
+      discount: 'Free Add-on',
+      image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=1200'
+    },
+    {
+      id: 'promo_def_4',
+      title: 'Complimentary Bridal Makeup Trial',
+      subtitle: 'Secure your HD Bridal Makeup package and get a 100% free personalized trial session.',
+      badge: 'Beauty Offer',
+      discount: 'Free Trial',
+      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1200'
+    }
+  ];
+
+  const displayPromos = promos && promos.length > 0 ? promos : defaultPromos;
 
   return (
     <div className="space-y-16">
@@ -70,74 +132,110 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
         </div>
       </section>
 
-            {/* Promotional Banners */}
-      <section className="bg-gradient-to-tr from-gray-900 via-gray-900 to-rose-950 rounded-3xl sm:rounded-4xl p-8 sm:p-14 text-white shadow-xl overflow-hidden relative">
-        <div className="max-w-3xl mx-auto text-center space-y-3 mb-10 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-black uppercase tracking-widest text-rose-300">
-            <Sparkles size={14} />
-            <span>Exclusive Offers</span>
+      {/* Promotional Banners — Clean, Clear, Unfiltered & Spacious */}
+      <section className="bg-gradient-to-b from-rose-50/70 via-white to-gray-50/60 border border-rose-100 rounded-3xl sm:rounded-4xl p-6 sm:p-10 shadow-sm relative overflow-hidden space-y-8">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-700 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+              <Sparkles size={14} className="text-rose-600" />
+              <span>Exclusive Offers</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black font-display text-gray-900 tracking-tight">
+              Celebrate more, spend less
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600 font-medium max-w-xl">
+              Unlock verified celebration packages and limited-time savings with direct 5% escrow protection.
+            </p>
           </div>
-          <h2 className="text-2xl sm:text-4xl font-black font-display leading-tight">
-            Celebrate more, spend less
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto font-medium">
-            Unlock premium celebration packages with our exclusive limited-time vendor promotions.
-          </p>
+
+          {/* Navigation Scroll Buttons */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => scrollPromos('left')}
+              className="w-10 h-10 rounded-full bg-white border border-gray-200 hover:border-gray-900 flex items-center justify-center text-gray-800 shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
+              aria-label="Previous offers"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollPromos('right')}
+              className="w-10 h-10 rounded-full bg-white border border-gray-200 hover:border-gray-900 flex items-center justify-center text-gray-800 shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
+              aria-label="Next offers"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* CSS Marquee Loop */}
-        <div className="relative flex overflow-x-hidden w-full group mask-image-fade">
-          <div className="animate-marquee flex gap-6 whitespace-nowrap min-w-full">
-            {[1, 2].map((loopIdx) => (
-              <React.Fragment key={loopIdx}>
-                {promos.length > 0 ? promos.map((promo, idx) => (
-                  <div key={`${loopIdx}-${promo.id || idx}`} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3 relative overflow-hidden group">
-                    {/* Background Image with Overlay */}
-                    {promo.image && (
-                      <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-30 transition-opacity">
-                        <img src={promo.image} alt={promo.title} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
-                      </div>
-                    )}
-                    
-                    <div className="relative z-10 flex flex-col gap-3 h-full">
-                      <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white shadow-inner">
-                          <Star size={20} className="fill-white" />
-                        </div>
-                        {promo.badge && (
-                          <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-200 px-2 py-1 rounded-md border border-rose-500/30">
-                            {promo.badge}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">{promo.title || 'Special Promotion'}</h4>
-                      <p className="text-xs text-gray-300 whitespace-normal leading-relaxed flex-1">{promo.subtitle || 'Book now to avail this exclusive offer.'}</p>
-                    </div>
+        {/* Large Unfiltered Promotional Rails */}
+        <div 
+          ref={promoScrollRef}
+          onScroll={checkPromoScroll}
+          className="flex gap-6 overflow-x-auto scrollbar-none py-2 px-1 scroll-smooth snap-x snap-mandatory"
+        >
+          {displayPromos.map((promo, idx) => (
+            <div
+              key={promo.id || idx}
+              className="w-[340px] sm:w-[480px] md:w-[560px] shrink-0 bg-white rounded-3xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group snap-start cursor-pointer"
+            >
+              {/* Promo Banner Image Container — 100% natural, crisp, zero filters */}
+              <div className="relative w-full h-48 sm:h-64 bg-gray-100 overflow-hidden">
+                {promo.image ? (
+                  <img
+                    src={promo.image}
+                    alt={promo.title || 'Promotional Offer'}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-rose-500 via-rose-600 to-pink-600 flex items-center justify-center text-white">
+                    <Sparkles size={48} className="text-white/80" />
                   </div>
-                )) : (
-                  <>
-                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white mb-2 shadow-inner">
-                        <Star size={20} className="fill-white" />
-                      </div>
-                      <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">50% Off Pre-Wedding Drone Shoots</h4>
-                      <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Book any premium photographer today and get a complimentary 4K cinematic drone shoot.</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-80 shrink-0 shadow-lg inline-flex flex-col gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center text-white mb-2 shadow-inner">
-                        <Sparkles size={20} />
-                      </div>
-                      <h4 className="font-extrabold text-lg text-white whitespace-normal leading-tight">Free Royal Mandap Upgrade</h4>
-                      <p className="text-xs text-gray-300 whitespace-normal leading-relaxed">Valid on all luxury banquet hall bookings this month. Elevate your wedding decor.</p>
-                    </div>
-                  </>
                 )}
-              </React.Fragment>
-            ))}
-          </div>
+
+                {/* Top Badge Overlay */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <span className="bg-rose-600 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
+                    <Tag size={12} />
+                    <span>{promo.badge || 'Featured Offer'}</span>
+                  </span>
+                  {promo.discount && (
+                    <span className="bg-amber-400 text-gray-950 text-xs font-extrabold px-2.5 py-1 rounded-full shadow-md">
+                      {promo.discount}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Promo Information Footer — High contrast, large and clearly readable */}
+              <div className="p-5 sm:p-6 flex flex-col justify-between flex-1 gap-3 bg-white">
+                <div className="space-y-1.5">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 font-display leading-snug group-hover:text-rose-600 transition-colors">
+                    {promo.title || 'Special Celebration Offer'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed line-clamp-2">
+                    {promo.subtitle || 'Book now to lock in this exclusive deal with our verified partners.'}
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+                  <span className="text-xs font-extrabold text-rose-600 flex items-center gap-1">
+                    <span>5% Escrow Advance Protection</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-black text-gray-900 group-hover:text-rose-600 group-hover:translate-x-1 transition-all">
+                    <span>Claim Offer</span>
+                    <ArrowRight size={14} />
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>
   );
 }
+export default HowItWorksSection;

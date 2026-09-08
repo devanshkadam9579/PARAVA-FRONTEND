@@ -25,37 +25,22 @@ export function HeroSection({
   onGuestCountChange,
   onSearch
 }: HeroSectionProps) {
-  const [animationKey, setAnimationKey] = React.useState(0);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationKey(prev => prev + 1);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 font-sans text-center">
-      {/* Clean Open Marketplace Hero - No dark boxes, no floating containers */}
+    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 font-sans text-center">
+      {/* Clean Open Marketplace Hero */}
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Tagline Badge */}
-        <div className="inline-flex items-center gap-2 bg-rose-50 px-4 py-1.5 rounded-full border border-rose-200 text-xs font-bold text-rose-700">
+        <div className="inline-flex items-center gap-2 bg-rose-50 px-4 py-1.5 rounded-full border border-rose-200 text-xs font-extrabold text-rose-700 shadow-xs">
           <Sparkles size={14} className="text-rose-600" />
           <span>India's Curated Celebration Marketplace</span>
         </div>
 
         {/* Logo and Main Headline */}
-        <div className="flex justify-center mb-4">
-          <img src="/parva-logo.png" alt="MyParva" className="h-14 sm:h-20 object-contain" />
+        <div className="flex justify-center mb-2">
+          <img src="/parva-logo.png" alt="MyParva" className="h-14 sm:h-18 object-contain" />
         </div>
         <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
-          <BlurText
-            key={animationKey}
-            text="Plan less, celebrate more.."
-            delay={100}
-            animateBy="words"
-            direction="top"
-          />
+          Plan less, celebrate more.
         </h1>
 
         {/* Subtitle */}

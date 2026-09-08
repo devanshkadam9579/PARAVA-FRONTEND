@@ -105,6 +105,7 @@ interface VendorDetailSheetProps {
   bookingFeePercentage?: number;
   handlePayWithRazorpay?: (params: any) => void;
   onNavigateToBookings?: () => void;
+    onNavigateToMessages?: (vendorId: string) => void;
 }
 
 export default function VendorDetailSheet({
@@ -1647,10 +1648,58 @@ export default function VendorDetailSheet({
                                   <div className="space-y-3">
                                     <button
                                       onClick={() => {
-                                        setPaymentStep('processing');
-                                        setTimeout(() => {
-                                          setPaymentStep('success');
-                                        }, 2500);
+                                        
+                                          setPaymentStep('processing');
+                                          setTimeout(async () => {
+                                            setPaymentStep('success');
+                                            
+                                            // SAVE BOOKING TO FIRESTORE
+                                            try {
+                                              const { getDb } = await import('../lib/firebase');
+                                              const { doc, setDoc } = await import('firebase/firestore');
+                                              const db = getDb();
+                                              const bookingId = receiptData?.id || `PRV-${Date.now()}`;
+                                              
+                                              const newBooking = {
+                                                id: bookingId,
+                                                vendorId: vendor.id,
+                                                vendor: vendor,
+                                                userName: currentUser?.name || 'Customer',
+                                                userEmail: currentUser?.email || '',
+                                                userPhone: currentUser?.phone || '',
+                                                date: selectedDate,
+                                                time: selectedTimeSlot,
+                                                status: 'Confirmed',
+                                                totalAmount: receiptData?.totalAmountDue || 15000,
+                                                eventType: planningEventType || 'Event',
+                                                createdAt: new Date().toISOString()
+                                              };
+                                              
+
+                                              await setDoc(doc(db, 'bookings', bookingId), newBooking);
+                                              
+                                              // ALSO UNLOCK CHAT
+                                              try {
+                                                if (currentUser && currentUser.uid) {
+                                                   const connId = `${currentUser.uid}_${vendor.id}`;
+                                                   await setDoc(doc(db, 'connections', connId), {
+                                                      userId: currentUser.uid,
+                                                      vendorId: vendor.id,
+                                                      timestamp: new Date().toISOString()
+                                                   });
+                                                }
+                                              } catch (connErr) {}
+                                              
+                                              if (onShowNotification) {
+
+                                                onShowNotification('Booking successfully saved to database!');
+                                              }
+                                            } catch(err) {
+                                              console.error("Error saving booking", err);
+                                            }
+                                            
+                                          }, 2500);
+
                                       }}
                                       className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
                                     >
@@ -1668,10 +1717,58 @@ export default function VendorDetailSheet({
 
                                     <button
                                       onClick={() => {
-                                        setPaymentStep('processing');
-                                        setTimeout(() => {
-                                          setPaymentStep('success');
-                                        }, 2500);
+                                        
+                                          setPaymentStep('processing');
+                                          setTimeout(async () => {
+                                            setPaymentStep('success');
+                                            
+                                            // SAVE BOOKING TO FIRESTORE
+                                            try {
+                                              const { getDb } = await import('../lib/firebase');
+                                              const { doc, setDoc } = await import('firebase/firestore');
+                                              const db = getDb();
+                                              const bookingId = receiptData?.id || `PRV-${Date.now()}`;
+                                              
+                                              const newBooking = {
+                                                id: bookingId,
+                                                vendorId: vendor.id,
+                                                vendor: vendor,
+                                                userName: currentUser?.name || 'Customer',
+                                                userEmail: currentUser?.email || '',
+                                                userPhone: currentUser?.phone || '',
+                                                date: selectedDate,
+                                                time: selectedTimeSlot,
+                                                status: 'Confirmed',
+                                                totalAmount: receiptData?.totalAmountDue || 15000,
+                                                eventType: planningEventType || 'Event',
+                                                createdAt: new Date().toISOString()
+                                              };
+                                              
+
+                                              await setDoc(doc(db, 'bookings', bookingId), newBooking);
+                                              
+                                              // ALSO UNLOCK CHAT
+                                              try {
+                                                if (currentUser && currentUser.uid) {
+                                                   const connId = `${currentUser.uid}_${vendor.id}`;
+                                                   await setDoc(doc(db, 'connections', connId), {
+                                                      userId: currentUser.uid,
+                                                      vendorId: vendor.id,
+                                                      timestamp: new Date().toISOString()
+                                                   });
+                                                }
+                                              } catch (connErr) {}
+                                              
+                                              if (onShowNotification) {
+
+                                                onShowNotification('Booking successfully saved to database!');
+                                              }
+                                            } catch(err) {
+                                              console.error("Error saving booking", err);
+                                            }
+                                            
+                                          }, 2500);
+
                                       }}
                                       className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
                                     >
@@ -1724,9 +1821,20 @@ export default function VendorDetailSheet({
                                       className="w-full bg-gray-100 text-brand-text font-black py-3 rounded-xl hover:bg-gray-200 transition"
                                     >
                                       BACK TO PROFILE
-                                    </button>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setIsPaymentModalOpen(false);
+                                          onClose();
+                                          if (onNavigateToMessages) onNavigateToMessages(vendor.id);
+                                        }}
+                                        className="w-full bg-blue-100 text-blue-700 font-black py-3 rounded-xl hover:bg-blue-200 transition mt-2"
+                                      >
+                                        MESSAGE VENDOR
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+
                               )}
                             </div>
                             

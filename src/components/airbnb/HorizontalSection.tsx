@@ -49,11 +49,11 @@ export function HorizontalSection({
       {/* Header with Title and Scroll Controls */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 font-display tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-display tracking-tight flex items-center gap-2">
             <span>{title}</span>
           </h2>
           {subtitle && (
-            <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">{subtitle}</p>
+            <p className="text-sm sm:text-base text-gray-500 font-bold mt-1">{subtitle}</p>
           )}
         </div>
 

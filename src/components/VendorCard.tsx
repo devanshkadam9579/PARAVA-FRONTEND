@@ -175,38 +175,38 @@ const VendorCard = memo(function VendorCard({
         <div className="p-4 flex flex-col flex-1 justify-between gap-3">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black text-brand-primary tracking-wider uppercase bg-brand-primary/10 px-2 py-0.5 rounded-md">
+              <span className="text-sm font-black text-brand-primary tracking-wider uppercase bg-brand-primary/10 px-2 py-0.5 rounded-md">
                 {vendor.category}
               </span>
-              <div className="flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded text-amber-700 text-xs font-black">
+              <div className="flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded text-amber-700 text-sm font-black">
                 <Star size={11} className="fill-amber-400 text-amber-400" />
                 <span>{vendor.rating.toFixed(1)}</span>
-                <span className="text-[10px] text-gray-400 font-normal">({vendor.reviewCount})</span>
+                <span className="text-xs text-gray-400 font-normal">({vendor.reviewCount})</span>
               </div>
             </div>
 
-            <h3 className="font-extrabold text-sm text-gray-900 leading-snug line-clamp-1">
+            <h3 className="font-extrabold text-lg sm:text-xl text-gray-900 leading-snug line-clamp-1">
               {vendor.name}
             </h3>
 
-            <p className="text-[11px] text-gray-500 line-clamp-1 font-medium">
+            <p className="text-base text-gray-500 line-clamp-1 font-medium">
               {vendor.tagline || vendor.description}
             </p>
           </div>
 
           <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2 text-xs">
             <div>
-              <span className="text-[9px] text-gray-400 font-bold block uppercase">
+              <span className="text-sm text-gray-500 font-bold block uppercase">
                 {vendor.category === 'Catering' ? 'Per Plate Rate' : 'Starting From'}
               </span>
-              <span className="font-black text-gray-900 text-sm">
+              <span className="font-black text-gray-900 text-lg sm:text-xl">
                 ₹{vendor.basePrice.toLocaleString('en-IN')}
-                {vendor.category === 'Catering' && <span className="text-[10px] text-gray-500 font-medium">/plate</span>}
+                {vendor.category === 'Catering' && <span className="text-xs text-gray-500 font-medium">/plate</span>}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200/60 hidden sm:flex items-center gap-1">
+              <span className="text-xs font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200/60 hidden sm:flex items-center gap-1">
                 <MapPin size={10} className="text-gray-400" />
                 <span>{getDistanceDisplay()}</span>
               </span>
@@ -217,7 +217,7 @@ const VendorCard = memo(function VendorCard({
                   e.stopPropagation();
                   onSelect(vendor);
                 }}
-                className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-md shadow-brand-primary/20 transition-all active:scale-95 flex items-center gap-1"
+                className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-sm px-4 py-2 rounded-xl shadow-md shadow-brand-primary/20 transition-all active:scale-95 flex items-center gap-1"
                 id={`book-now-btn-${vendor.id}`}
               >
                 <span>Book Now</span>

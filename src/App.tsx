@@ -40,6 +40,8 @@ import ParvaLogin from './components/LoginScreen';
 import SlidablePromoBanner from './components/SlidablePromoBanner';
 import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarketplace';
 import AuthModal from './components/AuthModal';
+import VendorAuthModal from './components/VendorAuthModal';
+import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
 
 import { Share2 } from 'lucide-react';
@@ -6353,308 +6355,35 @@ export default function App() {
       />
 
       {/* Vendor Auth & Onboarding Modal */}
-      <AnimatePresence>
-        {isVendorAuthModalOpen && (
-          <div className="fixed inset-0 z-[125] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[32px] w-full max-w-md p-6 shadow-2xl space-y-4 border border-gray-100 overflow-hidden max-h-[85vh] flex flex-col"
-            >
-              <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary">
-                    <Sparkles size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-gray-900 leading-tight">Vendor Portal Access</h3>
-                    <p className="text-[11px] text-gray-500">Sign in to manage your listings & bookings</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsVendorAuthModalOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="overflow-y-auto flex-1 space-y-4 pr-1">
-                {!isRegisteringVendor ? (
-                  /* Option A: Vendor Login */
-                  <div className="space-y-3.5">
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      Enter your 6-digit PARVA Vendor ID or registered phone number to access your business dashboard.
-                    </p>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Vendor ID or Phone</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 481029 or 9876543210"
-                        value={loginVendorId}
-                        onChange={(e) => setLoginVendorId(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition font-mono"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!loginVendorId.trim()) {
-                          showNotification('Please enter your Vendor ID or Phone.');
-                          return;
-                        }
-                        const query = loginVendorId.trim().toUpperCase();
-                        const matchingVendor = vendors.find(v => 
-                          v.id.trim().toUpperCase() === query || 
-                          (v.phone && v.phone.replace(/\D/g, '').includes(query))
-                        );
-
-                        if (matchingVendor) {
-                          const vendorUserObj = {
-                            id: matchingVendor.id,
-                            name: matchingVendor.name,
-                            role: 'vendor',
-                            vendorId: matchingVendor.id,
-                            category: matchingVendor.category,
-                            phone: matchingVendor.phone || ''
-                          };
-                          setCurrentUser(vendorUserObj);
-                          localStorage.setItem('parva_user', JSON.stringify(vendorUserObj));
-                          setIsVendorAuthModalOpen(false);
-                          setActiveTab('profile');
-                          showNotification(`Welcome back, ${matchingVendor.name}! Vendor Hub loaded.`);
-                        } else {
-                          showNotification('Vendor account not found with this ID/Phone. Please register below.');
-                        }
-                      }}
-                      className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs py-3 rounded-xl transition shadow-md shadow-brand-primary/20 active:scale-95"
-                    >
-                      Verify & Open Vendor Hub
-                    </button>
-
-                    <div className="text-center pt-2 border-t border-gray-100">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsRegisteringVendor(true);
-                          setVendorWizardStep(1);
-                        }}
-                        className="text-xs font-bold text-brand-primary hover:underline"
-                      >
-                        New partner? Register your business here
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Option B: Vendor Registration Step-by-Step Wizard */
-                  <div className="space-y-3.5">
-                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-widest text-brand-primary font-black block">Business Onboarding</span>
-                        <h4 className="font-extrabold text-xs text-gray-900">Step {vendorWizardStep} of 3</h4>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsRegisteringVendor(false)}
-                        className="text-[10px] text-gray-500 hover:text-brand-primary font-semibold"
-                      >
-                        Back to Login
-                      </button>
-                    </div>
-
-                    {vendorWizardStep === 1 && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Business / Brand Name</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Royal Grand Celebrations"
-                            value={wizardName}
-                            onChange={(e) => setWizardName(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none focus:bg-white focus:border-brand-primary"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Primary Category</label>
-                          <select
-                            value={wizardCategory}
-                            onChange={(e) => setWizardCategory(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none focus:bg-white focus:border-brand-primary"
-                          >
-                            {['Event Planner', 'Banquet Hall', 'Decorator', 'Catering', 'Photography', 'DJ & Sound', 'Bridal Makeup'].map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!wizardName.trim()) {
-                              showNotification('Please enter your business name.');
-                              return;
-                            }
-                            setVendorWizardStep(2);
-                          }}
-                          className="w-full bg-brand-primary text-white font-bold py-2.5 rounded-xl text-xs"
-                        >
-                          Next: Contact Details →
-                        </button>
-                      </div>
-                    )}
-
-                    {vendorWizardStep === 2 && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Mobile / WhatsApp Number</label>
-                          <input
-                            type="tel"
-                            maxLength={10}
-                            placeholder="10-digit number"
-                            value={wizardPhone}
-                            onChange={(e) => setWizardPhone(e.target.value.replace(/\D/g, ''))}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Operating City</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Kolhapur"
-                            value={wizardCity}
-                            onChange={(e) => setWizardCity(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setVendorWizardStep(1)}
-                            className="px-4 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs"
-                          >
-                            Back
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!wizardPhone.trim() || wizardPhone.length < 10) {
-                                showNotification('Please enter a valid 10-digit phone number.');
-                                return;
-                              }
-                              setVendorWizardStep(3);
-                            }}
-                            className="flex-1 bg-brand-primary text-white font-bold py-2.5 rounded-xl text-xs"
-                          >
-                            Next: Pricing →
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {vendorWizardStep === 3 && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Starting Base Price (₹)</label>
-                          <input
-                            type="number"
-                            placeholder="e.g. 15000"
-                            value={wizardBasePrice}
-                            onChange={(e) => setWizardBasePrice(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Short Tagline</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Premium event celebrations & decor"
-                            value={wizardTagline}
-                            onChange={(e) => setWizardTagline(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setVendorWizardStep(2)}
-                            className="px-4 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs"
-                          >
-                            Back
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const newId = `v-${Date.now().toString().slice(-6)}`;
-                              const newVendor = {
-                                id: newId,
-                                name: wizardName.trim(),
-                                category: wizardCategory,
-                                location: wizardCity.trim() || 'Kolhapur',
-                                phone: wizardPhone.trim(),
-                                whatsapp: wizardPhone.trim(),
-                                tagline: wizardTagline.trim() || `${wizardCategory} specialists in ${wizardCity}`,
-                                description: `Premier ${wizardCategory} services catering to bespoke weddings, corporate events and social celebrations.`,
-                                basePrice: Number(wizardBasePrice) || 10000,
-                                rating: 5.0,
-                                reviewCount: 1,
-                                image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&auto=format&fit=crop&q=80',
-                                services: [
-                                  {
-                                    name: 'Standard Package',
-                                    price: Number(wizardBasePrice) || 10000,
-                                    unit: 'per event',
-                                    description: 'Full end-to-end service package with on-site crew coordination.'
-                                  }
-                                ],
-                                busyDates: [],
-                                busySlots: {},
-                                approved: true
-                              };
-
-                              try {
-                                const db = getDb();
-                                const { doc, setDoc } = await import('firebase/firestore');
-                                await setDoc(doc(db, 'vendors', newId), newVendor);
-                              } catch (e) {}
-
-                              const updatedVendors = [newVendor, ...vendors];
-                              setVendors(updatedVendors);
-                              localStorage.setItem('parva_vendors_list', JSON.stringify(updatedVendors));
-
-                              const vendorUserObj = {
-                                id: newId,
-                                name: newVendor.name,
-                                role: 'vendor',
-                                vendorId: newId,
-                                category: newVendor.category,
-                                phone: newVendor.phone
-                              };
-                              setCurrentUser(vendorUserObj);
-                              localStorage.setItem('parva_user', JSON.stringify(vendorUserObj));
-                              setIsVendorAuthModalOpen(false);
-                              setIsRegisteringVendor(false);
-                              setActiveTab('profile');
-                              showNotification(`🎉 Business registered! Vendor ID: ${newId}. Dashboard active.`);
-                            }}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition"
-                          >
-                            Submit & Open Dashboard
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-
-      {/* 5. IMMERSIVE VENDOR DETAIL SHEET */}
+      <VendorAuthModal
+        isOpen={isVendorAuthModalOpen}
+        onClose={() => setIsVendorAuthModalOpen(false)}
+        vendors={vendors}
+        categoriesList={categoriesList}
+        showNotification={showNotification}
+        onSuccess={(user) => {
+          setCurrentUser(user);
+          localStorage.setItem('parva_user', JSON.stringify(user));
+          setActiveTab('profile'); // Send them to dashboard immediately
+        }}
+      />
+      
+      
+      {currentUser?.role === 'vendor' && (
+        <VendorDashboardFull
+          currentUser={currentUser}
+          vendors={vendors}
+          bookings={bookings}
+          onLogout={() => {
+            setCurrentUser(null);
+            localStorage.removeItem('parva_user');
+            showNotification('Vendor logged out safely.');
+          }}
+          showNotification={showNotification}
+          onNavigateToMessages={() => setActiveTab('messages')}
+        />
+      )}
+{/* 5. IMMERSIVE VENDOR DETAIL SHEET */}
       {selectedVendor && (
         <Helmet>
           <title>{selectedVendor.name} | Parva Events</title>
@@ -6742,6 +6471,7 @@ export default function App() {
           planningGuestSize={planningGuestSize}
           bookingFeePercentage={bookingFeePercentage}
           onNavigateToBookings={() => setActiveTab('bookings')}
+            onNavigateToMessages={(vid) => { handleSelectThread(vid); setActiveTab('messages'); }}
           handlePayWithRazorpay={(params: any) => {
             setRazorpayAmount(params.totalAmountDue);
             setRazorpayPurpose('connection');

@@ -71,19 +71,18 @@ export function AirbnbCategoryRail({
 
   return (
     <div className={`relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white border-b border-gray-100 ${className}`}>
-      <div className="flex items-center gap-2 relative">
+      <div className="flex items-center relative py-1">
         {/* Left Scroll Chevron */}
         {canScrollLeft && (
-          <div className="hidden md:flex absolute left-0 z-10 items-center h-full">
+          <div className="hidden md:flex absolute left-0 z-20 items-center h-full">
             <button
               type="button"
               onClick={() => scroll('left')}
-              className="w-7 h-7 rounded-full bg-white border border-gray-300 shadow-sm hover:border-gray-900 flex items-center justify-center text-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-md hover:border-gray-900 flex items-center justify-center text-gray-800 hover:scale-105 active:scale-95 transition cursor-pointer"
               aria-label="Scroll categories left"
             >
-              <ChevronLeft size={15} />
+              <ChevronLeft size={16} />
             </button>
-            <div className="w-8 h-full bg-gradient-to-r from-white to-transparent pointer-events-none" />
           </div>
         )}
 
@@ -91,7 +90,7 @@ export function AirbnbCategoryRail({
         <div
           ref={scrollRef}
           onScroll={checkScroll}
-          className="flex items-center gap-7 sm:gap-9 overflow-x-auto scrollbar-none py-3.5 scroll-smooth select-none px-1 w-full"
+          className="flex items-center gap-6 sm:gap-8 overflow-x-auto scrollbar-none py-4 px-6 sm:px-10 scroll-smooth select-none w-full"
         >
           {allCategories.map((cat) => {
             const isSelected = selectedCategory === cat.id || 
@@ -105,17 +104,17 @@ export function AirbnbCategoryRail({
                 key={cat.id}
                 type="button"
                 onClick={() => onSelectCategory(cat.id === 'all' ? 'all' : cat.name)}
-                className={`group flex flex-col items-center gap-1.5 shrink-0 pb-2 relative transition cursor-pointer ${
+                className={`group flex flex-col items-center gap-2 shrink-0 py-1 px-1.5 relative transition cursor-pointer ${
                   isSelected
                     ? 'text-gray-900 font-bold'
                     : 'text-gray-500 hover:text-gray-800 font-medium'
                 }`}
               >
                 {/* Category Icon / Admin Image */}
-                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden flex items-center justify-center transition-all duration-200 ${
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden flex items-center justify-center transition-all duration-200 border-2 ${
                   isSelected 
-                    ? 'ring-2 ring-rose-600 ring-offset-2 scale-105 shadow-md' 
-                    : 'ring-1 ring-gray-200 group-hover:ring-gray-400 group-hover:scale-105 shadow-sm'
+                    ? 'border-rose-600 shadow-md bg-rose-50/70 ring-2 ring-rose-500/20' 
+                    : 'border-gray-200 group-hover:border-gray-400 shadow-xs hover:shadow-sm bg-white'
                 }`}>
                   {cat.image ? (
                     <img
@@ -126,23 +125,25 @@ export function AirbnbCategoryRail({
                     />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center ${
-                      isSelected ? 'bg-rose-50 text-rose-600' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200 group-hover:text-gray-900'
+                      isSelected ? 'bg-rose-50 text-rose-600' : 'bg-gray-50 text-gray-600 group-hover:bg-gray-100 group-hover:text-gray-900'
                     }`}>
-                      <IconComponent size={32} className="stroke-[2]" />
+                      <IconComponent size={26} className="stroke-[2]" />
                     </div>
                   )}
                 </div>
 
                 {/* Category Name Label */}
-                <span className={`text-sm sm:text-base whitespace-nowrap tracking-tight ${isSelected ? 'text-gray-900 font-extrabold' : 'text-gray-600 font-semibold group-hover:text-gray-900'}`}>
+                <span className={`text-xs sm:text-sm whitespace-nowrap tracking-tight ${
+                  isSelected ? 'text-gray-900 font-black' : 'text-gray-600 font-semibold group-hover:text-gray-900'
+                }`}>
                   {cat.name}
                 </span>
 
                 {/* Active Indicator Underline */}
                 {isSelected ? (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-rose-600 rounded-full animate-in fade-in duration-200" />
+                  <span className="w-8 h-[2.5px] bg-rose-600 rounded-full animate-in fade-in duration-200" />
                 ) : (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-transparent group-hover:bg-gray-300 rounded-full transition-all" />
+                  <span className="w-8 h-[2.5px] bg-transparent group-hover:bg-gray-200 rounded-full transition-all" />
                 )}
               </button>
             );
@@ -151,15 +152,14 @@ export function AirbnbCategoryRail({
 
         {/* Right Scroll Chevron */}
         {canScrollRight && (
-          <div className="hidden md:flex absolute right-0 z-10 items-center h-full">
-            <div className="w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none" />
+          <div className="hidden md:flex absolute right-0 z-20 items-center h-full">
             <button
               type="button"
               onClick={() => scroll('right')}
-              className="w-7 h-7 rounded-full bg-white border border-gray-300 shadow-sm hover:border-gray-900 flex items-center justify-center text-gray-700 hover:scale-105 active:scale-95 transition cursor-pointer"
+              className="w-8 h-8 rounded-full bg-white border border-gray-200 shadow-md hover:border-gray-900 flex items-center justify-center text-gray-800 hover:scale-105 active:scale-95 transition cursor-pointer"
               aria-label="Scroll categories right"
             >
-              <ChevronRight size={15} />
+              <ChevronRight size={16} />
             </button>
           </div>
         )}

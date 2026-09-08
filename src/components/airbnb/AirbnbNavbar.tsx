@@ -98,10 +98,7 @@ export function AirbnbNavbar({
 
         {/* Center Navigation / Animated Search Capsule */}
         <div className="hidden md:flex flex-1 h-[48px] items-center justify-center relative">
-          <div 
-            className={`absolute transition-all duration-300 ease-in-out ${isScrolled ? 'opacity-0 scale-95 pointer-events-none translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}
-          >
-            <nav className="flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
+          <div className="relative"><nav className="flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
               <button
                 type="button"
                 onClick={() => onNavigateTab('home')}

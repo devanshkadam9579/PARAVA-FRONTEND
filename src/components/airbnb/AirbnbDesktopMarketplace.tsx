@@ -298,11 +298,11 @@ export function AirbnbDesktopMarketplace({
 
         {/* Sort & Results Bar */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <span className="text-sm sm:text-base text-gray-500 font-bold">
+          <span className="text-base sm:text-lg text-gray-600 font-extrabold">
             Showing {filteredVendors.length} verified celebration specialists in {currentCity}
           </span>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500 font-semibold hidden sm:inline">Sort by:</span>
+            <span className="text-gray-600 font-bold hidden sm:inline">Sort by:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
@@ -318,7 +318,62 @@ export function AirbnbDesktopMarketplace({
         {/* Vendors Loading State */}
         {vendors.length === 0 ? (
           <VendorGridSkeleton count={8} />
+        ) : selectedCategory !== 'all' ? (
+          /* Focused Category Grid View */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 font-display">
+                  {selectedCategory} Specialists in {currentCity}
+                </h2>
+                <p className="text-xs text-gray-500 font-medium mt-1">
+                  Showing {filteredVendors.length} verified {selectedCategory.toLowerCase()} partners with 5% escrow protection
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectCategory('all')}
+                className="text-xs font-black text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+              >
+                View all categories
+              </button>
+            </div>
+
+            {filteredVendors.length === 0 ? (
+              <div className="bg-gray-50 rounded-3xl border border-gray-200/80 p-12 text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                  <Sparkles size={28} />
+                </div>
+                <h3 className="text-lg font-black text-gray-900">
+                  No {selectedCategory} specialists in {currentCity} yet
+                </h3>
+                <p className="text-xs text-gray-500 max-w-md mx-auto font-medium">
+                  We are actively onboarding top-tier celebration partners in {currentCity}. Explore other categories or browse all verified services.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onSelectCategory('all')}
+                  className="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md transition active:scale-95"
+                >
+                  Browse All Services
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {filteredVendors.map((vendor) => (
+                  <AirbnbVendorCard
+                    key={vendor.id}
+                    vendor={vendor}
+                    onSelect={onSelectVendor}
+                    isWishlisted={wishlist.includes(vendor.id)}
+                    onToggleWishlist={onToggleWishlist}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
+          /* Default "All Services" View with Curated Rails and Master Grid */
           <div className="space-y-12">
             {/* Section 1: Horizontal Rail — Popular Specialists */}
             {popularVendors.length > 0 && (
@@ -376,9 +431,7 @@ export function AirbnbDesktopMarketplace({
               </HorizontalSection>
             )}
 
-
-
-            {/* Section 5: Horizontal Rail — Luxury Floral Decor */}
+            {/* Section 4: Horizontal Rail — Luxury Floral Decor */}
             {decorators.length > 0 && (
               <HorizontalSection
                 title="Luxury Wedding Decor & Mandap Designs"
@@ -399,7 +452,7 @@ export function AirbnbDesktopMarketplace({
             {/* Velocity Text Strip */}
             <ScrollVelocity text="CELEBRATE • CONNECT • CREATE • PARVA • " />
 
-            {/* Section 6: Horizontal Rail — Photography & Videography */}
+            {/* Section 5: Horizontal Rail — Photography & Videography */}
             {photographers.length > 0 && (
               <HorizontalSection
                 title="Celebration Photographers & Drone Cinematography"
@@ -417,7 +470,7 @@ export function AirbnbDesktopMarketplace({
               </HorizontalSection>
             )}
 
-            {/* Section 7: Horizontal Rail — Trending DJ & Sound */}
+            {/* Section 6: Horizontal Rail — Trending DJ & Sound */}
             {djs.length > 0 && (
               <HorizontalSection
                 title="Trending DJ & Live Acoustic Bands"
@@ -435,7 +488,7 @@ export function AirbnbDesktopMarketplace({
               </HorizontalSection>
             )}
 
-            {/* Section 8: All Verified Specialists Grid */}
+            {/* Section 7: All Verified Specialists Grid */}
             <section className="space-y-6 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
