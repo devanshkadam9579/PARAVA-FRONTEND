@@ -178,7 +178,9 @@ export function FooterSection({
             <ul className="space-y-2.5 text-xs font-semibold text-gray-600">
               <li>
                 <a
-                  href="/vendor"
+                  href="https://parva-vendor-app.onrender.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-rose-600 transition cursor-pointer"
                 >
                   Become a partner
@@ -186,29 +188,33 @@ export function FooterSection({
               </li>
               <li>
                 <a
-                  href="/vendor"
+                  href="https://parva-vendor-app.onrender.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-rose-600 transition cursor-pointer"
                 >
                   Vendor portal login
                 </a>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={onOpenSupport}
+                <a
+                  href="https://parva-vendor-app.onrender.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-rose-600 transition cursor-pointer"
                 >
                   Partner guidelines & safety
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={onOpenSupport}
+                <a
+                  href="https://parva-vendor-app.onrender.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-rose-600 transition cursor-pointer"
                 >
                   Monetization & payouts
-                </button>
+                </a>
               </li>
             </ul>
           </div>

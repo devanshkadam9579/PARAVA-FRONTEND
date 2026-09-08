@@ -50,18 +50,8 @@ export function AirbnbVendorDetailView({
   const [isAmenitiesOpen, setIsAmenitiesOpen] = useState(false);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
-  // Initial service selection
-  const initialServices = (vendor.services && vendor.services.length > 0)
-    ? [vendor.services[0]]
-    : [{
-        id: 's1',
-        name: 'Signature Celebration Package',
-        price: vendor.basePrice,
-        description: 'Complete setup, premium coordination, and guaranteed execution.',
-        imageUrl: images[0]
-      }];
-
-  const [selectedServices, setSelectedServices] = useState<VendorServiceItem[]>(initialServices);
+  // Initial service selection: starts with empty selection until user chooses
+  const [selectedServices, setSelectedServices] = useState<VendorServiceItem[]>([]);
   const [selectedAddons, setSelectedAddons] = useState<{ id: string; name: string; price: number }[]>([]);
   const [timeSlot, setTimeSlot] = useState<'morning' | 'evening' | 'fullday'>('evening');
   const [availabilityState, setAvailabilityState] = useState<'checking' | 'available' | 'unavailable' | 'idle'>('idle');
@@ -73,11 +63,7 @@ export function AirbnbVendorDetailView({
   const toggleService = (svc: VendorServiceItem) => {
     const exists = selectedServices.some(s => (s.id && s.id === svc.id) || s.name === svc.name);
     if (exists) {
-      if (selectedServices.length > 1) {
-        setSelectedServices(selectedServices.filter(s => (s.id ? s.id !== svc.id : s.name !== svc.name)));
-      } else {
-        setSelectedServices([]);
-      }
+      setSelectedServices(selectedServices.filter(s => (s.id ? s.id !== svc.id : s.name !== svc.name)));
     } else {
       setSelectedServices([...selectedServices, svc]);
     }
@@ -98,17 +84,19 @@ export function AirbnbVendorDetailView({
     }
   };
 
-  // Base Package & Add-on Calculations
-  const baseServicePrice = selectedServices.length > 0
-    ? selectedServices.reduce((sum, s) => sum + (isCatering ? s.price * (guestCount || 100) : s.price), 0)
-    : (isCatering ? vendor.basePrice * (guestCount || 100) : vendor.basePrice);
+  // Base Package & Add-on Calculations: only calculate when selected
+  const hasSelectedItems = selectedServices.length > 0 || selectedAddons.length > 0;
+  const baseServicePrice = selectedServices.reduce(
+    (sum, s) => sum + (isCatering ? (Number(s.price) || 0) * (guestCount || 100) : (Number(s.price) || 0)), 
+    0
+  );
 
-  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
   const subtotal = baseServicePrice + addonsTotal;
-  const bookingFee = Math.round(subtotal * 0.05); // 5% advance connection fee
-  const gst = Math.round(bookingFee * 0.18); // 18% GST on connection fee
+  const bookingFee = hasSelectedItems ? Math.round(subtotal * 0.05) : 0; // 5% advance connection fee
+  const gst = hasSelectedItems ? Math.round(bookingFee * 0.18) : 0; // 18% GST on connection fee
   const finalAdvanceDue = bookingFee + gst;
-  const balanceDueAtEvent = subtotal - bookingFee;
+  const balanceDueAtEvent = Math.max(0, subtotal - bookingFee);
 
   // Live Availability Checker using real vendor busyDates
   const checkAvailabilityLive = () => {
@@ -334,7 +322,7 @@ export function AirbnbVendorDetailView({
 
           {/* Service Packages with Dynamic Images */}
           {vendor.services && vendor.services.length > 0 && (
-            <div className="pt-8 space-y-6">
+            <div id="available-service-packages" className="pt-8 space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-black text-gray-900 font-display">
                   Available Service Packages
@@ -544,10 +532,12 @@ export function AirbnbVendorDetailView({
             <div className="flex items-baseline justify-between border-b border-gray-100 pb-4">
               <div>
                 <span className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
-                  ₹{subtotal.toLocaleString('en-IN')}
+                  {hasSelectedItems ? `₹${subtotal.toLocaleString('en-IN')}` : '₹0'}
                 </span>
                 <span className="text-xs text-gray-500 font-medium ml-1">
-                  {isCatering ? `(${guestCount || 100} guests)` : 'total event value'}
+                  {hasSelectedItems 
+                    ? (isCatering ? `(${guestCount || 100} guests)` : 'total event value')
+                    : 'select services below'}
                 </span>
               </div>
               <div className="flex items-center gap-1 text-xs font-bold text-gray-800">
@@ -644,57 +634,60 @@ export function AirbnbVendorDetailView({
 
             {/* Price Breakdown */}
             <div className="space-y-3 pt-2 text-xs">
-              {selectedServices.length > 0 ? (
-                selectedServices.map((s, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-gray-600 font-medium">
-                    <span className="truncate max-w-[180px]">{s.name} {isCatering ? `(₹${s.price} × ${guestCount || 100})` : ''}</span>
-                    <span className="font-bold text-gray-900 shrink-0">₹{(isCatering ? s.price * (guestCount || 100) : s.price).toLocaleString('en-IN')}</span>
+              {hasSelectedItems ? (
+                <>
+                  {selectedServices.map((s, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-gray-600 font-medium">
+                      <span className="truncate max-w-[180px]">{s.name} {isCatering ? `(₹${s.price} × ${guestCount || 100})` : ''}</span>
+                      <span className="font-bold text-gray-900 shrink-0">₹{(isCatering ? s.price * (guestCount || 100) : s.price).toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+
+                  {selectedAddons.length > 0 && (
+                    <div className="flex items-center justify-between text-gray-600 font-medium">
+                      <span>Custom Add-ons ({selectedAddons.length})</span>
+                      <span className="font-bold text-gray-900">+₹{addonsTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-gray-600 font-medium">
+                    <div className="flex items-center gap-1">
+                      <span>5% Date Lock Advance Fee</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowFeeInfo(!showFeeInfo)}
+                        className="text-gray-400 hover:text-gray-900 cursor-pointer"
+                      >
+                        <Info size={12} />
+                      </button>
+                    </div>
+                    <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
                   </div>
-                ))
+
+                  <div className="flex items-center justify-between text-gray-600 font-medium">
+                    <span>GST (18% on advance fee)</span>
+                    <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  {showFeeInfo && (
+                    <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-600 leading-relaxed border border-gray-200">
+                      You only pay ₹{finalAdvanceDue.toLocaleString('en-IN')} now to lock your date under Parva Escrow Guarantee. The remaining ₹{balanceDueAtEvent.toLocaleString('en-IN')} is paid directly to the vendor on event execution.
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="flex items-center justify-between text-gray-600 font-medium">
-                  <span>Standard Booking</span>
-                  <span className="font-bold text-gray-900">₹{(isCatering ? vendor.basePrice * (guestCount || 100) : vendor.basePrice).toLocaleString('en-IN')}</span>
-                </div>
-              )}
-
-              {selectedAddons.length > 0 && (
-                <div className="flex items-center justify-between text-gray-600 font-medium">
-                  <span>Custom Add-ons ({selectedAddons.length})</span>
-                  <span className="font-bold text-gray-900">+₹{addonsTotal.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between text-gray-600 font-medium">
-                <div className="flex items-center gap-1">
-                  <span>5% Date Lock Advance Fee</span>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowFeeInfo(!showFeeInfo)}
-                    className="text-gray-400 hover:text-gray-900 cursor-pointer"
-                  >
-                    <Info size={12} />
-                  </button>
-                </div>
-                <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
-              </div>
-
-              <div className="flex items-center justify-between text-gray-600 font-medium">
-                <span>GST (18% on advance fee)</span>
-                <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
-              </div>
-
-              {/* Fee explanation box */}
-              {showFeeInfo && (
-                <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-600 leading-relaxed border border-gray-200">
-                  You only pay ₹{finalAdvanceDue.toLocaleString('en-IN')} now to lock your date under Parva Escrow Guarantee. The remaining ₹{balanceDueAtEvent.toLocaleString('en-IN')} is paid directly to the vendor on event execution.
+                <div className="p-4 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center space-y-1">
+                  <p className="text-xs font-bold text-gray-700">No package selected</p>
+                  <p className="text-[11px] text-gray-500">Please select a service package or add-on on the left to calculate the advance fee.</p>
                 </div>
               )}
 
               <div className="border-t border-gray-200 pt-3 flex items-baseline justify-between">
                 <div>
                   <p className="font-black text-sm text-gray-900">Advance Payable Now</p>
-                  <p className="text-[11px] text-gray-400">Balance ₹{balanceDueAtEvent.toLocaleString('en-IN')} due at event</p>
+                  <p className="text-[11px] text-gray-400">
+                    {hasSelectedItems ? `Balance ₹${balanceDueAtEvent.toLocaleString('en-IN')} due at event` : 'Select packages to calculate'}
+                  </p>
                 </div>
                 <span className="font-black text-xl text-rose-600 font-display">
                   ₹{finalAdvanceDue.toLocaleString('en-IN')}
@@ -706,27 +699,22 @@ export function AirbnbVendorDetailView({
             <button
               type="button"
               onClick={() => {
-                if (selectedServices.length > 0) {
-                  selectedServices.forEach(s => onAddServiceToBundle(s));
-                } else {
-                  onAddServiceToBundle({
-                    id: 'default-pkg',
-                    name: 'Signature Celebration Package',
-                    price: vendor.basePrice,
-                    description: 'Standard celebration package',
-                    imageUrl: images[0]
-                  });
+                if (!hasSelectedItems) {
+                  return;
                 }
+                selectedServices.forEach(s => onAddServiceToBundle(s));
                 onProceedToCheckout();
               }}
-              disabled={availabilityState === 'unavailable' || rangeConflicts.length > 0}
-              className={`w-full py-4 rounded-2xl font-black text-sm text-white shadow-lg transition active:scale-95 cursor-pointer ${
-                availabilityState === 'unavailable' || rangeConflicts.length > 0
-                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                  : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
+              disabled={!hasSelectedItems || availabilityState === 'unavailable' || rangeConflicts.length > 0}
+              className={`w-full py-4 rounded-2xl font-black text-sm transition active:scale-95 cursor-pointer ${
+                !hasSelectedItems
+                  ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed shadow-none'
+                  : availabilityState === 'unavailable' || rangeConflicts.length > 0
+                  ? 'bg-gray-300 text-white cursor-not-allowed shadow-none'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20'
               }`}
             >
-              Reserve with 5% Advance
+              {!hasSelectedItems ? 'Select a Service Package Above' : 'Reserve with 5% Advance'}
             </button>
 
             <p className="text-center text-[11px] text-gray-400 font-medium">

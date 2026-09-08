@@ -27,6 +27,17 @@ export function AirbnbVendorCard({
   const reviewCount = vendor.reviewCount || vendor.reviews?.length || 48;
   const isCatering = (vendor.category || '').toLowerCase() === 'catering';
 
+  // Calculate lowest service price provided
+  const servicePrices = (vendor.services || [])
+    .map((s: any) => (typeof s.price === 'number' ? s.price : Number(s.price || 0)))
+    .filter((p: number) => p > 0);
+
+  const lowestPrice = servicePrices.length > 0 
+    ? Math.min(...servicePrices) 
+    : (vendor.basePrice || vendor.minBudget || 0);
+
+  const lowestService = (vendor.services || []).find((s: any) => Number(s.price) === lowestPrice);
+
   return (
     <div 
       onClick={() => onSelect(vendor)}
@@ -103,9 +114,11 @@ export function AirbnbVendorCard({
         </p>
 
         <p className="text-xs font-black text-gray-900 pt-0.5">
-          ₹{vendor.basePrice.toLocaleString('en-IN')}{' '}
+          ₹{lowestPrice.toLocaleString('en-IN')}{' '}
           <span className="text-gray-500 font-normal">
-            {isCatering ? 'per plate' : 'starting package'}
+            {lowestService?.unit 
+              ? (lowestService.unit.startsWith('/') ? lowestService.unit : `per ${lowestService.unit}`) 
+              : (isCatering ? 'per plate' : 'onwards')}
           </span>
         </p>
       </div>

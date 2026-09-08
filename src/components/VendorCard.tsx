@@ -200,7 +200,15 @@ const VendorCard = memo(function VendorCard({
                 {vendor.category === 'Catering' ? 'Per Plate Rate' : 'Starting From'}
               </span>
               <span className="font-black text-gray-900 text-lg sm:text-xl">
-                ₹{vendor.basePrice.toLocaleString('en-IN')}
+                ₹{(() => {
+                  const servicePrices = (vendor.services || [])
+                    .map((s: any) => (typeof s.price === 'number' ? s.price : Number(s.price || 0)))
+                    .filter((p: number) => p > 0);
+                  const lowestPrice = servicePrices.length > 0 
+                    ? Math.min(...servicePrices) 
+                    : (vendor.basePrice || vendor.minBudget || 0);
+                  return lowestPrice.toLocaleString('en-IN');
+                })()}
                 {vendor.category === 'Catering' && <span className="text-xs text-gray-500 font-medium">/plate</span>}
               </span>
             </div>
