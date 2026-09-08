@@ -310,11 +310,13 @@ export function AirbnbDesktopMarketplace({
       />
 
       {/* Compact Airbnb Category Filter Rail */}
-      <AirbnbCategoryRail
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onSelectCategory={onSelectCategory}
-      />
+      <div id="category-filter-rail" className="scroll-mt-20">
+        <AirbnbCategoryRail
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={onSelectCategory}
+        />
+      </div>
 
       {/* Main Centered Marketplace Content */}
       <main id="marketplace-cards-section" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 scroll-mt-6">

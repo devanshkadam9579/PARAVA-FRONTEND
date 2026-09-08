@@ -137,9 +137,13 @@ export function AirbnbVendorCard({
         <p className="text-sm sm:text-[15px] font-black text-gray-900 pt-0.5 flex items-baseline gap-1">
           <span>₹{lowestPrice.toLocaleString('en-IN')}</span>
           <span className="text-gray-500 text-xs sm:text-sm font-normal">
-            {lowestService?.unit 
-              ? (lowestService.unit.startsWith('/') ? lowestService.unit : `per ${lowestService.unit}`) 
-              : (isCatering ? 'per plate' : 'onwards')}
+            {(() => {
+              if (!lowestService?.unit) return isCatering ? 'per plate' : 'onwards';
+              const u = lowestService.unit.trim();
+              if (u.startsWith('/')) return u;
+              if (u.toLowerCase().startsWith('per')) return u;
+              return `per ${u}`;
+            })()}
           </span>
         </p>
       </div>
