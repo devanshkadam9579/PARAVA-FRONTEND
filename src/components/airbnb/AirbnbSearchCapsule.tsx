@@ -71,11 +71,11 @@ export function AirbnbSearchCapsule({
           onClick={() => setActiveDropdown(activeDropdown === 'location' ? 'none' : 'location')}
           className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'location' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
         >
-          <div className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
-            <MapPin size={12} className="text-rose-600" />
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <MapPin size={14} className="text-rose-600" />
             <span>Where</span>
           </div>
-          <div className="text-xs font-black text-gray-900 truncate mt-0.5">
+          <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
             {currentCity ? `${currentCity}, MH` : 'Search city or area'}
           </div>
         </div>
@@ -85,11 +85,11 @@ export function AirbnbSearchCapsule({
           onClick={() => setActiveDropdown(activeDropdown === 'date' ? 'none' : 'date')}
           className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'date' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
         >
-          <div className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
-            <CalendarIcon size={12} className="text-rose-600" />
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <CalendarIcon size={14} className="text-rose-600" />
             <span>When</span>
           </div>
-          <div className="text-xs font-black text-gray-900 truncate mt-0.5">
+          <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
             {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Add event date'}
           </div>
         </div>
@@ -102,11 +102,11 @@ export function AirbnbSearchCapsule({
           }`}
         >
           <div>
-            <div className="text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
-              <Users size={12} className="text-rose-600" />
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+              <Users size={14} className="text-rose-600" />
               <span>Who</span>
             </div>
-            <div className="text-xs font-black text-gray-900 truncate mt-0.5">
+            <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
               {guestCount || 100} Guests
             </div>
           </div>
@@ -119,11 +119,11 @@ export function AirbnbSearchCapsule({
               setActiveDropdown('none');
               onSearch();
             }}
-            className="w-11 h-11 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
             aria-label="Search celebration vendors"
             title="Search"
           >
-            <Search size={16} className="stroke-[2.5]" />
+            <Search size={18} className="stroke-[2.5]" />
           </button>
         </div>
       </div>

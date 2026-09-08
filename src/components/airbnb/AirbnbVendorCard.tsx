@@ -41,7 +41,7 @@ export function AirbnbVendorCard({
   return (
     <div 
       onClick={() => onSelect(vendor)}
-      className={`group flex flex-col space-y-3 cursor-pointer select-none snap-start shrink-0 w-[270px] sm:w-[285px] md:w-[295px] ${className}`}
+      className={`group flex flex-col space-y-3 cursor-pointer select-none snap-start shrink-0 w-[280px] sm:w-[295px] md:w-[310px] ${className}`}
     >
       {/* 4:3 Strict Aspect Ratio Photo Container with Subtle Glare */}
       <GlareHover borderRadius="1.25rem" className="w-full">
@@ -54,8 +54,8 @@ export function AirbnbVendorCard({
           />
 
           {/* Guest favourite pill badge */}
-          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black text-gray-900 border border-gray-200/60 shadow-xs flex items-center gap-1">
-            <ShieldCheck size={12} className="text-rose-600" />
+          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-gray-900 border border-gray-200/60 shadow-xs flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-rose-600" />
             <span>Verified Specialist</span>
           </div>
 
@@ -71,7 +71,7 @@ export function AirbnbVendorCard({
             aria-label="Wishlist button"
           >
             <Heart 
-              size={16} 
+              size={18} 
               className={isWishlisted ? 'fill-rose-500 text-rose-500' : 'stroke-[2.5] text-white drop-shadow-md'} 
             />
           </button>
@@ -94,28 +94,28 @@ export function AirbnbVendorCard({
 
       {/* Details Info with Consistent Heights & Clamping */}
       <div className="flex flex-col space-y-1">
-        <div className="flex items-start justify-between text-xs gap-2 min-h-[22px]">
-          <h3 className="font-extrabold text-sm text-gray-900 truncate leading-snug group-hover:text-rose-600 transition-colors">
+        <div className="flex items-start justify-between gap-2 min-h-[24px]">
+          <h3 className="font-extrabold text-[15px] sm:text-base text-gray-900 truncate leading-snug group-hover:text-rose-600 transition-colors">
             {vendor.name}
           </h3>
           <div className="flex items-center gap-1 shrink-0 mt-0.5">
-            <Star size={12} className="fill-amber-400 text-amber-400" />
-            <span className="font-black text-xs text-gray-900">
+            <Star size={13} className="fill-amber-400 text-amber-400" />
+            <span className="font-black text-sm text-gray-900">
               {(vendor.rating || 4.9).toFixed(1)}
             </span>
-            <span className="text-gray-400 text-[11px]">({reviewCount})</span>
+            <span className="text-gray-400 text-xs font-normal">({reviewCount})</span>
           </div>
         </div>
 
-        <p className="text-xs text-gray-500 truncate font-medium flex items-center gap-1">
+        <p className="text-sm text-gray-500 truncate font-medium flex items-center gap-1.5">
           <span>{vendor.category}</span>
           <span>·</span>
           <span>{vendor.location || 'Maharashtra'}</span>
         </p>
 
-        <p className="text-xs font-black text-gray-900 pt-0.5">
+        <p className="text-sm sm:text-[15px] font-black text-gray-900 pt-0.5">
           ₹{lowestPrice.toLocaleString('en-IN')}{' '}
-          <span className="text-gray-500 font-normal">
+          <span className="text-gray-500 text-xs sm:text-sm font-normal">
             {lowestService?.unit 
               ? (lowestService.unit.startsWith('/') ? lowestService.unit : `per ${lowestService.unit}`) 
               : (isCatering ? 'per plate' : 'onwards')}
