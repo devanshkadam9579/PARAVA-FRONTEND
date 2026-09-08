@@ -149,7 +149,7 @@ export function AirbnbDesktopMarketplace({
   const djs = vendors.filter(v => (v.category || '').toLowerCase().includes('dj'));
 
   // Common Header
-  const renderNavbar = (showSearch = true) => (
+  const renderNavbar = () => (
     <AirbnbNavbar
       categories={categories}
       selectedCategory={selectedCategory}
@@ -167,15 +167,6 @@ export function AirbnbDesktopMarketplace({
       onOpenSupport={onOpenSupport}
       onOpenNotifications={onOpenNotifications}
       unreadCount={unreadCount}
-      currentCity={currentCity}
-      onSelectCity={onSelectCity}
-      cities={cities}
-      eventDate={planningStartDate}
-      onDateChange={onDateChange}
-      guestCount={planningGuestSize}
-      onGuestCountChange={onGuestCountChange}
-      onSearch={() => {}}
-      showSearchCapsule={showSearch}
     />
   );
 
@@ -183,7 +174,7 @@ export function AirbnbDesktopMarketplace({
   if (isCheckoutOpen && bundledItems.length > 0) {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
-        {renderNavbar(false)}
+        {renderNavbar()}
         <AirbnbCheckoutView
           bundledItems={bundledItems}
           planningDate={planningStartDate}
@@ -207,7 +198,7 @@ export function AirbnbDesktopMarketplace({
   if (selectedVendor) {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
-        {renderNavbar(false)}
+        {renderNavbar()}
         <AirbnbVendorDetailView
           vendor={selectedVendor}
           onBack={onCloseVendorDetail}
@@ -229,7 +220,7 @@ export function AirbnbDesktopMarketplace({
   if (activeTab === 'bookings') {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
-        {renderNavbar(false)}
+        {renderNavbar()}
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <MyBookingsView
             bookings={bookings}
@@ -249,7 +240,7 @@ export function AirbnbDesktopMarketplace({
   if (activeTab === 'chat') {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
-        {renderNavbar(false)}
+        {renderNavbar()}
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <ChatTab />
         </div>
@@ -262,7 +253,7 @@ export function AirbnbDesktopMarketplace({
   if (activeTab === 'profile') {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
-        {renderNavbar(false)}
+        {renderNavbar()}
         <CustomerProfileView
           currentUser={currentUser}
           bookings={bookings}
@@ -278,34 +269,51 @@ export function AirbnbDesktopMarketplace({
     );
   }
 
-  // 6. Homepage & Marketplace Feed (Direct Airbnb Layout)
+  // 6. Homepage & Marketplace Feed (Default)
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
-      {renderNavbar(true)}
+      {renderNavbar()}
+
+      {/* Hero Section with Embedded High-Visibility Search */}
+      <HeroSection
+        currentCity={currentCity}
+        onSelectCity={onSelectCity}
+        cities={cities}
+        eventDate={planningStartDate}
+        onDateChange={onDateChange}
+        guestCount={planningGuestSize}
+        onGuestCountChange={onGuestCountChange}
+        onSearch={() => {}}
+      />
+
+      {/* Compact Airbnb Category Filter Rail */}
+      <AirbnbCategoryRail
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={onSelectCategory}
+      />
 
       {/* Main Centered Marketplace Content */}
-      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
 
-        {/* Sort & Results Bar (Visible when category is filtered) */}
-        {selectedCategory !== 'all' && (
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <span className="text-base sm:text-lg text-gray-600 font-extrabold">
-              Showing {filteredVendors.length} verified celebration specialists in {currentCity}
-            </span>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-600 font-bold hidden sm:inline">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-white border-2 border-rose-500 rounded-full px-5 py-2 font-bold text-gray-900 outline-none focus:ring-4 focus:ring-rose-100 hover:border-rose-600 transition shadow-sm cursor-pointer appearance-none relative pr-10 hover:bg-gray-50 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%23111827%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_0.75rem_center] bg-[length:1.2em_1.2em]"
-              >
-                <option value="recommended" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Top Rated ⭐</option>
-                <option value="price_low" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: Low to High ₹</option>
-                <option value="price_high" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: High to Low ₹</option>
-              </select>
-            </div>
+        {/* Sort & Results Bar */}
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <span className="text-base sm:text-lg text-gray-600 font-extrabold">
+            Showing {filteredVendors.length} verified celebration specialists in {currentCity}
+          </span>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-600 font-bold hidden sm:inline">Sort by:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-white border-2 border-rose-500 rounded-full px-5 py-2 font-bold text-gray-900 outline-none focus:ring-4 focus:ring-rose-100 hover:border-rose-600 transition shadow-sm cursor-pointer appearance-none relative pr-10 hover:bg-gray-50 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%23111827%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_0.75rem_center] bg-[length:1.2em_1.2em]"
+            >
+              <option value="recommended" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Top Rated ⭐</option>
+              <option value="price_low" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: Low to High ₹</option>
+              <option value="price_high" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: High to Low ₹</option>
+            </select>
           </div>
-        )}
+        </div>
 
         {/* Vendors Loading State */}
         {vendors.length === 0 ? (

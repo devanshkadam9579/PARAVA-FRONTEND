@@ -47,15 +47,14 @@ export function HorizontalSection({
   return (
     <section className={`space-y-4 ${className}`}>
       {/* Header with Title and Scroll Controls */}
-      <div className="flex items-center justify-between gap-4">
-        <div 
-          onClick={onActionClick}
-          className={`flex items-center gap-1.5 ${onActionClick ? 'cursor-pointer group' : ''}`}
-        >
-          <h2 className="text-xl sm:text-2xl font-black text-gray-900 font-display tracking-tight group-hover:text-rose-600 transition-colors">
-            {title}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-display tracking-tight flex items-center gap-2">
+            <span>{title}</span>
           </h2>
-          <ChevronRight size={20} className="text-gray-900 stroke-[2.5] group-hover:translate-x-1 transition-transform" />
+          {subtitle && (
+            <p className="text-sm sm:text-base text-gray-500 font-bold mt-1">{subtitle}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -63,7 +62,7 @@ export function HorizontalSection({
             <button
               type="button"
               onClick={onActionClick}
-              className="text-xs font-bold text-gray-900 hover:text-rose-600 underline underline-offset-4 mr-2 transition cursor-pointer"
+              className="text-xs font-bold text-gray-900 hover:text-brand-primary underline underline-offset-4 mr-2 transition"
             >
               {actionText}
             </button>
@@ -112,5 +111,3 @@ export function HorizontalSection({
     </section>
   );
 }
-
-export default HorizontalSection;

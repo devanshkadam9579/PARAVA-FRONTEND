@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Menu, User as UserIcon, Globe, Bell, ShoppingCart, LogOut, 
   Calendar, Heart, MessageSquare, Headphones, ShieldCheck, Sparkles,
-  Award, Users, ChevronDown, Check, Search, Building2, UtensilsCrossed,
-  Camera, Music, Palette, Grid
+  Award, Users, ChevronDown, Check, Search
 } from 'lucide-react';
 import { ParvaLogo } from './ParvaLogo';
-import { AirbnbSearchCapsule } from './AirbnbSearchCapsule';
 
 export interface AirbnbNavbarProps {
   categories: { id: string; name: string; icon?: any; image?: string }[];
@@ -22,26 +20,28 @@ export interface AirbnbNavbarProps {
   onOpenSupport: () => void;
   onOpenNotifications: () => void;
   unreadCount: number;
-  currentCity?: string;
-  onSelectCity?: (city: string) => void;
-  cities?: string[];
-  eventDate?: string;
-  onDateChange?: (date: string) => void;
-  guestCount?: number;
-  onGuestCountChange?: (guests: number) => void;
-  onSearch?: () => void;
-  showSearchCapsule?: boolean;
 }
 
-// 3D Category icons matching Airbnb style
-const NAV_CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🌐', label: 'All Services' },
-  { id: 'Banquet Hall', name: 'Venues', icon: '🏰', label: 'Venues' },
-  { id: 'Catering', name: 'Catering', icon: '🍽️', label: 'Catering' },
-  { id: 'Decorators', name: 'Decor', icon: '🎈', label: 'Decorators' },
-  { id: 'Photographer', name: 'Photography', icon: '📷', label: 'Photographers' },
-  { id: 'DJ', name: 'DJ & Sound', icon: '🎧', label: 'DJ & Sound' },
-];
+// Curated high-definition category imagery mapping (Zero emojis)
+const CATEGORY_IMAGE_MAP: Record<string, string> = {
+  'all': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=120',
+  'Catering': 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=120',
+  'Decorator': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Decorators': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Decoration': 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=120',
+  'Banquet Hall': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'Venues': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'Venue': 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=120',
+  'DJ': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=120',
+  'DJ & Sound': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=120',
+  'Photographer': 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=120',
+  'Photography': 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=120',
+  'Makeup Artist': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=120',
+  'Makeup Artists': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=120',
+  'Cake & Desserts': 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&q=80&w=120',
+  'Event Planner': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=120',
+  'Event Planners': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=120'
+};
 
 export function AirbnbNavbar({
   categories,
@@ -56,23 +56,14 @@ export function AirbnbNavbar({
   onOpenCart,
   onOpenSupport,
   onOpenNotifications,
-  unreadCount,
-  currentCity = 'Kolhapur',
-  onSelectCity = () => {},
-  cities = [],
-  eventDate = '',
-  onDateChange = () => {},
-  guestCount = 100,
-  onGuestCountChange = () => {},
-  onSearch = () => {},
-  showSearchCapsule = true
+  unreadCount
 }: AirbnbNavbarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 80);
+      setIsScrolled(window.scrollY > 120);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -86,95 +77,108 @@ export function AirbnbNavbar({
     return 'U';
   };
 
+  const navCategories = [
+    { id: 'all', name: 'All Services', image: CATEGORY_IMAGE_MAP['all'] },
+    ...categories.map(c => ({
+      id: c.name,
+      name: c.name,
+      image: c.image || CATEGORY_IMAGE_MAP[c.name] || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=120'
+    }))
+  ];
+
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all font-sans">
-      {/* 1. Top Navbar Row: Logo | Center Categories | Right Partner + User Menu */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[76px] flex items-center justify-between gap-4">
-        {/* Left: Brand Logo */}
-        <div className="shrink-0">
-          <ParvaLogo 
-            size="md"
-            onClick={() => {
-              onSelectCategory('all');
-              onNavigateTab('home');
-            }}
-          />
-        </div>
+    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all">
+      {/* Top Bar: Logo, Concierge, Cart, Profile */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-4">
+        {/* Brand Logo */}
+        <ParvaLogo 
+          size="md"
+          onClick={() => onNavigateTab('home')}
+        />
 
-        {/* Center: Category Mode Tabs with 3D Icons & Bottom Underline Indicator */}
-        <nav className="hidden md:flex items-center gap-2 sm:gap-6 lg:gap-8 h-full">
-          {NAV_CATEGORIES.map((cat) => {
-            const isSelected = 
-              (cat.id === 'all' && (selectedCategory === 'all' || !selectedCategory)) ||
-              (cat.id !== 'all' && (
-                selectedCategory.toLowerCase().includes(cat.id.toLowerCase()) ||
-                selectedCategory.toLowerCase().includes(cat.name.toLowerCase()) ||
-                selectedCategory.toLowerCase().includes(cat.label.toLowerCase())
-              ));
-
-            return (
+        {/* Center Navigation / Animated Search Capsule */}
+        <div className="hidden md:flex flex-1 h-[48px] items-center justify-center relative">
+          <div className="relative"><nav className="flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
               <button
-                key={cat.id}
                 type="button"
-                onClick={() => {
-                  onSelectCategory(cat.id === 'all' ? 'all' : cat.name);
-                  if (activeTab !== 'home') onNavigateTab('home');
-                }}
-                className={`relative flex items-center gap-2 h-full px-2 text-sm font-semibold transition cursor-pointer select-none ${
-                  isSelected
-                    ? 'text-gray-950 font-extrabold'
-                    : 'text-gray-500 hover:text-gray-900'
+                onClick={() => onNavigateTab('home')}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                  activeTab === 'home' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <span className="text-xl filter drop-shadow-xs">{cat.icon}</span>
-                <span className="whitespace-nowrap">{cat.name}</span>
-                {isSelected && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-gray-950 rounded-full animate-in fade-in duration-150" />
-                )}
+                Explore Services
               </button>
-            );
-          })}
-        </nav>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('bookings')}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                  activeTab === 'bookings' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                My Reservations
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('chat')}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                  activeTab === 'chat' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Messages
+              </button>
+            </nav>
+          </div>
 
-        {/* Right: Partner link, Language/Globe, Concierge, Cart, Profile */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Become a Partner Link */}
-          <a
-            href="https://parva-vendor-app.onrender.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center text-xs sm:text-sm font-bold text-gray-800 hover:bg-gray-100 px-3.5 py-2 rounded-full transition cursor-pointer"
+          <div 
+            className={`absolute transition-all duration-300 ease-in-out cursor-pointer ${isScrolled ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-110 pointer-events-none -translate-y-2'} flex items-center justify-center`}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            Become a partner
-          </a>
+            <div className="flex items-center bg-white border border-gray-300 rounded-full shadow-sm hover:shadow-md transition pl-5 pr-2 py-2 gap-4">
+              <span className="text-sm font-bold text-gray-900">Anywhere</span>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <span className="text-sm font-bold text-gray-900">Anytime</span>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <span className="text-sm text-gray-500">Add guests</span>
+              <div className="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-white ml-2">
+                <Search size={14} strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </div>
 
-          {/* Region / Globe Selector */}
-          <button
-            type="button"
-            onClick={() => {}}
-            className="p-2.5 hover:bg-gray-100 rounded-full text-gray-700 transition hidden sm:flex items-center justify-center cursor-pointer"
-            title={`Current Region: ${currentCity}`}
-          >
-            <Globe size={18} />
-          </button>
-
+        {/* Right Actions Menu */}
+        <div className="flex items-center gap-3">
           {/* 24/7 Concierge Support */}
           <button
             type="button"
             onClick={onOpenSupport}
-            className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-full transition"
+            className="hidden lg:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition"
             title="24/7 Celebration Assistance"
           >
             <Headphones size={15} className="text-rose-600" />
-            <span>Concierge</span>
+            <span>24/7 Concierge</span>
+          </button>
+
+          {/* Notifications Bell */}
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className="p-2.5 hover:bg-gray-100 rounded-full text-gray-700 transition relative"
+            title="Notifications"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Plan Bundle / Cart */}
           <button
             type="button"
             onClick={onOpenCart}
-            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition active:scale-95 relative"
-            title="View Event Plan"
+            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 rounded-full text-xs font-extrabold transition active:scale-95 relative"
           >
             <ShoppingCart size={15} />
             <span className="hidden sm:inline">Event Plan</span>
@@ -185,13 +189,12 @@ export function AirbnbNavbar({
             )}
           </button>
 
-          {/* User Profile Dropdown Pill */}
+          {/* User Profile Pill Dropdown */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-300 rounded-full hover:shadow-md transition active:scale-95 bg-white cursor-pointer"
-              aria-label="User navigation menu"
+              className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-200 rounded-full hover:shadow-md transition active:scale-95 bg-white"
             >
               <Menu size={16} className="text-gray-600" />
               <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
@@ -199,10 +202,10 @@ export function AirbnbNavbar({
               </div>
             </button>
 
-            {/* Profile Dropdown Menu */}
+            {/* Profile Menu Dropdown Modal */}
             {isUserMenuOpen && (
               <div 
-                className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
                 onClick={() => setIsUserMenuOpen(false)}
               >
                 {currentUser ? (
@@ -259,22 +262,14 @@ export function AirbnbNavbar({
                     <button
                       type="button"
                       onClick={onOpenLogin}
-                      className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-gray-50 cursor-pointer"
+                      className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-gray-50"
                     >
                       Log In / Sign Up
                     </button>
-                    <a
-                      href="https://parva-vendor-app.onrender.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
-                    >
-                      <span>Become a Partner</span>
-                    </a>
                     <button
                       type="button"
                       onClick={onOpenSupport}
-                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-50"
                     >
                       Help Centre
                     </button>
@@ -285,24 +280,6 @@ export function AirbnbNavbar({
           </div>
         </div>
       </div>
-
-      {/* 2. Floating Centered Search Capsule Row (Visible when showSearchCapsule is true) */}
-      {showSearchCapsule && activeTab === 'home' && (
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-1 flex justify-center">
-          <AirbnbSearchCapsule
-            currentCity={currentCity}
-            onSelectCity={onSelectCity}
-            cities={cities}
-            eventDate={eventDate}
-            onDateChange={onDateChange}
-            guestCount={guestCount}
-            onGuestCountChange={onGuestCountChange}
-            onSearch={onSearch}
-          />
-        </div>
-      )}
     </header>
   );
 }
-
-export default AirbnbNavbar;
