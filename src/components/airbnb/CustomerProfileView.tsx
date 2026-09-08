@@ -285,7 +285,17 @@ export function CustomerProfileView({
                         />
                       </div>
                       <div className="p-4 space-y-1">
-                        <h4 className="font-extrabold text-sm text-gray-900 truncate">{vendor.name}</h4>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h4 className="font-extrabold text-sm text-gray-900 truncate">{vendor.name}</h4>
+                          {vendor.verified !== false && (
+                            <img 
+                              src="/verified-badge.png" 
+                              alt="Verified" 
+                              className="w-4 h-4 object-contain shrink-0" 
+                              title="Admin Verified Specialist" 
+                            />
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">{vendor.category} · {vendor.location}</p>
                         <p className="text-xs font-black text-gray-900 pt-1">
                           ₹{vendor.basePrice.toLocaleString('en-IN')}{' '}

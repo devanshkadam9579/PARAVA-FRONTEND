@@ -359,11 +359,12 @@ export function AirbnbDesktopMarketplace({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
                 {filteredVendors.map((vendor) => (
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-full"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -387,6 +388,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -405,6 +407,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -423,6 +426,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -441,6 +445,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -462,6 +467,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -480,6 +486,7 @@ export function AirbnbDesktopMarketplace({
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-[280px] sm:w-[300px] md:w-[315px] shrink-0"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}
@@ -501,11 +508,12 @@ export function AirbnbDesktopMarketplace({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
                 {filteredVendors.map((vendor) => (
                   <AirbnbVendorCard
                     key={vendor.id}
                     vendor={vendor}
+                    className="w-full"
                     onSelect={onSelectVendor}
                     isWishlisted={wishlist.includes(vendor.id)}
                     onToggleWishlist={onToggleWishlist}

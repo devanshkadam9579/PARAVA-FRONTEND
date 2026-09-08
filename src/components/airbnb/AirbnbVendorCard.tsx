@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Star, ShieldCheck, MapPin } from 'lucide-react';
+import { Heart, Star } from 'lucide-react';
 import { Vendor } from '../../types';
 import { GlareHover } from '../ui/glare-hover';
 
@@ -37,11 +37,12 @@ export function AirbnbVendorCard({
     : (vendor.basePrice || vendor.minBudget || 0);
 
   const lowestService = (vendor.services || []).find((s: any) => Number(s.price) === lowestPrice);
+  const isVerified = vendor.verified !== false;
 
   return (
     <div 
       onClick={() => onSelect(vendor)}
-      className={`group flex flex-col space-y-3 cursor-pointer select-none snap-start shrink-0 w-[280px] sm:w-[295px] md:w-[310px] ${className}`}
+      className={`group flex flex-col space-y-3 cursor-pointer select-none transition-transform duration-200 ${className || 'w-full'}`}
     >
       {/* 4:3 Strict Aspect Ratio Photo Container with Subtle Glare */}
       <GlareHover borderRadius="1.25rem" className="w-full">
@@ -53,11 +54,17 @@ export function AirbnbVendorCard({
             loading="lazy"
           />
 
-          {/* Guest favourite pill badge */}
-          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-gray-900 border border-gray-200/60 shadow-xs flex items-center gap-1.5">
-            <ShieldCheck size={14} className="text-rose-600" />
-            <span>Verified Specialist</span>
-          </div>
+          {/* 3D Green Verified Badge Overlay */}
+          {isVerified && (
+            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md pl-2 pr-3 py-1 rounded-full text-xs font-black text-gray-900 border border-gray-200/80 shadow-xs flex items-center gap-1.5 select-none">
+              <img 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                className="w-4 h-4 object-contain shrink-0" 
+              />
+              <span>Verified Specialist</span>
+            </div>
+          )}
 
           {/* Wishlist Heart */}
           <button
@@ -66,7 +73,7 @@ export function AirbnbVendorCard({
               e.stopPropagation();
               onToggleWishlist(vendor.id, e);
             }}
-            className="absolute top-3 right-3 p-2 rounded-full text-white hover:scale-110 active:scale-90 transition bg-black/20 backdrop-blur-xs cursor-pointer"
+            className="absolute top-3 right-3 p-2 rounded-full text-white hover:scale-110 active:scale-90 transition bg-black/25 backdrop-blur-xs cursor-pointer z-10"
             title={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
             aria-label="Wishlist button"
           >
@@ -78,12 +85,12 @@ export function AirbnbVendorCard({
 
           {/* Carousel Dots on Hover */}
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               {images.slice(0, 5).map((_, idx) => (
                 <span
                   key={idx}
                   className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    idx === currentImgIndex ? 'bg-white w-3' : 'bg-white/60'
+                    idx === currentImgIndex ? 'bg-white w-3 shadow-xs' : 'bg-white/60'
                   }`}
                 />
               ))}
@@ -92,29 +99,43 @@ export function AirbnbVendorCard({
         </div>
       </GlareHover>
 
-      {/* Details Info with Consistent Heights & Clamping */}
-      <div className="flex flex-col space-y-1">
-        <div className="flex items-start justify-between gap-2 min-h-[24px]">
-          <h3 className="font-extrabold text-[15px] sm:text-base text-gray-900 truncate leading-snug group-hover:text-rose-600 transition-colors">
-            {vendor.name}
-          </h3>
-          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+      {/* Details Info with Consistent Spacing & Boundaries */}
+      <div className="flex flex-col space-y-1.5 px-0.5">
+        {/* Title & Rating Row */}
+        <div className="flex items-center justify-between gap-3 min-h-[26px]">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <h3 className="font-extrabold text-[15px] sm:text-base text-gray-900 truncate leading-snug group-hover:text-rose-600 transition-colors">
+              {vendor.name}
+            </h3>
+            {isVerified && (
+              <img 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0" 
+                title="Admin Verified Specialist" 
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 bg-gray-50/90 px-2 py-0.5 rounded-md border border-gray-100">
             <Star size={13} className="fill-amber-400 text-amber-400" />
-            <span className="font-black text-sm text-gray-900">
+            <span className="font-black text-xs sm:text-sm text-gray-900">
               {(vendor.rating || 4.9).toFixed(1)}
             </span>
-            <span className="text-gray-400 text-xs font-normal">({reviewCount})</span>
+            <span className="text-gray-400 text-[11px] sm:text-xs font-medium">({reviewCount})</span>
           </div>
         </div>
 
-        <p className="text-sm text-gray-500 truncate font-medium flex items-center gap-1.5">
-          <span>{vendor.category}</span>
-          <span>·</span>
-          <span>{vendor.location || 'Maharashtra'}</span>
+        {/* Category & City Location */}
+        <p className="text-xs sm:text-sm text-gray-500 truncate font-medium flex items-center gap-1.5">
+          <span className="truncate">{vendor.category}</span>
+          <span className="text-gray-300">·</span>
+          <span className="truncate">{vendor.location || 'Maharashtra'}</span>
         </p>
 
-        <p className="text-sm sm:text-[15px] font-black text-gray-900 pt-0.5">
-          ₹{lowestPrice.toLocaleString('en-IN')}{' '}
+        {/* Dynamic Starting Price Display */}
+        <p className="text-sm sm:text-[15px] font-black text-gray-900 pt-0.5 flex items-baseline gap-1">
+          <span>₹{lowestPrice.toLocaleString('en-IN')}</span>
           <span className="text-gray-500 text-xs sm:text-sm font-normal">
             {lowestService?.unit 
               ? (lowestService.unit.startsWith('/') ? lowestService.unit : `per ${lowestService.unit}`) 
@@ -125,4 +146,5 @@ export function AirbnbVendorCard({
     </div>
   );
 }
+
 export default AirbnbVendorCard;

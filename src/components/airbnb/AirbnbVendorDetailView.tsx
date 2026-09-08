@@ -137,9 +137,19 @@ export function AirbnbVendorDetailView({
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 font-display tracking-tight">
-              {vendor.name}
-            </h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 font-display tracking-tight">
+                {vendor.name}
+              </h1>
+              {vendor.verified !== false && (
+                <img 
+                  src="/verified-badge.png" 
+                  alt="Verified" 
+                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0" 
+                  title="Admin Verified Specialist" 
+                />
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600 mt-2 font-medium">
               <div className="flex items-center gap-1">
                 <Star size={14} className="fill-amber-400 text-amber-400" />
@@ -147,11 +157,15 @@ export function AirbnbVendorDetailView({
                 <span className="text-gray-400">·</span>
                 <span className="underline font-bold text-gray-900">142 reviews</span>
               </div>
-              <span>·</span>
-              <div className="flex items-center gap-1 font-bold text-gray-900">
-                <ShieldCheck size={15} className="text-rose-600" />
-                <span>Verified Specialist</span>
-              </div>
+              {vendor.verified !== false && (
+                <>
+                  <span>·</span>
+                  <div className="flex items-center gap-1.5 font-bold text-gray-900 bg-emerald-50/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <img src="/verified-badge.png" alt="Verified" className="w-4 h-4 object-contain" />
+                    <span className="text-xs font-black text-emerald-800">Verified Specialist</span>
+                  </div>
+                </>
+              )}
               <span>·</span>
               <div className="flex items-center gap-1">
                 <MapPin size={14} className="text-gray-400" />
@@ -258,11 +272,15 @@ export function AirbnbVendorDetailView({
           {/* Key Highlights */}
           <div className="pt-8 space-y-5">
             <div className="flex items-start gap-4">
-              <ShieldCheck size={24} className="text-rose-600 shrink-0 mt-0.5" />
+              <img 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                className="w-6 h-6 object-contain shrink-0 mt-0.5" 
+              />
               <div>
-                <h4 className="font-extrabold text-sm text-gray-900">Verified Specialist</h4>
+                <h4 className="font-extrabold text-sm text-gray-900">Admin Verified Specialist</h4>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  One of the most loved celebration specialists on Parva based on ratings and reliability.
+                  Audited and verified by Parva administration with 100% price transparency and authenticity.
                 </p>
               </div>
             </div>

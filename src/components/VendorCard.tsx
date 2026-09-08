@@ -185,9 +185,19 @@ const VendorCard = memo(function VendorCard({
               </div>
             </div>
 
-            <h3 className="font-extrabold text-lg sm:text-xl text-gray-900 leading-snug line-clamp-1">
-              {vendor.name}
-            </h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-extrabold text-lg sm:text-xl text-gray-900 leading-snug line-clamp-1">
+                {vendor.name}
+              </h3>
+              {vendor.verified !== false && (
+                <img 
+                  src="/verified-badge.png" 
+                  alt="Verified" 
+                  className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" 
+                  title="Admin Verified Specialist" 
+                />
+              )}
+            </div>
 
             <p className="text-base text-gray-500 line-clamp-1 font-medium">
               {vendor.tagline || vendor.description}
