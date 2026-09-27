@@ -250,103 +250,20 @@ export function AirbnbVendorDetailView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-4">
         {/* Left Column (60% on Desktop) */}
         <div className="lg:col-span-7 space-y-10 divide-y divide-gray-200">
-          {/* Host & Specialist Info */}
-          <div className="flex items-center justify-between pb-8">
-            <div>
-              <h2 className="text-xl font-black text-gray-900 font-display">
-                Hosted by {vendor.founderName || vendor.name}
-              </h2>
-              <p className="text-xs text-gray-500 mt-1 font-medium">
-                {vendor.experience || '8+ years'} celebration experience · &lt; 15 mins response time
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-full overflow-hidden bg-rose-50 border border-gray-200 shadow-xs shrink-0">
-              <img
-                src={vendor.founderImage || images[0]}
-                alt={vendor.founderName || vendor.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-
-          {/* Key Highlights */}
-          <div className="pt-8 space-y-5">
-            <div className="flex items-start gap-4">
-              <img 
-                src="/verified-badge.png" 
-                alt="Verified" 
-                className="w-6 h-6 object-contain shrink-0 mt-0.5" 
-              />
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">Admin Verified Specialist</h4>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Audited and verified by Parva administration with 100% price transparency and authenticity.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <Sparkles size={24} className="text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-extrabold text-sm text-gray-900">Escrow Protected Advance</h4>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Lock your date with only a 5% advance fee. Balance payable directly to vendor on event day.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="pt-8 space-y-4">
-            <h3 className="text-xl font-black text-gray-900 font-display">
-              About this service
-            </h3>
-            <p className="text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line">
-              {vendor.description || `${vendor.name} delivers exceptional celebration services in ${vendor.location || 'Maharashtra'}. With bespoke styling, verified equipment, and dedicated on-site coordination.`}
-            </p>
-          </div>
-
-          {/* Service Inclusions & Amenities */}
-          <div className="pt-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-gray-900 font-display">
-                What this service offers
-              </h3>
-            </div>
-
-            <div className="w-full">
-              <AnimatedList
-                items={vendor.features || [
-                  'Complete Setup & Breakdown Included',
-                  'Dedicated On-Site Coordination Supervisor',
-                  'Commercial Grade Equipment & Redundancy',
-                  'Aadhaar Verified Staff & Insured Service',
-                  'Premium Backup Available'
-                ]}
-                showGradients={true}
-                enableArrowNavigation={true}
-                displayScrollbar={false}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsAmenitiesOpen(true)}
-              className="px-6 py-3 border border-gray-900 hover:bg-gray-50 text-gray-900 text-xs font-extrabold rounded-2xl transition cursor-pointer"
-            >
-              Show all amenities & inclusions
-            </button>
-          </div>
-
-          {/* Service Packages with Dynamic Images */}
+          {/* 1. TOP SECTION: Available Service Packages with Dynamic Images */}
           {vendor.services && vendor.services.length > 0 && (
-            <div id="available-service-packages" className="pt-8 space-y-6">
+            <div id="available-service-packages" className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-gray-900 font-display">
-                  Available Service Packages
-                </h3>
-                <span className="text-xs text-gray-500 font-medium">
-                  {vendor.services.length} packages available
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 font-display">
+                    Available Service Packages
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                    Choose from {vendor.services.length} curated packages tailored for your celebration
+                  </p>
+                </div>
+                <span className="text-xs font-black bg-rose-50 text-rose-700 px-3 py-1 rounded-full border border-rose-200 shrink-0">
+                  {vendor.services.length} Packages
                 </span>
               </div>
 
@@ -420,9 +337,12 @@ export function AirbnbVendorDetailView({
 
           {/* Add-on Options */}
           <div className="pt-8 space-y-6">
-            <h3 className="text-xl font-black text-gray-900 font-display">
-              Custom Add-on Options
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 font-display">
+                Custom Add-on Options
+              </h3>
+              <span className="text-xs text-gray-500 font-medium">Optional Enhancements</span>
+            </div>
             <div className="space-y-3">
               {availableAddons.map((addon) => {
                 const isChecked = selectedAddons.some(a => a.id === addon.id);
@@ -457,13 +377,20 @@ export function AirbnbVendorDetailView({
             </div>
           </div>
 
-          {/* Month-wise Interactive Availability Calendar Section */}
+          {/* 2. SECOND SECTION: Month-wise Interactive Availability Calendar */}
           <div className="pt-8 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-gray-900 font-display">
-                Vendor Availability Calendar
-              </h3>
-              <span className="text-xs text-gray-500 font-medium">Real-time sync</span>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 font-display">
+                  Vendor Availability Calendar
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                  Select your event date to lock availability directly with {vendor.name}
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                ● Live Sync
+              </span>
             </div>
 
             <CalendarRangeSelect
@@ -477,7 +404,95 @@ export function AirbnbVendorDetailView({
             />
           </div>
 
-          {/* Customer Reviews Section */}
+          {/* 3. Host & Specialist Info */}
+          <div className="flex items-center justify-between pt-8 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 font-display">
+                Hosted by {vendor.founderName || vendor.name}
+              </h2>
+              <p className="text-xs text-gray-500 mt-1 font-medium">
+                {vendor.experience || '8+ years'} celebration experience · &lt; 15 mins response time
+              </p>
+            </div>
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-rose-50 border border-gray-200 shadow-xs shrink-0">
+              <img
+                src={vendor.founderImage || images[0]}
+                alt={vendor.founderName || vendor.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* 4. Key Highlights */}
+          <div className="pt-8 space-y-5">
+            <div className="flex items-start gap-4">
+              <img 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                className="w-6 h-6 object-contain shrink-0 mt-0.5" 
+              />
+              <div>
+                <h4 className="font-extrabold text-sm text-gray-900">Admin Verified Specialist</h4>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Audited and verified by Parva administration with 100% price transparency and authenticity.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <Sparkles size={24} className="text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-extrabold text-sm text-gray-900">Escrow Protected Advance</h4>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Lock your date with only a 5% advance fee. Balance payable directly to vendor on event day.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Description */}
+          <div className="pt-8 space-y-4">
+            <h3 className="text-xl font-black text-gray-900 font-display">
+              About this service
+            </h3>
+            <p className="text-sm text-gray-700 leading-relaxed font-normal whitespace-pre-line">
+              {vendor.description || `${vendor.name} delivers exceptional celebration services in ${vendor.location || 'Maharashtra'}. With bespoke styling, verified equipment, and dedicated on-site coordination.`}
+            </p>
+          </div>
+
+          {/* 6. Service Inclusions & Amenities */}
+          <div className="pt-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 font-display">
+                What this service offers
+              </h3>
+            </div>
+
+            <div className="w-full">
+              <AnimatedList
+                items={vendor.features || [
+                  'Complete Setup & Breakdown Included',
+                  'Dedicated On-Site Coordination Supervisor',
+                  'Commercial Grade Equipment & Redundancy',
+                  'Aadhaar Verified Staff & Insured Service',
+                  'Premium Backup Available'
+                ]}
+                showGradients={true}
+                enableArrowNavigation={true}
+                displayScrollbar={false}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsAmenitiesOpen(true)}
+              className="px-6 py-3 border border-gray-900 hover:bg-gray-50 text-gray-900 text-xs font-extrabold rounded-2xl transition cursor-pointer"
+            >
+              Show all amenities & inclusions
+            </button>
+          </div>
+
+          {/* 7. Customer Reviews Section */}
           <div className="pt-8 space-y-6">
             <div className="flex items-center gap-3">
               <Star size={24} className="fill-amber-400 text-amber-400" />
@@ -519,7 +534,7 @@ export function AirbnbVendorDetailView({
             </div>
           </div>
 
-          {/* Where you'll be - Map Section */}
+          {/* 8. Where you'll be - Map Section */}
           <div className="pt-8 space-y-6">
             <h3 className="text-xl font-black text-gray-900 font-display">
               Where you'll be

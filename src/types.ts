@@ -123,6 +123,11 @@ export interface Booking {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAge?: string | number;
+  eventLocationAddress?: string;
+  eventLocationCoords?: { lat: number; lng: number } | null;
+  styleSuggestions?: string;
+  notes?: string;
 }
 
 

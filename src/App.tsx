@@ -1582,9 +1582,13 @@ export default function App() {
           selectedServices: params.bookingData?.selectedServices || [],
           planningGuestSize: planningGuestSize || 100,
           couponCode: couponApplied ? couponCode : undefined,
-          customerName: currentUser?.name || params.bookingData?.customerName || 'Parva Customer',
-          customerPhone: currentUser?.phone || params.bookingData?.customerPhone || '9999999999',
-          customerEmail: currentUser?.email || params.bookingData?.customerEmail || 'customer@parva.com',
+          customerName: params.bookingData?.customerName || currentUser?.name || 'Parva Customer',
+          customerPhone: params.bookingData?.customerPhone || currentUser?.phone || '9999999999',
+          customerEmail: params.bookingData?.customerEmail || currentUser?.email || 'customer@parva.com',
+          customerAge: params.bookingData?.customerAge || '',
+          eventLocationAddress: params.bookingData?.eventLocationAddress || '',
+          eventLocationCoords: params.bookingData?.eventLocationCoords || null,
+          styleSuggestions: params.bookingData?.styleSuggestions || '',
           eventDate: params.bookingData?.eventDate || planningStartDate,
           eventTimeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'evening'
 
@@ -1638,9 +1642,13 @@ export default function App() {
               totalAmount: amount,
               bookingData: params.bookingData || null,
               customerData: {
-                name: currentUser?.name || 'Valued Customer',
-                email: currentUser?.email || 'customer@parvaevents.com',
-                phone: currentUser?.phone || 'N/A'
+                name: params.bookingData?.customerName || currentUser?.name || 'Valued Customer',
+                email: params.bookingData?.customerEmail || currentUser?.email || 'customer@parvaevents.com',
+                phone: params.bookingData?.customerPhone || currentUser?.phone || 'N/A',
+                age: params.bookingData?.customerAge || '',
+                eventLocationAddress: params.bookingData?.eventLocationAddress || '',
+                eventLocationCoords: params.bookingData?.eventLocationCoords || null,
+                styleSuggestions: params.bookingData?.styleSuggestions || ''
               }
             })
           });
@@ -2808,7 +2816,7 @@ export default function App() {
           onCloseVendorDetail={() => setSelectedVendor(null)}
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor || vendors[0], service)}
           bundledItems={bundledItems}
-          onPay={() => {
+          onPay={(bookingDetails) => {
             if (!currentUser) {
               setIsAuthModalOpen(true);
               return;
@@ -2817,6 +2825,14 @@ export default function App() {
             const bookingFee = Math.round(servicesTotal * 0.05);
             const gst = Math.round(bookingFee * 0.18);
             const finalPayableTotal = Math.max(0, bookingFee + gst - couponDiscount);
+
+            const custName = bookingDetails?.clientName || currentUser?.name || currentUser?.displayName || 'Valued Client';
+            const custPhone = bookingDetails?.clientPhone || currentUser?.phone || '';
+            const custEmail = bookingDetails?.clientEmail || currentUser?.email || '';
+            const custAge = bookingDetails?.clientAge || '';
+            const eventAddr = bookingDetails?.eventAddress || '';
+            const eventCoords = bookingDetails?.gpsCoords || null;
+            const styleNotes = bookingDetails?.styleSuggestions || '';
 
             const newBooking: Booking = {
               id: `b-new-${Date.now()}`,
@@ -2831,8 +2847,46 @@ export default function App() {
               bundleDiscount: 0,
               finalPrice: servicesTotal,
               paymentStatus: 'Paid',
-              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
+              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
+              customerName: custName,
+              customerPhone: custPhone,
+              customerEmail: custEmail,
+              customerAge: custAge,
+              eventLocationAddress: eventAddr,
+              eventLocationCoords: eventCoords,
+              styleSuggestions: styleNotes,
+              notes: styleNotes
             };
+
+            // Save lead & booking directly to Firestore collections for the vendor portal
+            if (newBooking.vendor && (custName || custPhone)) {
+              try {
+                const db = getDb();
+                const leadId = `lead-direct-${Date.now()}`;
+                const newLead = {
+                  id: leadId,
+                  vendorId: newBooking.vendor.id,
+                  name: custName,
+                  phone: custPhone,
+                  email: custEmail,
+                  age: custAge,
+                  eventLocationAddress: eventAddr,
+                  eventLocationCoords: eventCoords,
+                  styleSuggestions: styleNotes,
+                  city: newBooking.vendor.location || currentCity || 'Mumbai',
+                  budget: `Direct Reservation: ₹${servicesTotal.toLocaleString('en-IN')}`,
+                  eventDate: planningStartDate,
+                  timestamp: new Date().toLocaleString('en-IN'),
+                  status: 'new'
+                };
+                import('firebase/firestore').then(({ doc, setDoc }) => {
+                  setDoc(doc(db, 'leads', leadId), newLead).catch(err => console.error('Error auto-syncing lead on checkout:', err));
+                  setDoc(doc(db, 'bookings', newBooking.id), newBooking).catch(err => console.error('Error saving booking document:', err));
+                });
+              } catch (e) {
+                console.error('Error auto-syncing booking to Firestore:', e);
+              }
+            }
 
             handlePayWithRazorpay({
               vendorId: newBooking.vendor.id,

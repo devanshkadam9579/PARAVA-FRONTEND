@@ -53,7 +53,7 @@ export interface AirbnbDesktopMarketplaceProps {
   onCloseVendorDetail: () => void;
   onAddServiceToBundle: (service: VendorServiceItem) => void;
   bundledItems: { vendor: any; service: any }[];
-  onPay: () => void;
+  onPay: (bookingDetails?: any) => void;
   couponDiscount: number;
   couponCode: string;
   setCouponCode: (c: string) => void;
