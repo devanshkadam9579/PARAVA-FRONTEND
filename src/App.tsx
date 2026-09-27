@@ -33,14 +33,11 @@ import NotificationCenterModal, { AppNotification } from './components/Notificat
 import VoiceSearchModal from './components/VoiceSearchModal';
 import VendorCard from './components/VendorCard';
 import VendorDetailSheet from './components/VendorDetailSheet';
-import SplashCarousel from './components/SplashCarousel';
 import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
-import ParvaLogin from './components/LoginScreen';
 import SlidablePromoBanner from './components/SlidablePromoBanner';
 import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarketplace';
 import AuthModal from './components/AuthModal';
-import VendorAuthModal from './components/VendorAuthModal';
 import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
 
@@ -464,10 +461,7 @@ export default function App() {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
 
-  // Splash screen tour state
-  const [showSplash, setShowSplash] = useState<boolean>(() => {
-    return localStorage.getItem('parva_onboarded') !== 'true';
-  });
+
 
   // User State
   const [currentUser, setCurrentUser] = useState<any>(() => {
@@ -2664,836 +2658,7 @@ export default function App() {
   const safeHeroIndex = heroIndex >= promosList.length ? 0 : heroIndex;
   const currentPromo = promosList[safeHeroIndex];
 
-  if (showSplash) {
-    return <SplashCarousel onComplete={() => setShowSplash(false)} appLogo={appLogo} />;
-  }
-
-  if (!currentUser) {
-    
-    return (
-      <div className="min-h-screen bg-brand-bg flex flex-col max-w-md mx-auto shadow-2xl relative border-x border-brand-border overflow-y-auto" id="parva-login-container">
-        <Helmet>
-          <title>Welcome to Parva | Login</title>
-        </Helmet>
-        
-        <AnimatePresence>
-          {successNotification && (
-            <motion.div
-              initial={{ opacity: 0, y: -50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 20, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-16 left-6 right-6 max-w-[340px] mx-auto bg-brand-text text-white px-4 py-3 rounded-xl shadow-xl z-50 flex items-center gap-2.5 border border-white/10"
-            >
-              <div className="w-6 h-6 rounded-full bg-brand-success flex items-center justify-center shrink-0">
-                <Check size={12} strokeWidth={3} />
-              </div>
-              <p className="text-sm font-semibold tracking-wide flex-1 leading-tight">{successNotification}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        <div className="p-6 pt-12 flex-1 flex flex-col justify-center">
-            {/* GATED ACCESS: Unified Multi-Role Login Gateway */}
-            <div className="bg-white rounded-[28px] border border-brand-border p-6 shadow-sm space-y-5 animate-in fade-in duration-300">
-              <div className="text-center space-y-1.5">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white flex items-center justify-center mx-auto shadow-sm border border-brand-border">
-                  <img src={appLogo} className="w-12 h-12 object-contain" alt="PARVA Logo" referrerPolicy="no-referrer" />
-                </div>
-                <h3 className="font-extrabold text-brand-text text-base">Welcome to MyParva App</h3>
-                <p className="text-xs text-brand-text-secondary">Unlock verified event vendors, contact links & customized planner tools</p>
-              </div>
-
-              {/* Sub-tab selection for User and Vendor Roles */}
-              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-50 rounded-xl border border-brand-border">
-                {[
-                  { id: 'user', label: 'User Portal' },
-                  { id: 'vendor', label: 'Vendor Hub' }
-                ].map((role) => (
-                  <button
-                    key={role.id}
-                    onClick={() => {
-                      setLoginRole(role.id as any);
-                      setIsSigningUp(false);
-                    }}
-                    className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition duration-200 ${
-                      loginRole === role.id
-                        ? 'bg-brand-primary text-white shadow-sm'
-                        : 'text-brand-text-secondary hover:text-brand-text'
-                    }`}
-                  >
-                    {role.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                {loginRole === 'user' && (
-                  /* Exclusive Clean Google Sign-In with Name & Phone */
-                  <div className="space-y-4 pt-1">
-                    <div className="bg-amber-50/70 border border-amber-200/80 p-3 rounded-2xl">
-                      <p className="text-[11px] text-amber-900 font-bold leading-relaxed">
-                        ✨ Quick Sign-in: Enter your mobile number once for direct vendor contact, instant booking updates, and official PDF receipts.
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Your Full Name (Optional)</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Devansh Kadam"
-                          value={googleLoginName}
-                          onChange={(e) => setGoogleLoginName(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Mobile Phone Number *</label>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-gray-100 border border-gray-200 text-xs font-bold text-gray-700 px-3 py-2.5 rounded-xl">+91</span>
-                          <input
-                            type="tel"
-                            maxLength={10}
-                            placeholder="10-digit number"
-                            value={googleLoginPhone}
-                            onChange={(e) => setGoogleLoginPhone(e.target.value.replace(/\D/g, ''))}
-                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition font-mono tracking-wider"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        trackLoginStarted('google');
-                        try {
-                          const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
-                          const provider = new GoogleAuthProvider();
-                          const result = await signInWithPopup(getAuthInstance(), provider);
-                          const user = result.user;
-
-                          const db = getDb();
-                          const { doc, getDoc, setDoc } = await import('firebase/firestore');
-                          const userDoc = await getDoc(doc(db, 'users', user.uid));
-                          const existingData = userDoc.exists() ? userDoc.data() : {};
-
-                          const finalName = googleLoginName.trim() || user.displayName || existingData.name || 'Parva User';
-                          const finalPhone = googleLoginPhone.trim() || existingData.phone || '';
-
-                          const loggedUser = {
-                            uid: user.uid,
-                            name: finalName,
-                            email: user.email || '',
-                            phone: finalPhone,
-                            photoURL: user.photoURL || '',
-                            city: existingData.city || currentCity || 'Kolhapur',
-                            address: existingData.address || '',
-                            role: existingData.role || 'user'
-                          };
-
-                          await setDoc(doc(db, 'users', user.uid), loggedUser, { merge: true });
-                          setCurrentUser(loggedUser);
-                          localStorage.setItem('parva_user', JSON.stringify(loggedUser));
-
-                          trackLoginSuccess('google');
-                          setIsLoginModalOpen(false);
-                          showNotification(`🎉 Welcome, ${finalName}!`);
-                        } catch (err: any) {
-                          console.error("Google sign in error:", err);
-                          trackLoginFailed('google', err.message);
-                          showNotification(`⚠️ Sign-in cancelled: ${err.message}`);
-                        }
-                      }}
-                      className="w-full bg-white hover:bg-gray-50 text-gray-900 font-black py-4 px-4 rounded-2xl border-2 border-gray-200 hover:border-brand-primary flex items-center justify-center gap-3 transition shadow-md active:scale-98 text-xs uppercase tracking-wider mt-2"
-
-                    >
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                      <span>Continue with Google</span>
-                    </button>
-
-                    <p className="text-[10px] text-gray-400 text-center font-medium">
-                      🔒 Official Google Sign-In with Verified Account Security
-                    </p>
-                  </div>
-                )}
-                {loginRole === 'vendor' && (
-                  /* Vendor Hub Portal (with Self-Onboarding Step-by-Step Wizard) */
-                  <div className="space-y-4 bg-brand-primary-light/10 p-4.5 rounded-2xl border border-brand-primary/10 transition duration-300">
-                    {!isRegisteringVendor ? (
-                      /* Option A: Vendor Login via Access ID */
-                      <div className="space-y-3.5 animate-in fade-in">
-                        <div className="flex items-center gap-1.5 text-brand-primary">
-                          <Sparkles size={16} />
-                          <span className="text-[10px] font-black uppercase tracking-widest block">VENDOR HUB ACCESS</span>
-                        </div>
-                        
-                        <p className="text-[11px] text-brand-text-secondary leading-relaxed">
-                          Enter your unique 6-digit PARVA Vendor Access ID set by our administrators.
-                        </p>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-brand-primary block mb-1">6-Digit Vendor ID</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. 481029"
-                            value={loginVendorId}
-                            onChange={(e) => setLoginVendorId(e.target.value)}
-                            className="w-full bg-white border border-brand-primary/20 rounded-xl px-3.5 py-2 text-xs font-semibold outline-none focus:border-brand-primary transition text-center font-mono"
-                          />
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            if (!loginVendorId) {
-                              showNotification('⚠️ Please enter your PARVA Vendor ID.');
-                              return;
-                            }
-                            const matchingVendor = vendors.find(v => v.id.trim().toUpperCase() === loginVendorId.trim().toUpperCase());
-                            if (matchingVendor) {
-                              const vendorUserObj = {
-                                id: matchingVendor.id,
-                                name: matchingVendor.name,
-                                role: 'vendor',
-                                vendorId: matchingVendor.id,
-                                category: matchingVendor.category
-                              };
-                              setCurrentUser(vendorUserObj);
-                              localStorage.setItem('parva_user', JSON.stringify(vendorUserObj));
-                              showNotification(`💼 Welcoming Vendor: ${matchingVendor.name}! Dashboard Loaded.`);
-                            } else {
-                              showNotification('❌ Invalid Vendor ID. Please enter a valid unique ID.');
-                            }
-                          }}
-                          className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs py-3 rounded-xl transition shadow-md shadow-brand-primary/10"
-                        >
-                          Verify ID & Enter Hub
-                        </button>
-
-                        <div className="text-center pt-2 border-t border-brand-primary/5">
-                          <button
-                            onClick={() => {
-                              setIsRegisteringVendor(true);
-                              setVendorWizardStep(1);
-                            }}
-                            className="text-[10px] font-bold text-brand-primary hover:underline"
-                          >
-                            ➕ Don't have a Partner ID? Register Business Here
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Option B: Vendor Registration Step-by-Step Wizard */
-                      <div className="space-y-3.5 animate-in slide-in-from-right-5 duration-300">
-                        <div className="flex justify-between items-center pb-2 border-b border-brand-primary/10">
-                          <div>
-                            <span className="text-[9px] uppercase tracking-widest text-brand-primary font-black block">Vendor Onboarding</span>
-                            <h4 className="font-extrabold text-xs text-brand-text">Step {vendorWizardStep} of 4</h4>
-                          </div>
-                          <button
-                            onClick={() => setIsRegisteringVendor(false)}
-                            className="text-[10px] text-brand-text-secondary hover:text-brand-primary font-semibold"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-
-                        {/* Step 1: Basics */}
-                        {vendorWizardStep === 1 && (
-                          <div className="space-y-3">
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Business Name</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Dream Creators Events"
-                                value={wizardName}
-                                onChange={(e) => setWizardName(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="col-span-2 space-y-1.5">
-                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
-                                  Select Categories / Services Provided (Multiple Allowed)
-                                </label>
-                                <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50/80 rounded-xl border border-brand-border max-h-28 overflow-y-auto">
-                                  {(categoriesList.length > 0 ? categoriesList : [{ name: 'Venues' }, { name: 'Decorators' }, { name: 'Catering' }, { name: 'DJ & Sound' }, { name: 'Photography' }]).map((cat) => {
-                                    const isSelected = wizardCategories.includes(cat.name);
-                                    return (
-                                      <button
-                                        type="button"
-                                        key={cat.name}
-                                        onClick={() => {
-                                          if (isSelected) {
-                                            if (wizardCategories.length > 1) {
-                                              const updated = wizardCategories.filter(c => c !== cat.name);
-                                              setWizardCategories(updated);
-                                              setWizardCategory(updated[0]);
-                                            }
-                                          } else {
-                                            const updated = [...wizardCategories, cat.name];
-                                            setWizardCategories(updated);
-                                            setWizardCategory(updated[0]);
-                                          }
-                                        }}
-                                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 ${
-                                          isSelected
-                                            ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
-                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                                        }`}
-                                      >
-                                        <span>{isSelected ? '✓' : '+'}</span>
-                                        <span>{cat.name}</span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">City Location</label>
-                                <select
-                                  value={wizardCity}
-                                  onChange={(e) => setWizardCity(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-semibold outline-none"
-                                >
-                                  {citiesList.map(c => (
-                                    <option key={c} value={c}>{c}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Catchy Tagline</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Making your celebrations royal and floral"
-                                value={wizardTagline}
-                                onChange={(e) => setWizardTagline(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Contact Phone</label>
-                                <input
-                                  type="tel"
-                                  placeholder="9876543210"
-                                  value={wizardPhone}
-                                  onChange={(e) => setWizardPhone(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">WhatsApp No</label>
-                                <input
-                                  type="tel"
-                                  placeholder="9876543210"
-                                  value={wizardWhatsapp}
-                                  onChange={(e) => setWizardWhatsapp(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50">
-                              <div>
-                                <label className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block mb-1">Latitude (e.g. 19.0760)</label>
-                                <input
-                                  type="number"
-                                  step="any"
-                                  placeholder="e.g. 19.0760"
-                                  value={wizardLatitude}
-                                  onChange={(e) => setWizardLatitude(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-amber-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block mb-1">Longitude (e.g. 72.8777)</label>
-                                <input
-                                  type="number"
-                                  step="any"
-                                  placeholder="e.g. 72.8777"
-                                  value={wizardLongitude}
-                                  onChange={(e) => setWizardLongitude(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-amber-400"
-                                />
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                if (!wizardName || !wizardTagline || !wizardPhone) {
-                                  showNotification('⚠️ Please complete all fields.');
-                                  return;
-                                }
-                                setVendorWizardStep(2);
-                              }}
-                              className="w-full bg-brand-primary text-white font-extrabold text-xs py-2.5 rounded-xl mt-2 transition"
-                            >
-                              Continue to Services →
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Step 2: Services & Pricing */}
-                        {vendorWizardStep === 2 && (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Base Price (₹)</label>
-                                <input
-                                  type="number"
-                                  placeholder="e.g. 25000"
-                                  value={wizardBasePrice}
-                                  onChange={(e) => setWizardBasePrice(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Max Capacity (for Halls)</label>
-                                <input
-                                  type="number"
-                                  placeholder="e.g. 500"
-                                  value={wizardMaxCapacity}
-                                  onChange={(e) => setWizardMaxCapacity(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                  disabled={wizardCategory !== 'Banquet Hall'}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="border-t border-brand-primary/10 pt-3 space-y-3">
-                              <span className="text-[9px] uppercase tracking-wider text-brand-primary font-black block">Service Offerings & Packages (with Photos & Details)</span>
-                              
-                              {/* Service 1 */}
-                              <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
-                                <span className="text-[9px] font-black text-gray-700 uppercase">Primary Service #1</span>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Service Name (e.g. Mandap Setup)"
-                                    value={wizardService1Name}
-                                    onChange={(e) => setWizardService1Name(e.target.value)}
-                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                                  />
-                                  <input
-                                    type="number"
-                                    placeholder="Price (₹)"
-                                    value={wizardService1Price}
-                                    onChange={(e) => setWizardService1Price(e.target.value)}
-                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-bold outline-none"
-                                  />
-                                </div>
-                                <input
-                                  type="text"
-                                  placeholder="Short Description (e.g. Floral stage setup and entrance)"
-                                  value={wizardService1Desc}
-                                  onChange={(e) => setWizardService1Desc(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs outline-none"
-                                />
-                                <div className="space-y-1 bg-white p-2 rounded-xl border border-brand-border">
-                                  <CloudinaryImageUploader
-                                    label="📷 Photo (Camera / Gallery)"
-                                    initialImage={wizardService1Image}
-                                    onImageUploaded={(url) => setWizardService1Image(url)}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Service 2 */}
-                              <div className="bg-gray-50/80 p-3 rounded-2xl border border-brand-border space-y-2">
-                                <span className="text-[9px] font-black text-gray-700 uppercase">Service #2 (Optional)</span>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Service Name (e.g. House Lighting)"
-                                    value={wizardService2Name}
-                                    onChange={(e) => setWizardService2Name(e.target.value)}
-                                    className="col-span-2 bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
-                                  />
-                                  <input
-                                    type="number"
-                                    placeholder="Price (₹)"
-                                    value={wizardService2Price}
-                                    onChange={(e) => setWizardService2Price(e.target.value)}
-                                    className="bg-white border border-brand-border rounded-xl px-2 py-2 text-xs font-bold outline-none"
-                                  />
-                                </div>
-                                <input
-                                  type="text"
-                                  placeholder="Short Description"
-                                  value={wizardService2Desc}
-                                  onChange={(e) => setWizardService2Desc(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-1.5 text-xs outline-none"
-                                />
-                                <div className="space-y-1 bg-white p-2 rounded-xl border border-brand-border">
-                                  <CloudinaryImageUploader
-                                    label="📷 Photo (Camera / Gallery)"
-                                    initialImage={wizardService2Image}
-                                    onImageUploaded={(url) => setWizardService2Image(url)}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              <button
-                                onClick={() => setVendorWizardStep(1)}
-                                className="bg-gray-100 text-brand-text font-bold text-xs py-2.5 rounded-xl transition"
-                              >
-                                ← Back
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (!wizardBasePrice) {
-                                    showNotification('⚠️ Please specify a baseline price.');
-                                    return;
-                                  }
-                                  setVendorWizardStep(3);
-                                }}
-                                className="bg-brand-primary text-white font-extrabold text-xs py-2.5 rounded-xl transition"
-                              >
-                                Continue →
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Step 3: Biography & Features */}
-                        {vendorWizardStep === 3 && (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Founder Name</label>
-                                <input
-                                  type="text"
-                                  placeholder="Aditya Deshmukh"
-                                  value={wizardFounderName}
-                                  onChange={(e) => setWizardFounderName(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Exp (Years)</label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. 5+ Years"
-                                  value={wizardExperience}
-                                  onChange={(e) => setWizardExperience(e.target.value)}
-                                  className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Company Bio / Description</label>
-                              <textarea
-                                rows={2}
-                                placeholder="Describe your business services and specialization..."
-                                value={wizardDescription}
-                                onChange={(e) => setWizardDescription(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none resize-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">Features (Comma Separated)</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Premium Sound, AC Room, Valet"
-                                value={wizardFeatures}
-                                onChange={(e) => setWizardFeatures(e.target.value)}
-                                className="w-full bg-white border border-brand-border rounded-xl px-3 py-2 text-xs font-semibold outline-none"
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              <button
-                                onClick={() => setVendorWizardStep(2)}
-                                className="bg-gray-100 text-brand-text font-bold text-xs py-2.5 rounded-xl transition"
-                              >
-                                ← Back
-                              </button>
-                              <button
-                                onClick={() => setVendorWizardStep(4)}
-                                className="bg-brand-primary text-white font-extrabold text-xs py-2.5 rounded-xl transition"
-                              >
-                                Continue →
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Step 4: Dynamic Media Uploads (Unlimited N Images & Videos) */}
-                        {vendorWizardStep === 4 && (
-                          <div className="space-y-4">
-                            {/* Showcase Images with Add Slot button */}
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
-                                  📷 Portfolio Photos ({wizardImagesList.length})
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() => setWizardImagesList([...wizardImagesList, ''])}
-                                  className="text-[10px] font-bold bg-pink-50 text-brand-primary px-2.5 py-1 rounded-lg border border-pink-200 hover:bg-pink-100 transition active:scale-95"
-                                >
-                                  + Add Image
-                                </button>
-                              </div>
-
-                              <div className="space-y-2.5 max-h-60 overflow-y-auto p-1">
-                                {wizardImagesList.map((imgUrl, idx) => (
-                                  <div key={idx} className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5 relative">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[9px] font-bold text-gray-700">
-                                        {idx === 0 ? 'Cover Photo (Primary)' : `Photo #${idx + 1}`}
-                                      </span>
-                                      {wizardImagesList.length > 1 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setWizardImagesList(wizardImagesList.filter((_, i) => i !== idx))}
-                                          className="text-gray-400 hover:text-red-500 p-0.5 text-xs"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
-                                    </div>
-                                    <CloudinaryImageUploader
-                                      label={`Upload Photo #${idx + 1} (Camera / Gallery)`}
-                                      initialImage={imgUrl}
-                                      onImageUploaded={(url) => {
-                                        const next = [...wizardImagesList];
-                                        next[idx] = url;
-                                        setWizardImagesList(next);
-                                        if (idx === 0) setWizardCoverImage(url);
-                                      }}
-                                    />
-                                    <input
-                                      type="text"
-                                      placeholder="or paste URL https://..."
-                                      value={imgUrl}
-                                      onChange={(e) => {
-                                        const next = [...wizardImagesList];
-                                        next[idx] = e.target.value;
-                                        setWizardImagesList(next);
-                                        if (idx === 0) setWizardCoverImage(e.target.value);
-                                      }}
-                                      className="w-full bg-white border border-brand-border rounded-lg px-2.5 py-1 text-[10px] font-mono outline-none"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Video Reels with Add Slot button */}
-                            <div className="space-y-3 border-t border-dashed border-gray-200 pt-3">
-                              <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-bold text-brand-primary uppercase tracking-wider block">
-                                  🎬 Video Shorts & Reels ({wizardVideosList.length})
-                                </label>
-                                <button
-                                  type="button"
-                                  onClick={() => setWizardVideosList([...wizardVideosList, ''])}
-                                  className="text-[10px] font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-200 transition active:scale-95"
-                                >
-                                  + Add Video
-                                </button>
-                              </div>
-
-                              <div className="space-y-2.5 max-h-48 overflow-y-auto p-1">
-                                {wizardVideosList.map((vidUrl, idx) => (
-                                  <div key={idx} className="bg-gray-50/80 p-2.5 rounded-xl border border-brand-border space-y-1.5 relative">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[9px] font-bold text-gray-700">Video Reel #{idx + 1}</span>
-                                      {wizardVideosList.length > 1 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setWizardVideosList(wizardVideosList.filter((_, i) => i !== idx))}
-                                          className="text-gray-400 hover:text-red-500 p-0.5 text-xs"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <label className="bg-slate-900 hover:bg-slate-800 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg cursor-pointer flex items-center gap-1 transition active:scale-95">
-                                        <span>📹 Pick MP4 Video</span>
-                                        <input
-                                          type="file"
-                                          accept="video/*"
-                                          className="hidden"
-                                          onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            showNotification('⏳ Uploading video to Cloudinary...');
-                                            try {
-                                              const formData = new FormData();
-                                              formData.append('file', file);
-                                              formData.append('upload_preset', 'ml_default');
-                                              formData.append('cloud_name', 'k03rmhkg');
-                                              const res = await fetch('https://api.cloudinary.com/v1_1/k03rmhkg/video/upload', {
-                                                method: 'POST',
-                                                body: formData
-                                              });
-                                              const data = await res.json();
-                                              if (data.secure_url) {
-                                                const next = [...wizardVideosList];
-                                                next[idx] = data.secure_url;
-                                                setWizardVideosList(next);
-                                                showNotification('🎉 Video uploaded!');
-                                              }
-                                            } catch (err) {
-                                              showNotification('⚠️ Upload error.');
-                                            }
-                                          }}
-                                        />
-                                      </label>
-                                      <input
-                                        type="text"
-                                        placeholder="or YouTube Shorts link (https://...)"
-                                        value={vidUrl}
-                                        onChange={(e) => {
-                                          const next = [...wizardVideosList];
-                                          next[idx] = e.target.value;
-                                          setWizardVideosList(next);
-                                        }}
-                                        className="flex-1 bg-white border border-brand-border rounded-lg px-2.5 py-1 text-[10px] font-mono outline-none"
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              <button
-                                onClick={() => setVendorWizardStep(3)}
-                                className="bg-gray-100 text-brand-text font-bold text-xs py-2.5 rounded-xl transition"
-                              >
-                                ← Back
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  // Assemble and submit vendor document to Firestore
-                                  const customId = `v_reg_${Date.now()}`;
-                                  
-                                  const imagesArr = [
-                                    wizardCoverImage || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600',
-                                    wizardImage2 || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600',
-                                    wizardImage3 || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=600'
-                                  ].filter(Boolean);
-
-                                  const servicesArr = [];
-                                  if (wizardService1Name && wizardService1Price) {
-                                    servicesArr.push({ name: wizardService1Name, price: Number(wizardService1Price), unit: 'event' });
-                                  }
-                                  if (wizardService2Name && wizardService2Price) {
-                                    servicesArr.push({ name: wizardService2Name, price: Number(wizardService2Price), unit: 'event' });
-                                  }
-                                  if (servicesArr.length === 0) {
-                                    servicesArr.push({ name: 'Standard Event Package', price: Number(wizardBasePrice), unit: 'event' });
-                                  }
-
-                                  const featuresArr = wizardFeatures
-                                    ? wizardFeatures.split(',').map(f => f.trim()).filter(Boolean)
-                                    : ['Highly Professional', 'Timely Service', 'Flexible Budget'];
-
-                                  const newVendorDoc = {
-                                    id: customId,
-                                    name: wizardName,
-                                    category: wizardCategories[0] || wizardCategory || 'Venues',
-                                    categories: wizardCategories.length > 0 ? wizardCategories : [wizardCategory || 'Venues'],
-                                    tagline: wizardTagline,
-                                    description: wizardDescription || `Premium ${wizardCategory} based in ${wizardCity}`,
-                                    rating: 4.8,
-                                    reviewCount: 1,
-                                    trustScore: 90,
-                                    distance: 'Local Partner',
-                                    responseTime: '< 30 mins',
-                                    verified: false,
-                                    approved: true, // Live immediately on Home and Explore!
-                                    basePrice: Number(wizardBasePrice),
-                                    images: imagesArr,
-                                    location: wizardCity,
-                                    founderName: wizardFounderName || '',
-                                    experience: wizardExperience || '',
-                                    features: featuresArr,
-                                    services: servicesArr,
-                                    reviews: [],
-                                    bookingsCount: 0,
-                                    occasion: ['Wedding', 'Birthday', 'Corporate'],
-                                    capacity: wizardMaxCapacity ? Number(wizardMaxCapacity) : 100,
-                                    phone: wizardPhone,
-                                    whatsapp: wizardWhatsapp || wizardPhone,
-                                    videos: wizardVideoUrl ? [wizardVideoUrl] : [],
-                                    latitude: wizardLatitude ? Number(wizardLatitude) : undefined,
-                                    longitude: wizardLongitude ? Number(wizardLongitude) : undefined
-                                  };
-
-                                  try {
-                                    const db = getDb();
-                                    const { doc, setDoc } = await import('firebase/firestore');
-                                    await setDoc(doc(db, 'vendors', customId), newVendorDoc);
-                                    
-                                    showNotification('🎉 Registration submitted! Wait for Administrator approval.');
-                                    setIsRegisteringVendor(false);
-                                    
-                                    // Reset states
-                                    setWizardName('');
-                                    setWizardTagline('');
-                                    setWizardPhone('');
-                                    setWizardWhatsapp('');
-                                    setWizardBasePrice('');
-                                    setWizardMaxCapacity('');
-                                    setWizardService1Name('');
-                                    setWizardService1Price('');
-                                    setWizardService2Name('');
-                                    setWizardService2Price('');
-                                    setWizardFounderName('');
-                                    setWizardExperience('');
-                                    setWizardLatitude('');
-                                    setWizardLongitude('');
-                                    setWizardDescription('');
-                                    setWizardFeatures('');
-                                    setWizardCoverImage('');
-                                    setWizardImage2('');
-                                    setWizardImage3('');
-                                    setWizardVideoUrl('');
-                                  } catch (err) {
-                                    console.error(err);
-                                    showNotification('❌ Submission failed. Please check internet connection.');
-                                  }
-                                }}
-                                className="bg-brand-success text-white font-extrabold text-xs py-2.5 rounded-xl transition"
-                              >
-                                Submit Business 🎉
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Secure Secondary Link for System Admin Access */}
-              <div className="text-center pt-2 border-t border-gray-100">
-                <button
-                  onClick={() => setIsAdminLoginOpen(true)}
-                  className="text-[9.5px] font-semibold text-brand-text-secondary hover:text-brand-primary hover:underline transition"
-                >
-                  🛡️ System Administrator Secure Login
-                </button>
-              </div>
-            </div>
-        </div>
-      </div>
-    );
-  }
-
-
-  // Booking management helpers for Customer Web & Airbnb Experience
+    // Booking management helpers for Customer Web & Airbnb Experience
   const handleDownloadVoucher = (booking: Booking) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -3644,6 +2809,10 @@ export default function App() {
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor || vendors[0], service)}
           bundledItems={bundledItems}
           onPay={() => {
+            if (!currentUser) {
+              setIsAuthModalOpen(true);
+              return;
+            }
             const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
             const bookingFee = Math.round(servicesTotal * 0.05);
             const gst = Math.round(bookingFee * 0.18);
@@ -3688,99 +2857,97 @@ export default function App() {
       {/* MOBILE APPLICATION INTERFACE (Visible ONLY on Mobile < lg)                */}
       {/* ========================================================================= */}
       <div className="block lg:hidden min-h-screen bg-brand-bg">
-    <div className={`min-h-screen bg-brand-bg flex flex-col mx-auto shadow-2xl relative border-x border-brand-border overflow-hidden pb-24 transition-all duration-500 ${
-      isDashboardExpanded ? 'max-w-6xl w-full' : 'max-w-md w-full'
-    }`} id="parva-app-container">
-      {/* Blocking profile popup removed */ }
+        <div className="min-h-screen bg-brand-bg flex flex-col w-full relative pb-24" id="parva-app-container">
 
-      <Helmet>
-        <title>{!selectedExploreCategory || selectedExploreCategory === 'all' ? 'Explore Vendors | Parva Events' : `${(selectedExploreCategory || '').charAt(0).toUpperCase() + (selectedExploreCategory || '').slice(1)} Vendors | Parva Events`}</title>
-        <meta name="description" content={`Find and book the best ${!selectedExploreCategory || selectedExploreCategory === 'all' ? 'event' : selectedExploreCategory} vendors on Parva Events.`} />
-      </Helmet>
-      
-      {/* 1. TOP APP BAR */}
-      <header className="bg-white px-6 py-4 border-b border-brand-border sticky top-0 z-30 flex items-center justify-between" id="top-app-bar">
-        {/* Greetings */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary font-bold shadow-inner">
-            {getUserInitials(currentUser)}
-          </div>
-          <div>
-            <h1 className="text-xs text-brand-text-secondary font-medium flex items-center gap-1">
-              <span>Namaste, {getFirstName(currentUser)}</span>
-              <span>👋</span>
-            </h1>
-            {/* Location selector trigger */}
-            <button
-              onClick={() => setIsLocationOpen(true)}
-              className="flex items-center gap-1 text-brand-text font-bold text-sm hover:text-brand-primary transition mt-0.5"
-              id="top-location-trigger"
-            >
-              <MapPin size={14} className="text-brand-primary" />
-              <span>{currentCity}</span>
-              <ChevronRight size={14} className="text-brand-primary rotate-90" />
-            </button>
-          </div>
-        </div>
+          <Helmet>
+            <title>{!selectedExploreCategory || selectedExploreCategory === 'all' ? 'Explore Vendors | Parva Events' : `${(selectedExploreCategory || '').charAt(0).toUpperCase() + (selectedExploreCategory || '').slice(1)} Vendors | Parva Events`}</title>
+            <meta name="description" content={`Find and book the best ${!selectedExploreCategory || selectedExploreCategory === 'all' ? 'event' : selectedExploreCategory} vendors on Parva Events.`} />
+          </Helmet>
+          
+          {/* 1. TOP APP BAR */}
+          <header className="bg-white px-4 sm:px-6 py-3.5 border-b border-brand-border sticky top-0 z-30 flex items-center justify-between shadow-xs" id="top-app-bar">
+            {/* Greetings */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary font-black text-xs shadow-inner">
+                {getUserInitials(currentUser)}
+              </div>
+              <div>
+                <h1 className="text-xs text-brand-text-secondary font-medium flex items-center gap-1">
+                  <span>Namaste, {getFirstName(currentUser)}</span>
+                  <span>👋</span>
+                </h1>
+                {/* Location selector trigger */}
+                <button
+                  onClick={() => setIsLocationOpen(true)}
+                  className="flex items-center gap-1 text-brand-text font-bold text-xs hover:text-brand-primary transition mt-0.5"
+                  id="top-location-trigger"
+                >
+                  <MapPin size={13} className="text-brand-primary" />
+                  <span>{currentCity}</span>
+                  <ChevronRight size={13} className="text-brand-primary rotate-90" />
+                </button>
+              </div>
+            </div>
 
-        {/* Action icons right side */}
-        <div className="flex items-center gap-1.5">
-          {/* Help & Support */}
-          <button
-            onClick={() => setIsSupportModalOpen(true)}
-            className="p-2.5 hover:bg-gray-100 rounded-full text-brand-text transition relative"
-            id="support-help-button"
-            aria-label="Help and Support"
-            title="Help and Support"
-          >
-            <Headphones size={18} />
-          </button>
+            {/* Action icons right side */}
+            <div className="flex items-center gap-1.5">
+              {!currentUser && (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full transition shadow-xs active:scale-95 mr-1"
+                >
+                  Log In
+                </button>
+              )}
 
-          {/* Notifications */}
-          <button
-            onClick={() => {
-              setIsNotificationCenterOpen(true);
-              if (permissionStatus === 'default') {
-                requestNotificationPermission();
-              }
-            }}
-            className="p-2.5 hover:bg-gray-100 rounded-full text-brand-text transition relative"
-            id="notification-bell"
-            title="Open Notifications & Pop-up Alerts"
-          >
-            <Bell size={18} />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-brand-primary text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
-                {unreadNotificationsCount}
-              </span>
-            )}
-          </button>
+              {/* Help & Support */}
+              <button
+                onClick={() => setIsSupportModalOpen(true)}
+                className="p-2 hover:bg-gray-100 rounded-full text-brand-text transition relative"
+                id="support-help-button"
+                aria-label="Help and Support"
+                title="Help and Support"
+              >
+                <Headphones size={18} />
+              </button>
 
+              {/* Notifications */}
+              <button
+                onClick={() => {
+                  setIsNotificationCenterOpen(true);
+                  if (permissionStatus === 'default') {
+                    requestNotificationPermission();
+                  }
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full text-brand-text transition relative"
+                id="notification-bell"
+                title="Open Notifications & Pop-up Alerts"
+              >
+                <Bell size={18} />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-brand-primary text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                    {unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
 
-          {/* Cart showing bundle count */}
-          <button
-            onClick={() => {
-              setActiveTab('explore');
-              // Smooth scroll to bundler block if any
-              setTimeout(() => {
-                const element = document.getElementById('bundling-console');
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
-                }
-              }, 100);
-            }}
-            className="p-2.5 bg-brand-primary-light text-brand-primary hover:bg-brand-primary hover:text-white rounded-full transition relative shadow-sm"
-            id="cart-trigger"
-          >
-            <ShoppingCart size={18} />
-            {bundledItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-brand-primary-dark text-white text-[10px] font-extrabold flex items-center justify-center border-2 border-white">
-                {bundledItems.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </header>
+              {/* Cart showing bundle count */}
+              <button
+                onClick={() => {
+                  setActiveTab('bookings');
+                }}
+                className="p-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary hover:text-white rounded-full transition relative shadow-xs"
+                id="cart-trigger"
+              >
+                <ShoppingCart size={18} />
+                {bundledItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-primary-dark text-white text-[9px] font-extrabold flex items-center justify-center border-2 border-white">
+                    {bundledItems.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </header>
 
       {/* SUCCESS NOTIFICATION TOAST */}
       <AnimatePresence>
@@ -5037,10 +4204,40 @@ export default function App() {
         {/* ==================== TAB: PROFILE ==================== */}
         {activeTab === 'profile' && (
           <div className="space-y-6" id="profile-view-container">
-            
-              {/* ACCOUNT LOGGED IN VIEW */}
+            {!currentUser ? (
+              <div className="bg-white rounded-[28px] border border-brand-border p-6 text-center shadow-sm space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-brand-primary-light text-brand-primary flex items-center justify-center mx-auto shadow-inner">
+                  <User size={30} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-brand-text text-base">Your Parva Profile</h3>
+                  <p className="text-xs text-brand-text-secondary mt-1">
+                    Sign in to view your celebration bookings, wishlist, saved vendors, and invoices.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-bold text-xs py-3.5 rounded-2xl shadow-md transition active:scale-95 uppercase tracking-wider"
+                  >
+                    Sign In / Register
+                  </button>
+                </div>
+                <div className="pt-4 border-t border-brand-border">
+                  <a
+                    href="https://parva-vendor-app.onrender.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-brand-primary hover:underline flex items-center justify-center gap-1"
+                  >
+                    <span>Looking for Vendor Hub? Click here</span>
+                    <span>↗</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              /* ACCOUNT LOGGED IN VIEW */
               <div className="space-y-6">
-                
                 {currentUser?.role === 'vendor' ? (
                   /* 💼 Bespoke Vendor Control Dashboard */
                   <div className="space-y-6" id="vendor-portal-container">
@@ -6093,17 +5290,12 @@ export default function App() {
                         { label: 'Booking Preferences', desc: 'Default city, contact phone, GST details' },
                         { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
                         { label: 'Financials & Invoices', desc: 'Download tax records and transaction logs' },
-                        { label: 'Replay App Walkthrough', desc: 'Watch the onboarding splash and info slides again' },
                         { label: 'About MyParva App', desc: 'Version 1.0.0 • Terms of Service & Security' }
                       ].map((item, idx) => (
                         <button
                           key={idx}
                           onClick={() => {
-                            if (item.label === 'Replay App Walkthrough') {
-                              setShowSplash(true);
-                            } else {
-                              showNotification(`${item.label} opened`);
-                            }
+                            showNotification(`${item.label} opened`);
                           }}
                           className="w-full p-4 flex items-center justify-between hover:bg-gray-50 text-left transition"
                           id={`profile-setting-row-${idx}`}
@@ -6134,9 +5326,10 @@ export default function App() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
       </main>
 
@@ -6354,21 +5547,6 @@ export default function App() {
         onVoiceResult={handleVoiceSearchResult}
       />
 
-      {/* Vendor Auth & Onboarding Modal */}
-      <VendorAuthModal
-        isOpen={isVendorAuthModalOpen}
-        onClose={() => setIsVendorAuthModalOpen(false)}
-        vendors={vendors}
-        categoriesList={categoriesList}
-        showNotification={showNotification}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-          localStorage.setItem('parva_user', JSON.stringify(user));
-          setActiveTab('profile'); // Send them to dashboard immediately
-        }}
-      />
-      
-      
       {currentUser?.role === 'vendor' && (
         <VendorDashboardFull
           currentUser={currentUser}
@@ -6383,7 +5561,8 @@ export default function App() {
           onNavigateToMessages={() => setActiveTab('messages')}
         />
       )}
-{/* 5. IMMERSIVE VENDOR DETAIL SHEET */}
+
+      {/* 5. IMMERSIVE VENDOR DETAIL SHEET */}
       {selectedVendor && (
         <Helmet>
           <title>{selectedVendor.name} | Parva Events</title>
@@ -6402,10 +5581,8 @@ export default function App() {
           onToggleWishlist={() => handleToggleWishlist(selectedVendor.id)}
           onShowNotification={showNotification}
           currentUser={currentUser}
-          onTriggerLogin={(onSuccess) => {
-            const cached = localStorage.getItem('parva_user');
-            if (cached) setCurrentUser(JSON.parse(cached));
-            if (onSuccess) onSuccess();
+          onTriggerLogin={() => {
+            setIsAuthModalOpen(true);
           }}
           onAddLead={async (leadData: any) => {
             const newLead = {

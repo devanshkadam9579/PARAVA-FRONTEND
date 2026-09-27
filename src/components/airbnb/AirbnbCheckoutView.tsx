@@ -63,12 +63,21 @@ export function AirbnbCheckoutView({
             You'll be directed to complete payment securely with Instant Escrow Protection.
           </p>
 
-          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
-            <h4 className="text-xs font-bold text-gray-900">User Contact Details</h4>
-            <p className="text-xs text-gray-600">
-              Name: {currentUser?.name || 'Valued Client'} • Phone: {currentUser?.phone || 'N/A'} • Email: {currentUser?.email || 'N/A'}
-            </p>
-          </div>
+          {!currentUser ? (
+            <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 space-y-1">
+              <h4 className="text-xs font-bold text-amber-900">Sign in required to confirm booking</h4>
+              <p className="text-[11px] text-amber-800">
+                You'll be prompted to sign in with Google or Email. Your cart and event details will remain saved.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
+              <h4 className="text-xs font-bold text-gray-900">User Contact Details</h4>
+              <p className="text-xs text-gray-600">
+                Name: {currentUser?.name || 'Valued Client'} • Phone: {currentUser?.phone || 'N/A'} • Email: {currentUser?.email || 'N/A'}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3 pt-2">
             <p className="text-[11px] text-gray-500">
@@ -80,7 +89,7 @@ export function AirbnbCheckoutView({
               onClick={onPay}
               className="w-full sm:w-auto px-10 bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-sm py-4 rounded-2xl shadow-lg transition active:scale-95"
             >
-              Confirm and pay ₹{finalDue.toLocaleString('en-IN')}
+              {!currentUser ? 'Log in to Confirm Booking' : `Confirm and pay ₹${finalDue.toLocaleString('en-IN')}`}
             </button>
           </div>
         </div>
