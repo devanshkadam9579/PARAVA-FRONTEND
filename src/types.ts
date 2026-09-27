@@ -20,6 +20,25 @@ export interface VendorServiceItem {
   image?: string;
 }
 
+export interface VendorKycData {
+  aadhaarNumber?: string;
+  aadhaarFrontUrl?: string;
+  aadhaarBackUrl?: string;
+  panNumber?: string;
+  panUrl?: string;
+  gstNumber?: string;
+  licenseNumber?: string;
+  licenseUrl?: string;
+  registeredAddress?: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  profilePicUrl?: string;
+  status: 'NOT_SUBMITTED' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+  rejectionReason?: string;
+  submittedAt?: string;
+  verifiedAt?: string;
+}
+
 export interface Vendor {
   id: string;
   vendorPortalId?: string;
@@ -39,6 +58,8 @@ export interface Vendor {
   distance: string;
   responseTime: string;
   verified: boolean;
+  isVerified?: boolean;
+  kyc?: VendorKycData;
   basePrice: number; // Keeping for backward compatibility
   images: string[];
   videos?: string[];

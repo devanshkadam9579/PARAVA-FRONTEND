@@ -40,6 +40,7 @@ import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarke
 import AuthModal from './components/AuthModal';
 import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
+import { AdminKycReviewModal } from './components/admin/AdminKycReviewModal';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -1351,6 +1352,7 @@ export default function App() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminKycOpen, setIsAdminKycOpen] = useState(false);
   const [razorpayAmount, setRazorpayAmount] = useState(4999);
   const [razorpayStatus, setRazorpayStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [razorpayUpi, setRazorpayUpi] = useState('thegritfuel@okhdfcbank');
@@ -2674,48 +2676,139 @@ export default function App() {
       showNotification('Please allow popups to download voucher.');
       return;
     }
+    const totalPrice = Number(booking.totalPrice || booking.finalPrice || 0);
+    const platformFee = Math.round(totalPrice * 0.05);
+    const gstFee = Math.round(platformFee * 0.18);
+    const advancePaid = platformFee + gstFee;
+    const remainingAmount = totalPrice - platformFee;
+
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Parva Booking Voucher - ${booking.bookingIdString || booking.id}</title>
+          <meta charset="utf-8">
+          <title>Parva Booking Confirmation Voucher - ${booking.bookingIdString || booking.id}</title>
           <style>
-            body { font-family: 'Open Sans', Arial, sans-serif; padding: 40px; color: #1a0812; line-height: 1.6; }
-            .header { border-bottom: 2px solid #a21c54; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-            .logo { font-size: 28px; font-weight: 900; color: #a21c54; }
-            .title { font-size: 20px; font-weight: 800; }
-            .box { background: #faf5f8; border: 1px solid #f2e4ec; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .label { font-weight: 600; color: #666; font-size: 14px; }
-            .val { font-weight: 800; font-size: 14px; }
-            .total { font-size: 18px; font-weight: 900; color: #a21c54; border-top: 2px dashed #a21c54; padding-top: 10px; margin-top: 10px; }
-            .footer { font-size: 12px; color: #888; text-align: center; margin-top: 40px; }
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; background: #fff; color: #1a0812; padding: 36px; line-height: 1.5; font-size: 13px; }
+            .container { max-width: 800px; margin: 0 auto; border: 1px solid #f2e4ec; border-radius: 24px; padding: 32px; background: #fff; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #a21c54; padding-bottom: 20px; margin-bottom: 24px; }
+            .logo-wrap { display: flex; align-items: center; gap: 12px; }
+            .logo-img { height: 44px; width: auto; object-fit: contain; }
+            .voucher-badge { background: #faf5f8; border: 1px solid #f2e4ec; color: #a21c54; font-weight: 800; font-size: 11px; padding: 6px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; }
+            .title-section { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .voucher-title { font-size: 22px; font-weight: 900; color: #1a0812; }
+            .voucher-sub { font-size: 12px; color: #745b68; font-weight: 600; margin-top: 2px; }
+            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+            .card { background: #faf5f8; border: 1px solid #f2e4ec; border-radius: 16px; padding: 18px; }
+            .card-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: #a21c54; margin-bottom: 12px; border-bottom: 1px solid #f2e4ec; padding-bottom: 6px; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12.5px; }
+            .row:last-child { margin-bottom: 0; }
+            .label { color: #745b68; font-weight: 600; }
+            .val { font-weight: 800; color: #1a0812; text-align: right; }
+            .status-tag { display: inline-block; background: #e6f9f0; color: #047857; font-weight: 800; padding: 2px 8px; border-radius: 8px; font-size: 11px; }
+            .payment-card { background: #fff; border: 2px solid #a21c54; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+            .highlight-row { background: #faf5f8; padding: 10px 14px; border-radius: 10px; margin-top: 8px; }
+            .due-row { background: #fdf2f8; padding: 12px 14px; border-radius: 12px; border: 1px dashed #a21c54; margin-top: 10px; }
+            .policy-box { background: #fdfbf7; border: 1px solid #fef3c7; border-radius: 14px; padding: 16px; margin-bottom: 24px; font-size: 11px; color: #78350f; }
+            .policy-title { font-weight: 800; margin-bottom: 6px; color: #92400e; font-size: 12px; }
+            .policy-list { list-style: disc; padding-left: 18px; line-height: 1.6; }
+            .footer { border-top: 1px solid #f2e4ec; padding-top: 18px; text-align: center; color: #745b68; font-size: 11px; }
+            .btn-print { margin-top: 16px; background: #a21c54; color: #fff; border: none; padding: 10px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; }
+            @media print { .btn-print { display: none; } body { padding: 0; } .container { border: none; } }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo">PARVA</div>
-            <div class="title">EVENT RESERVATION VOUCHER</div>
+          <div class="container">
+            <div class="header">
+              <div class="logo-wrap">
+                <img src="/parva-logo.png" alt="Parva" class="logo-img" onerror="this.style.display='none'" />
+                <span style="font-size:24px; font-weight:900; color:#a21c54; letter-spacing:-0.5px;">parva</span>
+              </div>
+              <div class="voucher-badge">Verified Booking Voucher</div>
+            </div>
+
+            <div class="title-section">
+              <div>
+                <h1 class="voucher-title">Official Event Confirmation</h1>
+                <p class="voucher-sub">Issued under 100% Parva Escrow Guarantee</p>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:#745b68; font-weight:700;">BOOKING ID</div>
+                <div style="font-size:15px; font-weight:900; font-family:monospace; color:#a21c54;">${booking.bookingIdString || booking.id}</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <!-- Customer Details -->
+              <div class="card">
+                <div class="card-title">Customer & Event Details</div>
+                <div class="row"><span class="label">Customer Name:</span><span class="val">${booking.customerName || (booking as any).userName || 'Valued Client'}</span></div>
+                <div class="row"><span class="label">Contact Phone:</span><span class="val">${booking.customerPhone || (booking as any).userPhone || 'Provided'}</span></div>
+                <div class="row"><span class="label">Email Address:</span><span class="val">${booking.customerEmail || (booking as any).userEmail || 'Registered'}</span></div>
+                <div class="row"><span class="label">Event Date:</span><span class="val" style="color:#a21c54;">${booking.eventDate}</span></div>
+                <div class="row"><span class="label">Time Slot:</span><span class="val">${booking.eventTimeSlot || 'Standard Slot'}</span></div>
+                <div class="row"><span class="label">Event Venue:</span><span class="val">${booking.eventLocationAddress || (booking as any).location || 'Customer Selected Address'}</span></div>
+                ${booking.guestCount ? `<div class="row"><span class="label">Guest Count:</span><span class="val">${booking.guestCount} Guests</span></div>` : ''}
+              </div>
+
+              <!-- Vendor Details -->
+              <div class="card">
+                <div class="card-title">Vendor & Service Partner</div>
+                <div class="row"><span class="label">Vendor Name:</span><span class="val">${booking.vendor?.name || 'Verified Partner'}</span></div>
+                <div class="row"><span class="label">Category:</span><span class="val">${booking.vendor?.category || 'Celebration Service'}</span></div>
+                <div class="row"><span class="label">Service Name:</span><span class="val">${booking.serviceName || 'Standard Package'}</span></div>
+                <div class="row"><span class="label">Vendor Location:</span><span class="val">${booking.vendor?.location || 'Registered Partner City'}</span></div>
+                <div class="row"><span class="label">Partner Phone:</span><span class="val">${booking.vendor?.phone || '+91 Concierge Support'}</span></div>
+                <div class="row"><span class="label">Booking Status:</span><span class="val"><span class="status-tag">${booking.status}</span></span></div>
+                <div class="row"><span class="label">Escrow Protection:</span><span class="val" style="color:#047857;">Active & Insured</span></div>
+              </div>
+            </div>
+
+            <!-- Payment Breakdown -->
+            <div class="payment-card">
+              <div class="card-title" style="color:#1a0812; font-size:13px; margin-bottom:14px;">Authoritative Payment Ledger & Balance Summary</div>
+              <div class="row"><span class="label">Agreed Gross Booking Price:</span><span class="val">₹${totalPrice.toLocaleString('en-IN')}</span></div>
+              <div class="row"><span class="label">Platform Commitment Token (5%):</span><span class="val">₹${platformFee.toLocaleString('en-IN')}</span></div>
+              <div class="row"><span class="label">GST (18% on platform fee):</span><span class="val">₹${gstFee.toLocaleString('en-IN')}</span></div>
+              
+              <div class="row highlight-row">
+                <span class="label" style="font-weight:800; color:#047857;">Total Advance Paid Online via Parva:</span>
+                <span class="val" style="font-size:14px; color:#047857;">₹${advancePaid.toLocaleString('en-IN')} [Paid ✓]</span>
+              </div>
+
+              <div class="row due-row">
+                <div>
+                  <div style="font-weight:900; font-size:14px; color:#a21c54;">Remaining Balance Due at Venue:</div>
+                  <div style="font-size:10.5px; color:#745b68; font-weight:600;">Pay directly to ${booking.vendor?.name || 'vendor'} on event date upon arrival</div>
+                </div>
+                <span class="val" style="font-size:18px; font-weight:900; color:#a21c54;">₹${remainingAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            <!-- Policies & Protection -->
+            <div class="policy-box">
+              <div class="policy-title">🛡️ Parva Escrow Rules & Cancellation Policy</div>
+              <ul class="policy-list">
+                <li><strong>Slot Lock Guarantee:</strong> Your advance payment locks the vendor's exclusive calendar slot for the date and time specified above.</li>
+                <li><strong>On-Site Settlement:</strong> The remaining balance of ₹${remainingAmount.toLocaleString('en-IN')} is payable directly to the service partner on the event date upon setup/commencement.</li>
+                <li><strong>Cancellation Policy:</strong> Free cancellation with 100% advance refund (less standard PG gateway fees) is applicable if cancelled at least 7 days prior to the event date.</li>
+                <li><strong>Concierge Escalation:</strong> For any immediate venue coordination or rescheduling, reach our 24/7 dedicated support team.</li>
+              </ul>
+            </div>
+
+            <div class="footer">
+              <p><strong>Parva Celebrations India Private Limited</strong> • www.myparva.com</p>
+              <p>24x7 Partner & Client Concierge Helpline: <strong>support@myparva.com</strong> | <strong>+91 91724 99195</strong></p>
+              <button class="btn-print" onclick="window.print()">🖨️ Print / Download PDF Voucher</button>
+            </div>
           </div>
-          <div class="box">
-            <div class="row"><span class="label">Booking ID:</span><span class="val">${booking.bookingIdString || booking.id}</span></div>
-            <div class="row"><span class="label">Vendor Name:</span><span class="val">${booking.vendor?.name}</span></div>
-            <div class="row"><span class="label">Category:</span><span class="val">${booking.vendor?.category}</span></div>
-            <div class="row"><span class="label">Service / Package:</span><span class="val">${booking.serviceName || 'Standard Package'}</span></div>
-            <div class="row"><span class="label">Event Date:</span><span class="val">${booking.eventDate}</span></div>
-            <div class="row"><span class="label">Time Slot:</span><span class="val">${booking.eventTimeSlot || 'Evening'}</span></div>
-            <div class="row"><span class="label">Status:</span><span class="val">${booking.status}</span></div>
-          </div>
-          <div class="box">
-            <div class="row"><span class="label">Total Event Value:</span><span class="val">₹${(booking.totalPrice || 0).toLocaleString('en-IN')}</span></div>
-            <div class="row"><span class="label">Advance Escrow Paid (5% + GST):</span><span class="val">₹${Math.round((booking.totalPrice || 0) * 0.05 * 1.18).toLocaleString('en-IN')}</span></div>
-            <div class="row total"><span class="label">Balance Due at Event:</span><span class="val">₹${Math.round((booking.totalPrice || 0) * 0.95).toLocaleString('en-IN')}</span></div>
-          </div>
-          <div class="footer">
-            <p>Thank you for choosing PARVA — India's Premier Event Services Marketplace.</p>
-            <p>24/7 Concierge Support: support@myparva.com | www.myparva.com</p>
-          </div>
-          <script>window.print();</script>
+          <script>
+            window.onload = function() {
+              setTimeout(function() { window.print(); }, 500);
+            };
+          </script>
         </body>
       </html>
     `;
@@ -2737,6 +2830,56 @@ export default function App() {
     } catch (error) {
       console.error('Cancel booking error:', error);
       showNotification('Failed to cancel booking. Please try again.');
+    }
+  };
+
+  const handleApproveKyc = async (vendorId: string) => {
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'vendors', vendorId), {
+        isVerified: true,
+        verified: true,
+        'kyc.status': 'VERIFIED',
+        'kyc.verifiedAt': now,
+        updatedAt: now
+      });
+      setVendors(prev => prev.map(v => v.id === vendorId ? {
+        ...v,
+        isVerified: true,
+        verified: true,
+        kyc: { ...(v.kyc || { status: 'VERIFIED' }), status: 'VERIFIED', verifiedAt: now }
+      } : v));
+      showNotification('✅ Vendor KYC Approved & Verified Partner Badge Granted!');
+    } catch (err) {
+      console.error('Error approving KYC:', err);
+      showNotification('Failed to approve KYC. Please try again.');
+    }
+  };
+
+  const handleRejectKyc = async (vendorId: string, reason: string) => {
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'vendors', vendorId), {
+        isVerified: false,
+        verified: false,
+        'kyc.status': 'REJECTED',
+        'kyc.rejectionReason': reason,
+        updatedAt: now
+      });
+      setVendors(prev => prev.map(v => v.id === vendorId ? {
+        ...v,
+        isVerified: false,
+        verified: false,
+        kyc: { ...(v.kyc || { status: 'REJECTED' }), status: 'REJECTED', rejectionReason: reason }
+      } : v));
+      showNotification('KYC Rejection notice saved and vendor profile updated.');
+    } catch (err) {
+      console.error('Error rejecting KYC:', err);
+      showNotification('Failed to reject KYC.');
     }
   };
 
@@ -5424,6 +5567,26 @@ export default function App() {
 
                     {/* Profile Settings Menu */}
                     <div className="bg-white rounded-2xl border border-brand-border divide-y divide-gray-100 overflow-hidden shadow-sm">
+                      {/* Admin KYC Access */}
+                      <button
+                        onClick={() => setIsAdminKycOpen(true)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-amber-50/60 bg-amber-50/20 text-left transition border-b border-amber-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-brand-primary text-white flex items-center justify-center">
+                            <ShieldCheck size={16} />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-brand-text text-xs flex items-center gap-1.5">
+                              <span>Admin KYC & Partner Document Review</span>
+                              <span className="text-[9px] bg-brand-primary text-white px-2 py-0.5 rounded-full font-black">ADMIN</span>
+                            </h5>
+                            <p className="text-[10px] text-brand-text-secondary mt-0.5">Review submitted Aadhaar, PAN & Business licenses to approve verified badges</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400" />
+                      </button>
+
                       {[
                         { label: 'Booking Preferences', desc: 'Default city, contact phone, GST details' },
                         { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
@@ -5934,6 +6097,14 @@ export default function App() {
           }}
         />
       )}
+      {/* ADMIN KYC REVIEW MODAL */}
+      <AdminKycReviewModal
+        isOpen={isAdminKycOpen}
+        onClose={() => setIsAdminKycOpen(false)}
+        vendors={vendors}
+        onApproveKyc={handleApproveKyc}
+        onRejectKyc={handleRejectKyc}
+      />
     </div>
     </div>
     </>
