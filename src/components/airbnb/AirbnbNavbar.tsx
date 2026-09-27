@@ -178,7 +178,7 @@ export function AirbnbNavbar({
           <button
             type="button"
             onClick={onOpenCart}
-            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 rounded-full text-xs font-extrabold transition active:scale-95 relative"
+            className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2 rounded-full text-xs font-extrabold transition active:scale-95 relative cursor-pointer"
           >
             <ShoppingCart size={15} />
             <span className="hidden sm:inline">Event Plan</span>
@@ -189,12 +189,22 @@ export function AirbnbNavbar({
             )}
           </button>
 
+          {!currentUser && (
+            <button
+              type="button"
+              onClick={onOpenLogin}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-xs transition active:scale-95 cursor-pointer flex items-center gap-1"
+            >
+              <span>Sign In</span>
+            </button>
+          )}
+
           {/* User Profile Pill Dropdown */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-200 rounded-full hover:shadow-md transition active:scale-95 bg-white"
+              className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-200 rounded-full hover:shadow-md transition active:scale-95 bg-white cursor-pointer"
             >
               <Menu size={16} className="text-gray-600" />
               <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">

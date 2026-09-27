@@ -91,7 +91,7 @@ export default function NotificationCenterModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -101,16 +101,16 @@ export default function NotificationCenterModal({
         onClick={onClose}
       />
 
-      {/* Drawer Container */}
+      {/* Drawer / Modal Container */}
       <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
+        initial={{ y: '100%', opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-md mx-auto bg-white rounded-t-[32px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md mx-auto bg-white rounded-t-[32px] sm:rounded-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-gray-100"
       >
         {/* Top Handle Bar */}
-        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-1" />
+        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-1 sm:hidden" />
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
