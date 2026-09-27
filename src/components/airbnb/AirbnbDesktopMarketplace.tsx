@@ -37,7 +37,7 @@ export interface AirbnbDesktopMarketplaceProps {
   planningGuestSize: number;
   onGuestCountChange: (guests: number) => void;
   currentUser: any;
-  onOpenLogin: () => void;
+  onOpenLogin: (tab?: 'signin' | 'signup') => void;
   onLogout: () => void;
   onNavigateTab: (tab: 'home' | 'bookings' | 'chat' | 'profile') => void;
   activeTab: string;
@@ -206,6 +206,7 @@ export function AirbnbDesktopMarketplace({
           currentUser={currentUser}
           onPay={onPay}
           onBack={() => setIsCheckoutOpen(false)}
+          onOpenLogin={onOpenLogin}
           couponDiscount={couponDiscount}
           couponCode={couponCode}
           setCouponCode={setCouponCode}

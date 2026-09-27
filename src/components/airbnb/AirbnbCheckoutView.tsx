@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Star, ShieldCheck, Gem, Tag, MapPin, Navigation, User, Phone, Mail, Calendar, Palette, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Star, ShieldCheck, Gem, Tag, MapPin, Navigation, User, Phone, Mail, Calendar, Palette, Sparkles, AlertCircle, LogIn, UserPlus } from 'lucide-react';
 
 export interface BookingFormDetails {
   clientName: string;
@@ -19,6 +19,7 @@ export interface AirbnbCheckoutViewProps {
   currentUser: any;
   onPay: (details?: BookingFormDetails) => void;
   onBack: () => void;
+  onOpenLogin?: (tab?: 'signin' | 'signup') => void;
   couponDiscount: number;
   couponCode: string;
   setCouponCode: (c: string) => void;
@@ -34,22 +35,48 @@ export function AirbnbCheckoutView({
   currentUser,
   onPay,
   onBack,
+  onOpenLogin,
   couponDiscount,
   couponCode,
   setCouponCode,
   onApplyCoupon,
   couponMessage
 }: AirbnbCheckoutViewProps) {
+  // Restore saved draft if available
+  const getInitialDraft = () => {
+    try {
+      const saved = sessionStorage.getItem('parva_checkout_draft');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  };
+  const draft = getInitialDraft();
+
   // Form State
-  const [clientName, setClientName] = useState(currentUser?.name || currentUser?.displayName || '');
-  const [clientPhone, setClientPhone] = useState(currentUser?.phone || '');
-  const [clientEmail, setClientEmail] = useState(currentUser?.email || '');
-  const [clientAge, setClientAge] = useState(currentUser?.age ? String(currentUser.age) : '28');
-  const [eventAddress, setEventAddress] = useState('');
-  const [styleSuggestions, setStyleSuggestions] = useState('');
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [clientName, setClientName] = useState(currentUser?.name || currentUser?.displayName || draft?.clientName || '');
+  const [clientPhone, setClientPhone] = useState(currentUser?.phone || draft?.clientPhone || '');
+  const [clientEmail, setClientEmail] = useState(currentUser?.email || draft?.clientEmail || '');
+  const [clientAge, setClientAge] = useState(currentUser?.age ? String(currentUser.age) : (draft?.clientAge || '28'));
+  const [eventAddress, setEventAddress] = useState(draft?.eventAddress || '');
+  const [styleSuggestions, setStyleSuggestions] = useState(draft?.styleSuggestions || '');
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(draft?.gpsCoords || null);
   const [isScanningGps, setIsScanningGps] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Auto save draft to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('parva_checkout_draft', JSON.stringify({
+        clientName,
+        clientPhone,
+        clientEmail,
+        clientAge,
+        eventAddress,
+        styleSuggestions,
+        gpsCoords
+      }));
+    } catch (e) {}
+  }, [clientName, clientPhone, clientEmail, clientAge, eventAddress, styleSuggestions, gpsCoords]);
 
   // Sync with currentUser if they login while on this view
   useEffect(() => {
@@ -119,6 +146,11 @@ export function AirbnbCheckoutView({
 
     setFormError(null);
 
+    if (!currentUser && onOpenLogin) {
+      onOpenLogin('signin');
+      return;
+    }
+
     onPay({
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim(),
@@ -136,9 +168,9 @@ export function AirbnbCheckoutView({
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-2 text-xs font-bold text-gray-700 hover:text-gray-900 mb-6 transition cursor-pointer"
+        className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-gray-900 mb-6 transition cursor-pointer"
       >
-        <ArrowLeft size={16} />
+        <ArrowLeft size={18} />
         <span>Back to vendor listing</span>
       </button>
 
@@ -146,48 +178,70 @@ export function AirbnbCheckoutView({
         {/* Left Column (Confirm and pay actions & Additional Info Form) */}
         <div className="lg:col-span-7 space-y-6">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 font-display tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 font-sans tracking-tight">
               Confirm and pay
             </h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm sm:text-base text-gray-600 mt-1.5 font-normal">
               Provide event and contact details to notify your vendor and secure instant booking confirmation.
             </p>
           </div>
 
           {!currentUser && (
-            <div className="bg-amber-50/90 p-4 rounded-2xl border border-amber-200 flex items-start gap-3">
-              <AlertCircle size={18} className="text-amber-700 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-amber-900">Sign in required to confirm booking</h4>
-                <p className="text-[11px] text-amber-800 mt-0.5">
-                  You can fill out the booking form below. When clicking Proceed, you'll be prompted to sign in with Google or Email.
-                </p>
+            <div className="bg-amber-50/95 p-5 rounded-3xl border border-amber-200 shadow-xs space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={22} className="text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-amber-900">Sign In or Create Account to Confirm</h4>
+                  <p className="text-xs sm:text-sm text-amber-800 mt-0.5 leading-relaxed">
+                    You can fill out your event details below. Sign in with Google or Email to unlock direct communication with the vendor.
+                  </p>
+                </div>
+              </div>
+
+              {/* Direct Redirect to Login and Sign Up */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin?.('signin')}
+                  className="flex items-center gap-2 bg-amber-900 hover:bg-amber-950 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+                >
+                  <LogIn size={15} />
+                  <span>Sign In to Account</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin?.('signup')}
+                  className="flex items-center gap-2 bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  <UserPlus size={15} />
+                  <span>Create New Account</span>
+                </button>
               </div>
             </div>
           )}
 
           {/* Form Error Banner */}
           {formError && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-2">
-              <AlertCircle size={16} className="text-rose-600 shrink-0" />
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-sm font-bold flex items-center gap-2.5">
+              <AlertCircle size={18} className="text-rose-600 shrink-0" />
               <span>{formError}</span>
             </div>
           )}
 
           {/* Additional Event & Booking Information Card */}
-          <div className="bg-white rounded-3xl border border-gray-200/90 p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
-              <Sparkles size={18} className="text-rose-600" />
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">
+          <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex items-center gap-2.5 pb-4 border-b border-gray-100">
+              <Sparkles size={20} className="text-rose-600" />
+              <h3 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-wider font-sans">
                 1. Contact & Planner Information
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Complete Name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <User size={13} className="text-gray-400" />
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <User size={15} className="text-gray-400" />
                   <span>Complete Name *</span>
                 </label>
                 <input
@@ -195,15 +249,15 @@ export function AirbnbCheckoutView({
                   placeholder="e.g. Rahul Sharma"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none transition"
+                  className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl px-4 py-3.5 text-sm sm:text-base font-semibold text-gray-900 outline-none transition"
                   required
                 />
               </div>
 
               {/* Age */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <Calendar size={13} className="text-gray-400" />
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Calendar size={15} className="text-gray-400" />
                   <span>Age (Client / Host) *</span>
                 </label>
                 <input
@@ -213,15 +267,15 @@ export function AirbnbCheckoutView({
                   max="100"
                   value={clientAge}
                   onChange={(e) => setClientAge(e.target.value)}
-                  className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none transition"
+                  className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl px-4 py-3.5 text-sm sm:text-base font-semibold text-gray-900 outline-none transition"
                   required
                 />
               </div>
 
               {/* Contact Info (WhatsApp / Mobile) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <Phone size={13} className="text-gray-400" />
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Phone size={15} className="text-gray-400" />
                   <span>Contact Phone / WhatsApp *</span>
                 </label>
                 <input
@@ -229,15 +283,15 @@ export function AirbnbCheckoutView({
                   placeholder="e.g. 9823456789"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
-                  className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none transition"
+                  className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl px-4 py-3.5 text-sm sm:text-base font-semibold text-gray-900 outline-none transition"
                   required
                 />
               </div>
 
               {/* Email Address */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <Mail size={13} className="text-gray-400" />
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <Mail size={15} className="text-gray-400" />
                   <span>Confirmation Email</span>
                 </label>
                 <input
@@ -245,16 +299,16 @@ export function AirbnbCheckoutView({
                   placeholder="e.g. rahul@example.com"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
-                  className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 outline-none transition"
+                  className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl px-4 py-3.5 text-sm sm:text-base font-semibold text-gray-900 outline-none transition"
                 />
               </div>
             </div>
 
             {/* Event Location Complete Address Section */}
-            <div className="pt-4 border-t border-gray-100 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <MapPin size={13} className="text-rose-600" />
+            <div className="pt-5 border-t border-gray-100 space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <MapPin size={15} className="text-rose-600" />
                   <span>Event Venue / Complete Address *</span>
                 </label>
 
@@ -263,35 +317,35 @@ export function AirbnbCheckoutView({
                   type="button"
                   onClick={handleScanLocation}
                   disabled={isScanningGps}
-                  className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black px-3 py-1.5 rounded-xl transition cursor-pointer active:scale-95 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition cursor-pointer active:scale-95 disabled:opacity-60"
                   title="Detect coordinates from device GPS"
                 >
-                  <Navigation size={12} className={isScanningGps ? 'animate-spin' : ''} />
+                  <Navigation size={14} className={isScanningGps ? 'animate-spin' : ''} />
                   <span>{isScanningGps ? 'Scanning GPS...' : '📍 Scan Location by GPS'}</span>
                 </button>
               </div>
 
               {gpsCoords && (
-                <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-700 bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-200">
                   <span>✓ GPS Coordinates Locked:</span>
                   <span className="font-mono text-emerald-900">{gpsCoords.lat.toFixed(4)}, {gpsCoords.lng.toFixed(4)}</span>
                 </div>
               )}
 
               <textarea
-                rows={2}
-                placeholder="Enter complete address (Hall / Lawn Name, Street, Landmark, City, Pincode) or use Scan GPS above..."
+                rows={3}
+                placeholder="Enter complete venue address (Hall / Lawn Name, Street, Landmark, City, Pincode) or use Scan GPS above..."
                 value={eventAddress}
                 onChange={(e) => setEventAddress(e.target.value)}
-                className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl p-3 text-xs font-semibold text-gray-900 outline-none transition resize-none"
+                className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl p-4 text-sm sm:text-base font-medium text-gray-900 outline-none transition resize-none"
                 required
               />
             </div>
 
             {/* Additional Info / Style Suggestions */}
-            <div className="pt-4 border-t border-gray-100 space-y-2">
-              <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                <Palette size={13} className="text-indigo-600" />
+            <div className="pt-5 border-t border-gray-100 space-y-2.5">
+              <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <Palette size={15} className="text-indigo-600" />
                 <span>Style Suggestions & Custom Notes (Optional)</span>
               </label>
               <textarea
@@ -299,28 +353,28 @@ export function AirbnbCheckoutView({
                 placeholder="Share your preferred color palette, event themes, song choices, dietary preferences, or specific timings for the vendor..."
                 value={styleSuggestions}
                 onChange={(e) => setStyleSuggestions(e.target.value)}
-                className="w-full bg-gray-50/80 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-xl p-3 text-xs font-semibold text-gray-900 outline-none transition resize-none"
+                className="w-full bg-gray-50/90 border border-gray-200 focus:border-rose-500 focus:bg-white rounded-2xl p-4 text-sm sm:text-base font-medium text-gray-900 outline-none transition resize-none"
               />
-              <p className="text-[10px] text-gray-400 font-medium">
+              <p className="text-xs text-gray-500 font-medium">
                 This information will be forwarded directly to the vendor's hub and included in your booking voucher.
               </p>
             </div>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-2.5 text-sm text-gray-700 font-medium">
+              <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
               <span>100% Escrow Protected: Only 5% advance connection fee charged now.</span>
             </div>
 
-            <p className="text-[11px] text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
               By selecting the button below, I agree to the Parva Booking Terms and Vendor Cancellation Policy.
             </p>
 
             <button
               type="button"
               onClick={handleProceedPay}
-              className="w-full sm:w-auto px-10 bg-rose-600 hover:bg-rose-700 text-white font-black text-sm py-4 rounded-2xl shadow-lg transition active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto px-10 bg-rose-600 hover:bg-rose-700 text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-xl transition active:scale-95 cursor-pointer"
             >
               {!currentUser ? 'Log in & Confirm Booking' : `Confirm and pay ₹${finalDue.toLocaleString('en-IN')}`}
             </button>
@@ -329,25 +383,25 @@ export function AirbnbCheckoutView({
 
         {/* Right Column (Order summary card) */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl border border-gray-200/90 p-6 shadow-xl space-y-5 sticky top-28">
+          <div className="bg-white rounded-3xl border border-gray-200/90 p-6 sm:p-7 shadow-xl space-y-6 sticky top-28">
             {/* Rare find tag */}
-            <div className="bg-rose-50 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-2 border border-rose-200">
-              <Gem size={14} />
+            <div className="bg-rose-50 text-rose-700 text-sm font-bold px-3.5 py-2.5 rounded-2xl flex items-center gap-2 border border-rose-200">
+              <Gem size={16} />
               <span>Rare find! Specialist is in high demand</span>
             </div>
 
             {/* Vendor Snippet */}
-            <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
               <img
                 src={primaryItem.vendor.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=200'}
                 alt={primaryItem.vendor.name}
-                className="w-16 h-16 rounded-2xl object-cover border border-gray-200 shrink-0"
+                className="w-18 h-18 rounded-2xl object-cover border border-gray-200 shrink-0"
               />
               <div className="min-w-0">
-                <h4 className="font-extrabold text-xs text-gray-900 truncate">{primaryItem.vendor.name}</h4>
-                <p className="text-[11px] text-gray-500">{primaryItem.service.name}</p>
-                <div className="flex items-center gap-1 text-[11px] text-gray-700 font-bold mt-0.5">
-                  <Star size={11} className="fill-amber-400 text-amber-400" />
+                <h4 className="font-extrabold text-sm sm:text-base text-gray-900 truncate">{primaryItem.vendor.name}</h4>
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">{primaryItem.service.name}</p>
+                <div className="flex items-center gap-1 text-xs text-gray-700 font-bold mt-1">
+                  <Star size={13} className="fill-amber-400 text-amber-400" />
                   <span>{(primaryItem.vendor.rating || 4.9).toFixed(1)}</span>
                   <span className="text-gray-400 font-normal">({primaryItem.vendor.reviewCount || 142} reviews)</span>
                 </div>
@@ -355,49 +409,49 @@ export function AirbnbCheckoutView({
             </div>
 
             {/* Dates & Guests */}
-            <div className="space-y-2 text-xs">
+            <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center py-1">
                 <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">Event Date</span>
+                  <span className="text-gray-500 block text-xs uppercase font-bold">Event Date</span>
                   <span className="font-extrabold text-gray-900">{planningDate || 'Selected Date'}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">Time Slot</span>
+                  <span className="text-gray-500 block text-xs uppercase font-bold">Time Slot</span>
                   <span className="font-extrabold text-gray-900 capitalize">{planningTimeSlot || 'Evening'}</span>
                 </div>
               </div>
 
               <div className="flex justify-between items-center py-1 border-t border-gray-100">
                 <div>
-                  <span className="text-gray-500 block text-[10px] uppercase font-bold">Attendees / Guests</span>
+                  <span className="text-gray-500 block text-xs uppercase font-bold">Attendees / Guests</span>
                   <span className="font-extrabold text-gray-900">{guestCount || 100} Guests</span>
                 </div>
               </div>
             </div>
 
             {/* Coupon Code input */}
-            <div className="pt-2 border-t border-gray-100 space-y-2">
+            <div className="pt-3 border-t border-gray-100 space-y-2.5">
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Coupon code"
+                  placeholder="COUPON CODE"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-rose-500 uppercase"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold outline-none focus:border-rose-500 uppercase"
                 />
                 <button
                   type="button"
                   onClick={onApplyCoupon}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition cursor-pointer"
                 >
                   Apply
                 </button>
               </div>
-              {couponMessage && <p className="text-[10px] font-bold text-rose-600">{couponMessage}</p>}
+              {couponMessage && <p className="text-xs font-bold text-rose-600">{couponMessage}</p>}
             </div>
 
             {/* Price Details */}
-            <div className="space-y-2 pt-2 border-t border-gray-100 text-xs">
+            <div className="space-y-2.5 pt-3 border-t border-gray-100 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Services Total:</span>
                 <span className="font-bold text-gray-900">₹{servicesTotal.toLocaleString('en-IN')}</span>
@@ -416,11 +470,11 @@ export function AirbnbCheckoutView({
                   <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
                 </div>
               )}
-              <div className="flex justify-between font-black text-gray-900 pt-2 border-t border-gray-100">
+              <div className="flex justify-between font-black text-gray-900 pt-3 border-t border-gray-100 text-base">
                 <span>Advance Payable Now:</span>
-                <span className="text-rose-600 text-base">₹{finalDue.toLocaleString('en-IN')}</span>
+                <span className="text-rose-600 text-lg font-black">₹{finalDue.toLocaleString('en-IN')}</span>
               </div>
-              <div className="text-[10px] text-gray-400 text-right">
+              <div className="text-xs text-gray-400 text-right font-medium">
                 Remaining balance payable directly to vendor on event day
               </div>
             </div>
@@ -430,3 +484,6 @@ export function AirbnbCheckoutView({
     </div>
   );
 }
+
+export default AirbnbCheckoutView;
+

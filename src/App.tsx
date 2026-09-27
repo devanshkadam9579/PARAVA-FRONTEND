@@ -1005,6 +1005,7 @@ export default function App() {
   // Filter Modal & Dynamic Sorting State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
   const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
   const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
   const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
@@ -2795,7 +2796,10 @@ export default function App() {
           planningGuestSize={planningGuestSize}
           onGuestCountChange={(g) => setPlanningGuestSize(g)}
           currentUser={currentUser}
-          onOpenLogin={() => setIsAuthModalOpen(true)}
+          onOpenLogin={(tab) => {
+            setAuthModalTab(tab || 'signin');
+            setIsAuthModalOpen(true);
+          }}
           onLogout={() => {
             setCurrentUser(null);
             setIsAdmin(false);
@@ -2818,6 +2822,7 @@ export default function App() {
           bundledItems={bundledItems}
           onPay={(bookingDetails) => {
             if (!currentUser) {
+              setAuthModalTab('signin');
               setIsAuthModalOpen(true);
               return;
             }
@@ -5454,6 +5459,7 @@ export default function App() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
         onSuccess={(user) => {
           setCurrentUser(user);
           localStorage.setItem('parva_user', JSON.stringify(user));
