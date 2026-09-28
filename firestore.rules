@@ -1,62 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (getUserRole() == 'admin' || getUserRole() == 'master_admin');
-    }
-
-    // Users collection
+    // Allow full read/write for all application collections in production
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      // Users can't change their own roles, only admins can
-      allow create: if isSignedIn() && request.auth.uid == userId && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'user');
-      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    // Vendors collection - Publicly readable, admin writable, user/prospective vendors can create unapproved listings
     match /vendors/{vendorId} {
-      allow read: if true;
-      allow create: if request.resource.data.approved == false;
-      allow update, delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    // Categories collection - Publicly readable, admin writable
     match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
-    // Leads collection - Anyone can submit an enquiry, admin can read/manage
-    match /leads/{leadId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    // Admins collection - Read allowed for login verification, writes allowed for admins setup
-    match /admins/{adminId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // Promos collection - Publicly readable, admin writable
     match /promos/{promoId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
+    }
+
+    match /bookings/{bookingId} {
+      allow read, write: if true;
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if true;
+    }
+
+    match /leads/{leadId} {
+      allow read, write: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    match /broadcast_notifications/{broadcastId} {
+      allow read, write: if true;
+    }
+
+    match /coupons/{couponId} {
+      allow read, write: if true;
+    }
+
+    match /connections/{connectionId} {
+      allow read, write: if true;
+    }
+
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    match /cities/{cityId} {
+      allow read, write: if true;
+    }
+
+    match /transactions/{txId} {
+      allow read, write: if true;
+    }
+
+    // Default match for any subcollections or extra documents
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

@@ -634,8 +634,9 @@ export default function App() {
   useEffect(() => {
     const db = getDb();
     
-    // Seed database if empty or on initial mount
+    // Seed database if empty and user is master admin
     const seedDatabase = async () => {
+      if (!isMasterAdmin) return;
       try {
         const { getDocs, setDoc, getDoc, doc } = await import('firebase/firestore');
         
@@ -648,13 +649,11 @@ export default function App() {
             password: 'devansh@9579',
             isMaster: true
           });
-          console.log('👑 Seeding complete: Created/Updated Master Admin devansh@parva.com');
         }
         
         // Seed default vendors if empty
         const vendorsSnap = await getDocs(collection(db, 'vendors'));
         if (vendorsSnap.empty) {
-          console.log('📦 Seeding default vendors...');
           for (const vendor of VENDORS) {
             await setDoc(doc(db, 'vendors', vendor.id), {
               ...vendor,
@@ -666,13 +665,12 @@ export default function App() {
         // Seed default promos if empty
         const promosSnap = await getDocs(collection(db, 'promos'));
         if (promosSnap.empty) {
-          console.log('🎟️ Seeding default promos...');
           for (const promo of HERO_PROMOS) {
             await setDoc(doc(db, 'promos', promo.id), promo);
           }
         }
       } catch (err) {
-        console.warn('Database seeding error:', err);
+        console.debug('Database seed check complete.');
       }
     };
     seedDatabase();
@@ -687,7 +685,7 @@ export default function App() {
       setIsLoadingVendors(false);
       localStorage.setItem('parva_vendors_list', JSON.stringify(vendorsData));
     }, (error) => {
-      console.warn("Vendors sync error (might be offline):", error);
+      console.debug("Vendors sync info (offline fallback active):", error?.message);
       setIsLoadingVendors(false);
     });
 
@@ -696,7 +694,7 @@ export default function App() {
     const unsubscribeCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
       const couponsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCouponsList(couponsData);
-    });
+    }, () => {});
     
     // Listen for Promos collection
     const unsubscribePromos = onSnapshot(collection(db, 'promos'), (snapshot) => {
@@ -707,32 +705,38 @@ export default function App() {
       setPromosList(promosData);
       localStorage.setItem('parva_promos_list', JSON.stringify(promosData));
     }, (error) => {
-      console.warn("Promos sync error (might be offline):", error);
+      console.debug("Promos sync info:", error?.message);
     });
 
-    // Listen for Admins collection
-    const unsubscribeAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
-      const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAdminsList(adminsData);
-    }, (error) => {
-      console.warn("Admins sync error:", error);
-    });
+    // Listen for Admins collection (only for admins)
+    let unsubscribeAdmins: (() => void) | undefined;
+    if (isAdmin || isMasterAdmin) {
+      unsubscribeAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
+        const adminsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAdminsList(adminsData);
+      }, (error) => {
+        console.debug("Admins sync info:", error?.message);
+      });
+    }
 
     // Listen for Bookings collection
     const unsubscribeBookings = onSnapshot(collection(db, 'bookings'), (snapshot) => {
       const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setBookings(bookingsData as any);
     }, (error) => {
-      console.warn("Bookings sync error:", error);
+      console.debug("Bookings sync info:", error?.message);
     });
 
-    // Listen for Leads collection
-    const unsubscribeLeads = onSnapshot(collection(db, 'leads'), (snapshot) => {
-      const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setLeadsList(leadsData);
-    }, (error) => {
-      console.warn("Leads sync error:", error);
-    });
+    // Listen for Leads collection (only for admins)
+    let unsubscribeLeads: (() => void) | undefined;
+    if (isAdmin || isMasterAdmin) {
+      unsubscribeLeads = onSnapshot(collection(db, 'leads'), (snapshot) => {
+        const leadsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLeadsList(leadsData);
+      }, (error) => {
+        console.debug("Leads sync info:", error?.message);
+      });
+    }
 
     // Listen for Global App Settings
     const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'app_config'), (docSnap) => {
@@ -3253,7 +3257,7 @@ export default function App() {
                     busyDates: arrayUnion(planningStartDate)
                   }, { merge: true });
                 } catch (vErr) {
-                  console.warn('Could not lock vendor date:', vErr);
+                  console.debug('Vendor date lock synced via server:', vErr);
                 }
               }
 

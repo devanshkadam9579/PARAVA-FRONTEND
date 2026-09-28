@@ -1,0 +1,21 @@
+﻿{
+  "short_name": "MyParva",
+  "name": "MyParva - Celebration Booking Platform",
+  "icons": [
+    {
+      "src": "/parva-logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/parva-logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#a21c54",
+  "display": "standalone",
+  "orientation": "portrait"
+}
