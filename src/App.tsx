@@ -165,17 +165,31 @@ export const isVendorAvailable = (
   return true;
 };
 
+const isUserLoggedInHelper = (user: any): boolean => {
+  return Boolean(
+    user && (
+      (typeof user.uid === 'string' && user.uid.trim().length > 0) ||
+      (typeof user.email === 'string' && user.email.trim().length > 0) ||
+      (typeof user.phone === 'string' && user.phone.trim().length > 0) ||
+      (typeof user.name === 'string' && user.name.trim().length > 0 && user.name.toLowerCase() !== 'guest') ||
+      (typeof user.displayName === 'string' && user.displayName.trim().length > 0)
+    )
+  );
+};
+
 const getUserName = (user: any) => {
-  if (!user) return 'Guest Planner';
-  return user.name || user.displayName || user.email?.split('@')[0] || 'Planner';
+  if (!isUserLoggedInHelper(user)) return 'Guest Planner';
+  return user.name || user.displayName || user.email?.split('@')[0] || 'Guest Planner';
 };
 
 const getUserInitials = (user: any) => {
+  if (!isUserLoggedInHelper(user)) return 'G';
   const name = getUserName(user);
   return name ? name.charAt(0).toUpperCase() : 'G';
 };
 
 const getFirstName = (user: any) => {
+  if (!isUserLoggedInHelper(user)) return 'Guest Planner';
   const name = getUserName(user);
   return name === 'Guest Planner' ? 'Guest Planner' : name.split(' ')[0];
 };
@@ -1244,6 +1258,28 @@ export default function App() {
   });
   // Bookings State
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const isUserLoggedIn = useMemo(() => isUserLoggedInHelper(currentUser), [currentUser]);
+
+  // Scoped bookings for the currently authenticated user
+  const userBookings = useMemo(() => {
+    if (!isUserLoggedIn || !currentUser) return [];
+    const cPhone = (currentUser.phone || '').replace(/\D/g, '').slice(-10);
+    const cEmail = (currentUser.email || '').toLowerCase().trim();
+    const cUid = currentUser.uid || '';
+    const cName = (currentUser.name || currentUser.displayName || '').toLowerCase().trim();
+
+    return bookings.filter(b => {
+      if (b.userId && cUid && b.userId === cUid) return true;
+      if (b.customerEmail && cEmail && b.customerEmail.toLowerCase().trim() === cEmail) return true;
+      if (b.customerPhone && cPhone) {
+        const bPhone = b.customerPhone.replace(/\D/g, '').slice(-10);
+        if (bPhone && bPhone === cPhone) return true;
+      }
+      if (b.customerName && cName && b.customerName.toLowerCase().trim() === cName && cName !== 'guest' && cName !== 'user') return true;
+      return false;
+    });
+  }, [bookings, currentUser, isUserLoggedIn]);
 
   // Messages / Chat State
   const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
@@ -3270,7 +3306,12 @@ export default function App() {
           setCouponCode={setCouponCode}
           onApplyCoupon={handleApplyCoupon}
           couponMessage={couponMessage}
-          bookings={bookings}
+          bookings={userBookings}
+          onOpenAdminKyc={() => setIsAdminKycOpen(true)}
+          onOpenAdminHealth={() => setIsAdminDbHealthOpen(true)}
+          onOpenAdminChats={() => setIsAdminChatsOpen(true)}
+          onOpenLocationSelector={() => setIsLocationOpen(true)}
+          onOpenVendorAuth={() => setIsRegisteringVendor(true)}
           onDownloadVoucher={handleDownloadVoucher}
           onCancelBooking={handleCancelBooking}
           onSubmitReview={handleSubmitReview}
@@ -3315,7 +3356,7 @@ export default function App() {
 
             {/* Action icons right side */}
             <div className="flex items-center gap-1.5">
-              {!currentUser && (
+              {!isUserLoggedIn && (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
                   className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full transition shadow-xs active:scale-95 mr-1"
@@ -4232,7 +4273,7 @@ export default function App() {
               <h3 className="font-extrabold text-brand-text text-base">Your Active Bookings</h3>
             </div>
 
-            {bookings.length === 0 ? (
+            {userBookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
                 <img loading="lazy" 
                   src="/no-bookings.jpg" 
@@ -4250,7 +4291,7 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-4">
-                {bookings.map((b) => {
+                {userBookings.map((b) => {
                   const isCompleted = b.status === 'Completed';
                   const isPending = b.status === 'Pending';
                   
@@ -4446,196 +4487,20 @@ export default function App() {
         )}
 
         {/* ==================== TAB: MESSAGES ==================== */}
-        {activeTab === 'messages' && (
+        {(activeTab === 'messages' || (activeTab as any) === 'chat') && (
           <div className="h-[calc(100vh-140px)] flex flex-col" id="messages-view-container">
-            {activeChatVendorId ? (
-              /* ACTIVE INTERACTIVE CHAT SCREEN */
-              (() => {
-                const thread = chatThreads.find((t) => t.vendor.id === activeChatVendorId);
-                if (!thread) return null;
-
-                const messages = [...INITIAL_CHAT_MESSAGES.filter((m) => m.vendorId === activeChatVendorId), ...chatMessages.filter((m) => m.vendorId === activeChatVendorId)].sort((a,b) => (a.timestamp > b.timestamp ? 1 : -1));
-
-                return (
-                  <div className="flex-1 flex flex-col h-full bg-white rounded-3xl border border-brand-border overflow-hidden">
-                    {/* Chat Header */}
-                    <div className="bg-white px-4 py-3 border-b border-brand-border flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          onClick={() => setActiveChatVendorId(null)}
-                          className="p-1 hover:bg-gray-100 rounded-full text-brand-text"
-                          id="chat-back-btn"
-                        >
-                          <X size={18} />
-                        </button>
-                        <img loading="lazy"
-                          src={thread.vendor.images[0]}
-                          alt={thread.vendor.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div>
-                          <h4 className="font-bold text-brand-text text-xs leading-tight">
-                            {thread.vendor.name}
-                          </h4>
-                          <span className="text-[9px] text-brand-success font-semibold flex items-center gap-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-success animate-ping" />
-                            <span>Online • Responds fast</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* View details quick launch */}
-                      <button
-                        onClick={() => setSelectedVendor(thread.vendor)}
-                        className="text-[10px] text-brand-primary font-bold hover:underline"
-                        id="chat-view-vendor-details"
-                      >
-                        View Info
-                      </button>
-                    </div>
-
-                    {/* Chat message listing scrollpane */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-                      {messages.map((m) => {
-                        const isUser = m.sender === 'user';
-                        return (
-                          <div
-                            key={m.id}
-                            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs shadow-sm ${
-                                isUser
-                                  ? 'bg-brand-primary text-white rounded-tr-none'
-                                  : 'bg-white text-brand-text border border-brand-border rounded-tl-none'
-                              }`}
-                            >
-                              <p className="leading-relaxed whitespace-pre-line">{m.text}</p>
-                              <span className={`text-[8px] mt-1 block text-right ${isUser ? 'text-white/70' : 'text-brand-text-secondary'}`}>
-                                {m.timestamp}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Vendor typing placeholder */}
-                      {isVendorTyping && (
-                        <div className="flex justify-start">
-                          <div className="bg-white border border-brand-border rounded-2xl rounded-tl-none px-4 py-3 text-xs shadow-sm flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-bounce delay-0" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-bounce delay-150" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-bounce delay-300" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Sample Suggested Quick Prompts to make it extremely interactive */}
-                    <div className="bg-white p-2 border-t border-brand-border flex gap-1.5 overflow-x-auto no-scrollbar">
-                      {[
-                        'Can you send a full invoice?',
-                        'Is our date available?',
-                        'Let’s schedule a walkthrough!'
-                      ].map((promptText) => (
-                        <button
-                          key={promptText}
-                          onClick={() => setNewMessageText(promptText)}
-                          className="bg-gray-100 hover:bg-brand-primary-light text-brand-text border border-gray-200/60 rounded-xl px-2.5 py-1.5 text-[10px] font-medium shrink-0 transition"
-                        >
-                          {promptText}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Chat Input row */}
-                    <div className="bg-white p-3 border-t border-brand-border flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Ask anything about packages, date availability..."
-                        value={newMessageText}
-                        onChange={(e) => setNewMessageText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        className="flex-1 bg-gray-50 border border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none py-2.5 px-3.5 rounded-xl text-xs font-medium text-brand-text"
-                        id="chat-input-field"
-                      />
-                      <button
-                        onClick={handleSendMessage}
-                        className="p-2.5 bg-brand-primary hover:bg-brand-primary-dark text-white rounded-xl transition shadow-md shadow-brand-primary/25 shrink-0"
-                        id="chat-send-btn"
-                      >
-                        <Send size={15} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              /* LIST CHAT CONVERSATIONS VIEW */
-              <div className="space-y-4">
-                <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-extrabold text-brand-text text-base">Direct Messages</h3>
-                  <span className="bg-brand-primary-light text-brand-primary-dark text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Fast Responses
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {chatThreads.map((thread) => (
-                    <div
-                      key={thread.vendor.id}
-                      onClick={() => handleSelectThread(thread.vendor.id)}
-                      className="bg-white rounded-2xl border border-brand-border p-3.5 flex items-center justify-between cursor-pointer hover:border-brand-primary/45 transition shadow-sm"
-                      id={`chat-thread-${thread.vendor.id}`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative">
-                          <img loading="lazy"
-                            src={thread.vendor.images[0]}
-                            alt={thread.vendor.name}
-                            className="w-11 h-11 rounded-full object-cover border border-gray-100"
-                            referrerPolicy="no-referrer"
-                          />
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-brand-success border-2 border-white" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex justify-between items-baseline mb-0.5">
-                            <h4 className="font-bold text-brand-text text-xs truncate">
-                              {thread.vendor.name}
-                            </h4>
-                            <span className="text-[9px] text-brand-text-secondary">
-                              {thread.lastMessage.timestamp}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-brand-text-secondary truncate pr-2">
-                            {thread.lastMessage.text}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Unread indicator / Actions */}
-                      {thread.unreadCount > 0 && (
-                        <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-sm">
-                          {thread.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-brand-primary-light/40 rounded-2xl p-4 border border-brand-primary/10 flex items-start gap-3">
-                  <Info className="text-brand-primary mt-0.5 shrink-0" size={16} />
-                  <div>
-                    <h5 className="font-semibold text-brand-primary-dark text-xs">Direct Support</h5>
-                    <p className="text-[11px] text-brand-text-secondary leading-relaxed mt-0.5">
-                      Need custom quotes or high-volume corporate contracts? Let our master event concierges coordinate everything. Click live chat or call anytime.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <ChatTab
+              vendors={vendors}
+              bookings={userBookings}
+              currentUser={currentUser}
+              onOpenLogin={() => {
+                setAuthModalTab('signin');
+                setIsAuthModalOpen(true);
+              }}
+              onShowNotification={showNotification}
+              onNavigateToExplore={() => handleNavigateToTab('explore')}
+              onSelectVendor={(v) => setSelectedVendor(v)}
+            />
           </div>
         )}
 

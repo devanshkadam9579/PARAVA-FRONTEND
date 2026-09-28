@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Menu, User as UserIcon, Globe, Bell, ShoppingCart, LogOut, 
   Calendar, Heart, MessageSquare, Headphones, ShieldCheck, Sparkles,
-  Award, Users, ChevronDown, Check, Search
+  Award, Users, ChevronDown, Check, Search, MapPin, Activity
 } from 'lucide-react';
 import { ParvaLogo } from './ParvaLogo';
 
@@ -13,13 +13,21 @@ export interface AirbnbNavbarProps {
   currentUser: any;
   onOpenLogin: () => void;
   onLogout: () => void;
-  onNavigateTab: (tab: 'home' | 'bookings' | 'chat' | 'profile') => void;
+  onNavigateTab: (tab: 'home' | 'explore' | 'bookings' | 'chat' | 'messages' | 'profile') => void;
   activeTab: string;
   cartCount: number;
   onOpenCart: () => void;
   onOpenSupport: () => void;
   onOpenNotifications: () => void;
   unreadCount: number;
+  currentCity?: string;
+  onSelectCity?: (city: string) => void;
+  cities?: string[];
+  onOpenLocationSelector?: () => void;
+  onOpenAdminKyc?: () => void;
+  onOpenAdminHealth?: () => void;
+  onOpenAdminChats?: () => void;
+  onOpenVendorAuth?: () => void;
 }
 
 // Curated high-definition category imagery mapping (Zero emojis)
@@ -56,10 +64,35 @@ export function AirbnbNavbar({
   onOpenCart,
   onOpenSupport,
   onOpenNotifications,
-  unreadCount
+  unreadCount,
+  currentCity = 'Kolhapur',
+  onSelectCity,
+  cities = [],
+  onOpenLocationSelector,
+  onOpenAdminKyc,
+  onOpenAdminHealth,
+  onOpenAdminChats,
+  onOpenVendorAuth
 }: AirbnbNavbarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const isUserLoggedIn = Boolean(
+    currentUser && (
+      currentUser.uid || 
+      currentUser.email || 
+      currentUser.phone || 
+      (currentUser.name && currentUser.name !== 'Guest' && currentUser.name !== 'Guest Member' && currentUser.name !== 'Guest Planner')
+    )
+  );
+
+  const isAdminUser = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' || 
+      currentUser.role === 'master_admin' || 
+      ['devenshkadam2@gmail.com', 'devanshkadam2@gmail.com', 'devansh@parva.com'].includes(currentUser.email || '')
+    )
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -87,45 +120,84 @@ export function AirbnbNavbar({
   ];
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all">
-      {/* Top Bar: Logo, Concierge, Cart, Profile */}
+    <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all font-sans">
+      {/* Top Bar: Logo, City Pill, Nav Capsule, Actions */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <ParvaLogo 
-          size="md"
-          onClick={() => onNavigateTab('home')}
-        />
+        
+        {/* Brand Logo & City Selector Pill */}
+        <div className="flex items-center gap-3 shrink-0">
+          <ParvaLogo 
+            size="md"
+            onClick={() => onNavigateTab('home')}
+          />
 
-        {/* Center Navigation / Animated Search Capsule */}
-        <div className="hidden md:flex flex-1 h-[48px] items-center justify-center relative">
-          <div className="relative"><nav className="flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
+          {/* Direct City Selector Button */}
+          <button
+            type="button"
+            onClick={() => onOpenLocationSelector ? onOpenLocationSelector() : null}
+            className="hidden lg:flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-800 border border-gray-200 px-3 py-1.5 rounded-full text-xs font-bold transition shadow-2xs cursor-pointer"
+            title="Switch City"
+          >
+            <MapPin size={13} className="text-rose-600 shrink-0" />
+            <span className="font-extrabold">{currentCity}</span>
+            <ChevronDown size={12} className="text-gray-400" />
+          </button>
+        </div>
+
+        {/* Center Navigation Capsule */}
+        <div className="hidden md:flex flex-1 h-[48px] items-center justify-center relative max-w-xl">
+          <div className="relative">
+            <nav className="flex items-center gap-1 bg-gray-50 border border-gray-200/80 rounded-full px-2 py-1 shadow-xs">
               <button
                 type="button"
                 onClick={() => onNavigateTab('home')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
-                  activeTab === 'home' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'home' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Explore Services
               </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigateTab('explore')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'explore' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All Vendors
+              </button>
+
               <button
                 type="button"
                 onClick={() => onNavigateTab('bookings')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
-                  activeTab === 'bookings' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'bookings' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 My Reservations
               </button>
+
               <button
                 type="button"
                 onClick={() => onNavigateTab('chat')}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
-                  activeTab === 'chat' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'chat' || activeTab === 'messages' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Messages
               </button>
+
+              {isAdminUser && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAdminKyc ? onOpenAdminKyc() : onNavigateTab('profile')}
+                  className="px-3 py-1.5 rounded-full text-xs font-black text-rose-600 bg-rose-50 hover:bg-rose-100 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ShieldCheck size={13} />
+                  <span>Admin Hub</span>
+                </button>
+              )}
             </nav>
           </div>
 
@@ -136,9 +208,9 @@ export function AirbnbNavbar({
             <div className="flex items-center bg-white border border-gray-300 rounded-full shadow-sm hover:shadow-md transition pl-5 pr-2 py-2 gap-4">
               <span className="text-sm font-bold text-gray-900">Anywhere</span>
               <div className="h-6 w-px bg-gray-300"></div>
-              <span className="text-sm font-bold text-gray-900">Anytime</span>
+              <span className="text-sm font-bold text-gray-900">{currentCity}</span>
               <div className="h-6 w-px bg-gray-300"></div>
-              <span className="text-sm text-gray-500">Add guests</span>
+              <span className="text-sm text-gray-500">Add event date</span>
               <div className="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-white ml-2">
                 <Search size={14} strokeWidth={3} />
               </div>
@@ -152,7 +224,7 @@ export function AirbnbNavbar({
           <button
             type="button"
             onClick={onOpenSupport}
-            className="hidden lg:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition"
+            className="hidden lg:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition cursor-pointer"
             title="24/7 Celebration Assistance"
           >
             <Headphones size={15} className="text-rose-600" />
@@ -163,7 +235,7 @@ export function AirbnbNavbar({
           <button
             type="button"
             onClick={onOpenNotifications}
-            className="p-2.5 hover:bg-gray-100 rounded-full text-gray-700 transition relative"
+            className="p-2.5 hover:bg-gray-100 rounded-full text-gray-700 transition relative cursor-pointer"
             title="Notifications"
           >
             <Bell size={18} />
@@ -189,12 +261,15 @@ export function AirbnbNavbar({
             )}
           </button>
 
-          {!currentUser && (
+          {/* Guaranteed Visible Sign In Button When Logged Out */}
+          {!isUserLoggedIn && (
             <button
               type="button"
               onClick={onOpenLogin}
-              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-xs transition active:scale-95 cursor-pointer flex items-center gap-1"
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+              id="desktop-signin-button"
             >
+              <UserIcon size={14} />
               <span>Sign In</span>
             </button>
           )}
@@ -205,6 +280,7 @@ export function AirbnbNavbar({
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-2.5 p-1.5 pl-3 border border-gray-200 rounded-full hover:shadow-md transition active:scale-95 bg-white cursor-pointer"
+              id="desktop-user-menu-pill"
             >
               <Menu size={16} className="text-gray-600" />
               <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
@@ -215,75 +291,133 @@ export function AirbnbNavbar({
             {/* Profile Menu Dropdown Modal */}
             {isUserMenuOpen && (
               <div 
-                className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-150 font-sans"
                 onClick={() => setIsUserMenuOpen(false)}
               >
-                {currentUser ? (
+                {isUserLoggedIn ? (
                   <>
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-xs font-extrabold text-gray-900 truncate">
-                        {currentUser.name || 'Valued Client'}
-                      </p>
-                      <p className="text-[11px] text-gray-500 truncate">
+                    <div className="px-5 py-3 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-extrabold text-gray-900 truncate">
+                          {currentUser.name || 'Valued Client'}
+                        </p>
+                        {isAdminUser && (
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">
                         {currentUser.email || currentUser.phone || 'Client Account'}
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('profile')}
-                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                    >
-                      <UserIcon size={15} className="text-gray-500" />
-                      <span>Account Profile</span>
-                    </button>
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab('profile')}
+                        className="w-full px-5 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <UserIcon size={15} className="text-gray-500" />
+                        <span>Account Profile & Wishlist</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('bookings')}
-                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                    >
-                      <Calendar size={15} className="text-gray-500" />
-                      <span>My Reservations</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab('bookings')}
+                        className="w-full px-5 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Calendar size={15} className="text-gray-500" />
+                        <span>My Reservations</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('chat')}
-                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
-                    >
-                      <MessageSquare size={15} className="text-gray-500" />
-                      <span>Vendor Messages</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab('chat')}
+                        className="w-full px-5 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <MessageSquare size={15} className="text-gray-500" />
+                        <span>Vendor Messages</span>
+                      </button>
+                    </div>
+
+                    {/* Admin Actions */}
+                    {isAdminUser && (
+                      <div className="border-t border-gray-100 py-1 bg-rose-50/40">
+                        <div className="px-5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-700">
+                          Administrative Controls
+                        </div>
+                        {onOpenAdminKyc && (
+                          <button
+                            type="button"
+                            onClick={onOpenAdminKyc}
+                            className="w-full px-5 py-2 text-left text-xs font-bold text-gray-800 hover:bg-rose-100/60 flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <ShieldCheck size={15} className="text-rose-600" />
+                            <span>🛡️ KYC Verification Hub</span>
+                          </button>
+                        )}
+                        {onOpenAdminHealth && (
+                          <button
+                            type="button"
+                            onClick={onOpenAdminHealth}
+                            className="w-full px-5 py-2 text-left text-xs font-bold text-gray-800 hover:bg-rose-100/60 flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <Activity size={15} className="text-rose-600" />
+                            <span>📊 Cloudflare & DB Health</span>
+                          </button>
+                        )}
+                        {onOpenAdminChats && (
+                          <button
+                            type="button"
+                            onClick={onOpenAdminChats}
+                            className="w-full px-5 py-2 text-left text-xs font-bold text-gray-800 hover:bg-rose-100/60 flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <MessageSquare size={15} className="text-rose-600" />
+                            <span>💬 Admin Live Chat Logs</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     <div className="border-t border-gray-100 my-1" />
 
                     <button
                       type="button"
                       onClick={onLogout}
-                      className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-red-600 hover:bg-red-50 flex items-center gap-2.5"
+                      className="w-full px-5 py-2.5 text-left text-xs font-extrabold text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition cursor-pointer"
                     >
                       <LogOut size={15} />
                       <span>Log Out</span>
                     </button>
                   </>
                 ) : (
-                  <>
+                  <div className="space-y-1">
                     <button
                       type="button"
                       onClick={onOpenLogin}
-                      className="w-full px-4 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-gray-50"
+                      className="w-full px-5 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
                     >
                       Log In / Sign Up
                     </button>
+                    {onOpenVendorAuth && (
+                      <button
+                        type="button"
+                        onClick={onOpenVendorAuth}
+                        className="w-full px-5 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 transition flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Partner / Vendor Portal</span>
+                        <span className="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-black">Register</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={onOpenSupport}
-                      className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                      className="w-full px-5 py-2.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
                     >
-                      Help Centre
+                      24/7 Concierge & Help
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             )}

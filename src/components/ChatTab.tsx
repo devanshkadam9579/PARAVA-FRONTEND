@@ -16,6 +16,7 @@ export interface ChatTabProps {
   onOpenLogin: () => void;
   onShowNotification: (msg: string) => void;
   onNavigateToExplore?: () => void;
+  onSelectVendor?: (vendor: Vendor) => void;
 }
 
 interface ChatMessage {
@@ -41,10 +42,26 @@ export default function ChatTab({
   initialVendorId,
   onOpenLogin,
   onShowNotification,
-  onNavigateToExplore
+  onNavigateToExplore,
+  onSelectVendor
 }: ChatTabProps) {
-  // Only confirmed vendors (vendors for which the user has a reservation or active booking)
-  const bookedVendorIds = bookings.map(b => b.vendor?.id || (b as any).vendorId).filter(Boolean);
+  // Helper to determine if a booking belongs to the current user
+  const isUserBooking = (b: Booking) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin' || currentUser.role === 'master_admin') return true;
+    if (currentUser.role === 'vendor' && currentUser.vendorId) {
+      return b.vendor?.id === currentUser.vendorId || (b as any).vendorId === currentUser.vendorId;
+    }
+    const uidMatch = Boolean(b.userId && b.userId === currentUser.uid);
+    const phoneMatch = Boolean(currentUser.phone && (b.customerPhone === currentUser.phone || (b as any).clientPhone === currentUser.phone));
+    const emailMatch = Boolean(currentUser.email && (b.customerEmail === currentUser.email || (b as any).clientEmail === currentUser.email));
+    const nameMatch = Boolean(currentUser.name && b.customerName && b.customerName.toLowerCase() === currentUser.name.toLowerCase());
+    return uidMatch || phoneMatch || emailMatch || nameMatch;
+  };
+
+  // Only confirmed vendors for which THIS user has an active/paid reservation
+  const userBookings = bookings.filter(isUserBooking);
+  const bookedVendorIds = userBookings.map(b => b.vendor?.id || (b as any).vendorId).filter(Boolean);
   const bookedVendors = vendors.filter(v => bookedVendorIds.includes(v.id));
   const otherVendors = vendors.filter(v => !bookedVendorIds.includes(v.id));
   const allPartners = [...bookedVendors, ...otherVendors];
@@ -496,16 +513,20 @@ export default function ChatTab({
                 </p>
               </div>
 
-              {onNavigateToExplore && (
-                <button
-                  type="button"
-                  onClick={onNavigateToExplore}
-                  className="bg-brand-primary hover:bg-brand-primary-dark text-white text-xs font-black px-6 py-3 rounded-2xl shadow-md transition active:scale-95 flex items-center gap-2 uppercase tracking-wider cursor-pointer"
-                >
-                  <span>Book {activeVendor?.name || 'Vendor'} Now</span>
-                  <ArrowRight size={14} />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeVendor && onSelectVendor) {
+                    onSelectVendor(activeVendor);
+                  } else if (onNavigateToExplore) {
+                    onNavigateToExplore();
+                  }
+                }}
+                className="bg-brand-primary hover:bg-brand-primary-dark text-white text-xs font-black px-6 py-3 rounded-2xl shadow-md transition active:scale-95 flex items-center gap-2 uppercase tracking-wider cursor-pointer"
+              >
+                <span>Book {activeVendor?.name || 'Vendor'} Now</span>
+                <ArrowRight size={14} />
+              </button>
             </div>
           ) : (
             <>

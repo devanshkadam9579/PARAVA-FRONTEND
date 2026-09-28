@@ -40,7 +40,7 @@ export interface AirbnbDesktopMarketplaceProps {
   currentUser: any;
   onOpenLogin: (tab?: 'signin' | 'signup') => void;
   onLogout: () => void;
-  onNavigateTab: (tab: 'home' | 'bookings' | 'chat' | 'profile') => void;
+  onNavigateTab: (tab: 'home' | 'explore' | 'bookings' | 'chat' | 'messages' | 'profile') => void;
   activeTab: string;
   cartCount: number;
   onOpenCart: () => void;
@@ -66,6 +66,11 @@ export interface AirbnbDesktopMarketplaceProps {
   onSubmitReview: (bookingId: string, vendorId: string, rating: number, comment: string) => Promise<void>;
   searchQuery?: string;
   onSearchQueryChange?: (q: string) => void;
+  onOpenLocationSelector?: () => void;
+  onOpenAdminKyc?: () => void;
+  onOpenAdminHealth?: () => void;
+  onOpenAdminChats?: () => void;
+  onOpenVendorAuth?: () => void;
 }
 
 const ADDITIONAL_SERVICES = [
@@ -122,7 +127,12 @@ export function AirbnbDesktopMarketplace({
   onCancelBooking,
   onSubmitReview,
   searchQuery: externalSearchQuery,
-  onSearchQueryChange
+  onSearchQueryChange,
+  onOpenLocationSelector,
+  onOpenAdminKyc,
+  onOpenAdminHealth,
+  onOpenAdminChats,
+  onOpenVendorAuth
 }: AirbnbDesktopMarketplaceProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'price_high' | 'rating'>('recommended');
@@ -210,10 +220,10 @@ export function AirbnbDesktopMarketplace({
       selectedCategory={selectedCategory}
       onSelectCategory={(c) => {
         onSelectCategory(c);
-        if (activeTab !== 'home') onNavigateTab('home');
+        if (activeTab !== 'home' && activeTab !== 'explore') onNavigateTab('home');
       }}
       currentUser={currentUser}
-      onOpenLogin={onOpenLogin}
+      onOpenLogin={() => onOpenLogin('signin')}
       onLogout={onLogout}
       onNavigateTab={onNavigateTab}
       activeTab={activeTab}
@@ -222,6 +232,14 @@ export function AirbnbDesktopMarketplace({
       onOpenSupport={onOpenSupport}
       onOpenNotifications={onOpenNotifications}
       unreadCount={unreadCount}
+      currentCity={currentCity}
+      onSelectCity={onSelectCity}
+      cities={cities}
+      onOpenLocationSelector={onOpenLocationSelector}
+      onOpenAdminKyc={onOpenAdminKyc}
+      onOpenAdminHealth={onOpenAdminHealth}
+      onOpenAdminChats={onOpenAdminChats}
+      onOpenVendorAuth={onOpenVendorAuth}
     />
   );
 
@@ -296,7 +314,7 @@ export function AirbnbDesktopMarketplace({
   }
 
   // 4. Chat Tab View
-  if (activeTab === 'chat') {
+  if (activeTab === 'chat' || activeTab === 'messages') {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
         {renderNavbar()}
@@ -308,7 +326,8 @@ export function AirbnbDesktopMarketplace({
             initialVendorId={selectedChatVendorId}
             onOpenLogin={() => onOpenLogin?.('signin')}
             onShowNotification={(msg) => console.log(msg)}
-            onNavigateToExplore={() => onNavigateTab('home')}
+            onNavigateToExplore={() => onNavigateTab('explore')}
+            onSelectVendor={onSelectVendor}
           />
         </div>
         <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
