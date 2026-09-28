@@ -16,7 +16,8 @@ import FlowingMenu from '../reactbits/FlowingMenu';
 import { Vendor, VendorServiceItem, Booking } from '../../types';
 import { 
   ChevronRight, ChevronLeft, Sparkles, ShieldCheck, Headphones, Star, 
-  User as UserIcon, Heart, LogOut, ArrowRight, Shield, Award, Clock
+  User as UserIcon, Heart, LogOut, ArrowRight, Shield, Award, Clock,
+  Search, Filter, X, SlidersHorizontal, MapPin
 } from 'lucide-react';
 import { FooterSection } from '../ui/footer-section';
 import { BendingMarquee } from '../ui/bending-marquee';
@@ -63,6 +64,8 @@ export interface AirbnbDesktopMarketplaceProps {
   onDownloadVoucher: (b: Booking) => void;
   onCancelBooking: (bookingId: string, reason: string) => Promise<void>;
   onSubmitReview: (bookingId: string, vendorId: string, rating: number, comment: string) => Promise<void>;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
 }
 
 const ADDITIONAL_SERVICES = [
@@ -117,10 +120,22 @@ export function AirbnbDesktopMarketplace({
   bookings,
   onDownloadVoucher,
   onCancelBooking,
-  onSubmitReview
+  onSubmitReview,
+  searchQuery: externalSearchQuery,
+  onSearchQueryChange
 }: AirbnbDesktopMarketplaceProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'price_high' | 'rating'>('recommended');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minRating, setMinRating] = useState<number>(0);
+
+  const activeSearchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
+  const handleSearchChange = (val: string) => {
+    if (onSearchQueryChange) onSearchQueryChange(val);
+    setInternalSearchQuery(val);
+  };
 
   // Flexible category matching helper
   const isCategoryMatch = (vendor: Vendor, targetCategory: string) => {
@@ -153,8 +168,24 @@ export function AirbnbDesktopMarketplace({
   const filteredVendors = vendors
     .filter((v) => {
       const matchesCategory = isCategoryMatch(v, selectedCategory);
-      const matchesCity = !currentCity || (v.location || '').toLowerCase().includes(currentCity.toLowerCase());
-      return matchesCategory && matchesCity;
+      const matchesCity = !currentCity || currentCity.toLowerCase() === 'all' || (v.location || '').toLowerCase().includes(currentCity.toLowerCase());
+      
+      const sq = activeSearchQuery.toLowerCase().trim();
+      const matchesSearch = !sq || 
+        (v.name || '').toLowerCase().includes(sq) ||
+        (v.category || '').toLowerCase().includes(sq) ||
+        (v.tagline || '').toLowerCase().includes(sq) ||
+        (v.description || '').toLowerCase().includes(sq) ||
+        (v.location || '').toLowerCase().includes(sq) ||
+        (v.features || []).some(f => f.toLowerCase().includes(sq)) ||
+        (v.services || []).some(s => (s.name || '').toLowerCase().includes(sq) || (s.description || '').toLowerCase().includes(sq));
+
+      const price = v.basePrice || 0;
+      const matchesMin = minPrice === '' || price >= Number(minPrice);
+      const matchesMax = maxPrice === '' || price <= Number(maxPrice);
+      const matchesRating = minRating === 0 || (v.rating || 0) >= minRating;
+
+      return matchesCategory && matchesCity && matchesSearch && matchesMin && matchesMax && matchesRating;
     })
     .sort((a, b) => {
       if (sortBy === 'price_low') return (a.basePrice || 0) - (b.basePrice || 0);
@@ -240,6 +271,8 @@ export function AirbnbDesktopMarketplace({
     );
   }
 
+  const [selectedChatVendorId, setSelectedChatVendorId] = useState<string | null>(null);
+
   // 3. Bookings Tab View
   if (activeTab === 'bookings') {
     return (
@@ -248,7 +281,10 @@ export function AirbnbDesktopMarketplace({
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <MyBookingsView
             bookings={bookings}
-            onOpenChatWithVendor={(vendorId, bookingId) => onNavigateTab('chat')}
+            onOpenChatWithVendor={(vendorId, bookingId) => {
+              setSelectedChatVendorId(vendorId);
+              onNavigateTab('chat');
+            }}
             onDownloadVoucher={onDownloadVoucher}
             onCancelBooking={onCancelBooking}
             onSubmitReview={onSubmitReview}
@@ -266,7 +302,14 @@ export function AirbnbDesktopMarketplace({
       <div className="min-h-screen bg-white text-gray-900 font-sans">
         {renderNavbar()}
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <ChatTab />
+          <ChatTab
+            vendors={vendors}
+            bookings={bookings}
+            currentUser={currentUser}
+            initialVendorId={selectedChatVendorId}
+            onOpenLogin={() => onOpenLogin?.('signin')}
+            onShowNotification={(msg) => console.log(msg)}
+          />
         </div>
         <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
       </div>
@@ -308,6 +351,8 @@ export function AirbnbDesktopMarketplace({
         guestCount={planningGuestSize}
         onGuestCountChange={onGuestCountChange}
         onSearch={() => {}}
+        searchQuery={activeSearchQuery}
+        onSearchQueryChange={handleSearchChange}
       />
 
       {/* Compact Airbnb Category Filter Rail */}
@@ -322,22 +367,110 @@ export function AirbnbDesktopMarketplace({
       {/* Main Centered Marketplace Content */}
       <main id="marketplace-cards-section" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 scroll-mt-6">
 
-        {/* Sort & Results Bar */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <span className="text-base sm:text-lg text-gray-600 font-extrabold">
-            Showing {filteredVendors.length} verified celebration specialists in {currentCity}
-          </span>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-600 font-bold hidden sm:inline">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-white border-2 border-rose-500 rounded-full px-5 py-2 font-bold text-gray-900 outline-none focus:ring-4 focus:ring-rose-100 hover:border-rose-600 transition shadow-sm cursor-pointer appearance-none relative pr-10 hover:bg-gray-50 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%23111827%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_0.75rem_center] bg-[length:1.2em_1.2em]"
-            >
-              <option value="recommended" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Top Rated ⭐</option>
-              <option value="price_low" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: Low to High ₹</option>
-              <option value="price_high" className="bg-white text-gray-900 font-semibold hover:bg-blue-600 hover:text-white">Price: High to Low ₹</option>
-            </select>
+        {/* Search, Filter & Sort Toolbar */}
+        <div className="bg-gray-50/80 border border-gray-200 rounded-3xl p-4 sm:p-5 space-y-4 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Live Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={activeSearchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder={`Search vendors, banquet halls, photographers, decorators in ${currentCity}...`}
+                className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition"
+              />
+              {activeSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-bold text-gray-500 hidden sm:inline">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition shadow-xs cursor-pointer"
+              >
+                <option value="recommended">⭐ Top Rated</option>
+                <option value="price_low">₹ Price: Low to High</option>
+                <option value="price_high">₹ Price: High to Low</option>
+                <option value="rating">★ Highest Rating</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Secondary Filter Pills: Price Min/Max, Rating, Reset */}
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-200/60 flex-wrap text-xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Price Range */}
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-gray-500">Price (₹):</span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-20 px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold outline-none focus:border-rose-500"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-24 px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold outline-none focus:border-rose-500"
+                />
+              </div>
+
+              {/* Rating Filter Pills */}
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-gray-500">Rating:</span>
+                {[0, 4.0, 4.5, 4.8].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => setMinRating(rate)}
+                    className={`px-2.5 py-1 rounded-xl font-bold transition ${
+                      minRating === rate 
+                        ? 'bg-rose-600 text-white shadow-xs' 
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {rate === 0 ? 'All' : `${rate}★+`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Filters / Result Count */}
+            <div className="flex items-center gap-3">
+              <span className="font-extrabold text-gray-700">
+                {filteredVendors.length} {filteredVendors.length === 1 ? 'Specialist' : 'Specialists'}
+              </span>
+              {(activeSearchQuery || minPrice !== '' || maxPrice !== '' || minRating !== 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSearchChange('');
+                    setMinPrice('');
+                    setMaxPrice('');
+                    setMinRating(0);
+                    setSortBy('recommended');
+                  }}
+                  className="text-rose-600 hover:underline font-bold"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -549,33 +682,6 @@ export function AirbnbDesktopMarketplace({
             </section>
           </div>
         )}
-
-        {/* Events take place with MyParva - Accordion Gallery */}
-        <section className="space-y-6 pt-10 pb-6 border-t border-gray-100">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
-              Events That Came to Life with MyParva
-            </h2>
-            <p className="text-sm text-gray-500 font-medium">
-              Explore some of the stunning celebrations made possible by our verified vendor partners.
-            </p>
-          </div>
-          <div className="w-full max-w-5xl mx-auto h-[400px]">
-            <AccordionGallery
-              items={[
-                { image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=900', label: 'Grand Weddings', link: '#' },
-                { image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=900', label: 'Luxury Decor', link: '#' },
-                { image: 'https://images.unsplash.com/photo-1533147670608-2a2f9776d3ac?auto=format&fit=crop&q=80&w=900', label: 'Birthday Bashes', link: '#' },
-                { image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=900', label: 'Catering Extravaganza', link: '#' },
-                { image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=900', label: 'Live DJ Nights', link: '#' }
-              ]}
-              defaultIndex={2}
-              expandRatio={0.5}
-              trigger="hover"
-              grayscale={false}
-            />
-          </div>
-        </section>
 
         {/* Logo Loop - Tech / Partners */}
         <section className="py-8 border-y border-gray-100 bg-gray-50 overflow-hidden">

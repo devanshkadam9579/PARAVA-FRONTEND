@@ -3057,16 +3057,30 @@ export default function App() {
                 status: 'Confirmed & Paid'
               });
 
-              // Initialize direct chat message for real-time conversation between vendor and customer
+              // Initialize dual automated chat messages for real-time conversation between vendor and customer
               if (primaryVendor?.id) {
+                // 1. Automated Message to Vendor with customer demands & details
                 await addDoc(collection(db, 'chats'), {
                   bookingId: newBooking.id,
                   vendorId: primaryVendor.id,
                   sender: 'user',
                   senderName: custName,
-                  text: `Namaste! I have confirmed a booking for "${newBooking.serviceName}" on ${planningStartDate} (${formatTimeSlot(newBooking.eventTimeSlot)}). Looking forward to our celebration!`,
+                  text: `Namaste ${primaryVendor.name}! 🎉 New Direct Booking Confirmed for "${newBooking.serviceName}" on ${planningStartDate} (${formatTimeSlot(newBooking.eventTimeSlot)}).\n\n📋 Customer Requirements & Event Info:\n• Client Name: ${custName}\n• Contact Number: ${custPhone}\n• Email: ${custEmail || 'N/A'}\n• Event Location / Address: ${eventAddr}\n• Style & Theme Demands: ${styleNotes || 'Standard package as listed'}\n• Booking Advance Paid: ₹${finalPayableTotal.toLocaleString('en-IN')}\n• Total Service Value: ₹${servicesTotal.toLocaleString('en-IN')}`,
                   createdAt: new Date()
                 });
+
+                // 2. Automated Welcome & Feedback Prompt to Customer
+                await addDoc(collection(db, 'chats'), {
+                  bookingId: newBooking.id,
+                  vendorId: primaryVendor.id,
+                  sender: 'vendor',
+                  senderName: `${primaryVendor.name} Concierge`,
+                  text: `Welcome to MyParva, ${custName}! 🎊 Your reservation for ${newBooking.serviceName} is locked with 100% Escrow Protection. Our team is coordinating all arrangements for your event on ${planningStartDate}. Feel free to share any references, audio tracks, or theme preferences here. We look forward to your valuable feedback and rating after the celebration! ✨`,
+                  createdAt: new Date(Date.now() + 1000)
+                });
+
+                // Unlock vendor connection in user state
+                setUnlockedConnections(prev => [...new Set([...prev, primaryVendor.id])]);
 
                 // Lock vendor busyDate in Firestore
                 try {
@@ -3422,22 +3436,35 @@ export default function App() {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4">
-                {vendors
-                  .filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Event Planner' || v.category === 'Banquet Hall' || v.category === 'Decorator'))
-                  .map((vendor) => (
-                    <VendorCard
-                      key={vendor.id}
-                      vendor={vendor}
-                      onSelect={(v) => handleVendorSelect(v)}
-                      isWishlisted={(wishlist || []).includes(vendor.id)}
-                      onToggleWishlist={handleToggleWishlist}
-                      layout="grid"
-                      userCoords={activeOriginCoords}
-                    />
-                  ))}
-                {vendors.filter(v => v.location.toLowerCase() === currentCity.toLowerCase() && v.approved !== false && (v.category === 'Event Planner' || v.category === 'Banquet Hall' || v.category === 'Decorator')).length === 0 && (
-                  <div className="bg-white rounded-2xl border border-brand-border p-6 text-center text-xs text-brand-text-secondary">
-                    No active event planners listed in {currentCity} yet.
+                {filteredVendors.map((vendor) => (
+                  <VendorCard
+                    key={vendor.id}
+                    vendor={vendor}
+                    onSelect={(v) => handleVendorSelect(v)}
+                    isWishlisted={(wishlist || []).includes(vendor.id)}
+                    onToggleWishlist={handleToggleWishlist}
+                    layout="grid"
+                    userCoords={activeOriginCoords}
+                  />
+                ))}
+                {filteredVendors.length === 0 && (
+                  <div className="bg-white rounded-2xl border border-brand-border p-8 text-center text-xs text-brand-text-secondary space-y-2">
+                    <p className="font-bold text-gray-800 text-sm">No vendors found matching your criteria in {currentCity}</p>
+                    <p className="text-gray-500">Try changing your search query or selecting "All Services".</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedExploreCategory('all');
+                        setActiveSortOption('Distance');
+                        setActiveFilterMinPrice(null);
+                        setActiveFilterMaxPrice(null);
+                        setActiveFilterTypes([]);
+                      }}
+                      className="px-4 py-2 bg-brand-primary text-white font-bold rounded-xl text-xs hover:bg-brand-primary-dark transition"
+                    >
+                      Reset All Filters
+                    </button>
                   </div>
                 )}
               </div>
@@ -6104,6 +6131,34 @@ export default function App() {
         vendors={vendors}
         onApproveKyc={handleApproveKyc}
         onRejectKyc={handleRejectKyc}
+      />
+
+      {/* FILTER MODAL */}
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApply={(f) => {
+          setActiveSortOption(f.sort || 'Distance');
+          setActiveFilterMinPrice(f.min ? Number(f.min) : null);
+          setActiveFilterMaxPrice(f.max ? Number(f.max) : null);
+          setActiveFilterTypes(f.types || []);
+          setIsFilterModalOpen(false);
+          showNotification('✓ Filters applied successfully!');
+        }}
+      />
+
+      {/* AUTHENTICATION & LOGIN/SIGNUP MODAL */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
+        onSuccess={(loggedUser) => {
+          setCurrentUser(loggedUser);
+          localStorage.setItem('parva_user', JSON.stringify(loggedUser));
+          setIsAuthModalOpen(false);
+          showNotification(`🎉 Welcome, ${loggedUser.name || 'User'}!`);
+        }}
+        onShowNotification={showNotification}
       />
     </div>
     </div>

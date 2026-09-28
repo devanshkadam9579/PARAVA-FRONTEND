@@ -5,6 +5,7 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
   const promoScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
 
   const checkPromoScroll = () => {
     if (promoScrollRef.current) {
@@ -20,10 +21,44 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
     return () => window.removeEventListener('resize', checkPromoScroll);
   }, [promos]);
 
+  // Automatic Smooth Continuous Loop for Promo Cards
+  useEffect(() => {
+    if (isPaused) return;
+
+    const interval = setInterval(() => {
+      if (promoScrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
+        // If at the end, smoothly loop back to start
+        if (scrollLeft + clientWidth >= scrollWidth - 20) {
+          promoScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          // Advance by one card width (approx 360-500px depending on screen)
+          const cardWidth = window.innerWidth < 640 ? 350 : 500;
+          promoScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        }
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isPaused, promos]);
+
   const scrollPromos = (direction: 'left' | 'right') => {
     if (promoScrollRef.current) {
-      const amount = direction === 'left' ? -480 : 480;
-      promoScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
+      const cardWidth = window.innerWidth < 640 ? 350 : 500;
+      if (direction === 'right') {
+        if (scrollLeft + clientWidth >= scrollWidth - 20) {
+          promoScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          promoScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        }
+      } else {
+        if (scrollLeft <= 10) {
+          promoScrollRef.current.scrollTo({ left: scrollWidth, behavior: 'smooth' });
+        } else {
+          promoScrollRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+        }
+      }
     }
   };
 
@@ -174,6 +209,10 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
         <div 
           ref={promoScrollRef}
           onScroll={checkPromoScroll}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
           className="flex gap-6 overflow-x-auto scrollbar-none py-2 px-1 scroll-smooth snap-x snap-mandatory"
         >
           {displayPromos.map((promo, idx) => (

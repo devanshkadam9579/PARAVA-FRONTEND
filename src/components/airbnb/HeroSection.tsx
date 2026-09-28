@@ -13,6 +13,8 @@ export interface HeroSectionProps {
   onGuestCountChange: (guests: number) => void;
   onSearch: () => void;
   onSelectCategory?: (category: string) => void;
+  searchQuery?: string;
+  onSearchQueryChange?: (q: string) => void;
 }
 
 export function HeroSection({
@@ -23,7 +25,9 @@ export function HeroSection({
   onDateChange,
   guestCount,
   onGuestCountChange,
-  onSearch
+  onSearch,
+  searchQuery,
+  onSearchQueryChange
 }: HeroSectionProps) {
   return (
     <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 font-sans text-center">
@@ -75,6 +79,8 @@ export function HeroSection({
             guestCount={guestCount}
             onGuestCountChange={onGuestCountChange}
             onSearch={onSearch}
+            searchQuery={searchQuery}
+            onSearchQueryChange={onSearchQueryChange}
           />
         </div>
       </div>
