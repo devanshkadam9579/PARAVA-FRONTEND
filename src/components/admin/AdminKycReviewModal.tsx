@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, X, CheckCircle, AlertTriangle, FileText, Eye, 
   User, Phone, MapPin, Building, CreditCard, ExternalLink, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { Vendor, VendorKycData } from '../../types';
+import { getDb } from '../../lib/firebase';
 
 export interface AdminKycReviewModalProps {
   isOpen: boolean;
@@ -26,19 +27,42 @@ export function AdminKycReviewModal({
   const [rejectReason, setRejectReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
+  const [kycStore, setKycStore] = useState<Record<string, VendorKycData>>({});
+
+  // Fetch full standalone KYC documents
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchAllKyc = async () => {
+      try {
+        const db = getDb();
+        const { collection, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(collection(db, 'vendor_kyc'));
+        const store: Record<string, VendorKycData> = {};
+        snap.forEach((docSnap) => {
+          store[docSnap.id] = docSnap.data() as VendorKycData;
+        });
+        setKycStore(store);
+      } catch (err) {
+        console.warn('Could not fetch standalone vendor_kyc documents:', err);
+      }
+    };
+    fetchAllKyc();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Filter vendors with KYC
+  // Filter vendors with KYC (checking both vendor.kyc and standalone vendor_kyc doc)
   const kycVendors = vendors.filter(v => {
-    const status = v.kyc?.status || 'NOT_SUBMITTED';
+    const kycData = kycStore[v.id] || v.kyc;
+    const status = kycData?.status || 'NOT_SUBMITTED';
     if (filter === 'PENDING') return status === 'PENDING_VERIFICATION';
     if (filter === 'VERIFIED') return status === 'VERIFIED';
     if (filter === 'REJECTED') return status === 'REJECTED';
-    return v.kyc !== undefined;
+    return kycData !== undefined;
   });
 
   const activeVendor = selectedVendor || kycVendors[0] || null;
+  const activeKyc = (activeVendor ? kycStore[activeVendor.id] : null) || activeVendor?.kyc;
 
   const handleApprove = async (vendorId: string) => {
     if (!window.confirm('Approve this vendor KYC and grant Verified Partner Badge on Parva?')) return;
@@ -176,9 +200,9 @@ export function AdminKycReviewModal({
                 {/* Header Info */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    {activeVendor.kyc?.profilePicUrl || activeVendor.founderImage || activeVendor.images?.[0] ? (
+                    {activeKyc?.profilePicUrl || activeVendor.founderImage || activeVendor.images?.[0] ? (
                       <img
-                        src={activeVendor.kyc?.profilePicUrl || activeVendor.founderImage || activeVendor.images?.[0]}
+                        src={activeKyc?.profilePicUrl || activeVendor.founderImage || activeVendor.images?.[0]}
                         alt={activeVendor.name}
                         className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
                       />
@@ -205,7 +229,7 @@ export function AdminKycReviewModal({
                     <button
                       onClick={() => handleApprove(activeVendor.id)}
                       disabled={loadingAction}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 disabled:opacity-60"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
                     >
                       <ThumbsUp size={14} />
                       <span>Approve KYC</span>
@@ -213,7 +237,7 @@ export function AdminKycReviewModal({
                     <button
                       onClick={() => setIsRejecting(!isRejecting)}
                       disabled={loadingAction}
-                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition flex items-center gap-1.5 disabled:opacity-60"
+                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
                     >
                       <ThumbsDown size={14} />
                       <span>Reject KYC</span>
@@ -256,15 +280,15 @@ export function AdminKycReviewModal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <span className="text-gray-500 block">Contact Person / Founder:</span>
-                      <span className="font-bold text-gray-900">{activeVendor.kyc?.contactPerson || activeVendor.founderName || 'N/A'}</span>
+                      <span className="font-bold text-gray-900">{activeKyc?.contactPerson || activeVendor.founderName || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="text-gray-500 block">Contact Phone:</span>
-                      <span className="font-bold text-gray-900">{activeVendor.kyc?.contactPhone || activeVendor.phone || 'N/A'}</span>
+                      <span className="font-bold text-gray-900">{activeKyc?.contactPhone || activeVendor.phone || 'N/A'}</span>
                     </div>
                     <div className="sm:col-span-2">
                       <span className="text-gray-500 block">Registered Business Address:</span>
-                      <span className="font-medium text-gray-800">{activeVendor.kyc?.registeredAddress || activeVendor.location || 'N/A'}</span>
+                      <span className="font-medium text-gray-800">{activeKyc?.registeredAddress || activeVendor.location || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -274,19 +298,19 @@ export function AdminKycReviewModal({
                   <div className="flex items-center justify-between">
                     <h4 className="font-black text-gray-900 uppercase text-[10px] tracking-wider">2. Aadhaar Verification</h4>
                     <span className="text-xs font-mono font-bold text-brand-primary">
-                      {activeVendor.kyc?.aadhaarNumber ? `Aadhaar: ${activeVendor.kyc.aadhaarNumber}` : 'Number Not Provided'}
+                      {activeKyc?.aadhaarNumber ? `Aadhaar: ${activeKyc.aadhaarNumber}` : 'Number Not Provided'}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <span className="text-[11px] text-gray-500 font-bold block mb-1.5">Aadhaar Front Side:</span>
-                      {activeVendor.kyc?.aadhaarFrontUrl ? (
+                      {activeKyc?.aadhaarFrontUrl ? (
                         <div
-                          onClick={() => setPreviewImage(activeVendor.kyc?.aadhaarFrontUrl || null)}
+                          onClick={() => setPreviewImage(activeKyc?.aadhaarFrontUrl || null)}
                           className="relative group rounded-xl overflow-hidden border border-gray-200 cursor-pointer h-40 bg-gray-100"
                         >
-                          <img src={activeVendor.kyc.aadhaarFrontUrl} alt="Aadhaar Front" className="w-full h-full object-cover" />
+                          <img src={activeKyc.aadhaarFrontUrl} alt="Aadhaar Front" className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition text-xs font-bold gap-1">
                             <Eye size={16} /> Click to Enlarge
                           </div>
@@ -300,12 +324,12 @@ export function AdminKycReviewModal({
 
                     <div>
                       <span className="text-[11px] text-gray-500 font-bold block mb-1.5">Aadhaar Back Side:</span>
-                      {activeVendor.kyc?.aadhaarBackUrl ? (
+                      {activeKyc?.aadhaarBackUrl ? (
                         <div
-                          onClick={() => setPreviewImage(activeVendor.kyc?.aadhaarBackUrl || null)}
+                          onClick={() => setPreviewImage(activeKyc?.aadhaarBackUrl || null)}
                           className="relative group rounded-xl overflow-hidden border border-gray-200 cursor-pointer h-40 bg-gray-100"
                         >
-                          <img src={activeVendor.kyc.aadhaarBackUrl} alt="Aadhaar Back" className="w-full h-full object-cover" />
+                          <img src={activeKyc.aadhaarBackUrl} alt="Aadhaar Back" className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition text-xs font-bold gap-1">
                             <Eye size={16} /> Click to Enlarge
                           </div>
@@ -324,19 +348,19 @@ export function AdminKycReviewModal({
                   <div className="flex items-center justify-between">
                     <h4 className="font-black text-gray-900 uppercase text-[10px] tracking-wider">3. PAN & GST Verification</h4>
                     <div className="flex items-center gap-3 text-xs font-mono font-bold text-gray-700">
-                      {activeVendor.kyc?.panNumber && <span>PAN: {activeVendor.kyc.panNumber}</span>}
-                      {activeVendor.kyc?.gstNumber && <span>GST: {activeVendor.kyc.gstNumber}</span>}
+                      {activeKyc?.panNumber && <span>PAN: {activeKyc.panNumber}</span>}
+                      {activeKyc?.gstNumber && <span>GST: {activeKyc.gstNumber}</span>}
                     </div>
                   </div>
 
                   <div>
                     <span className="text-[11px] text-gray-500 font-bold block mb-1.5">PAN Card Document:</span>
-                    {activeVendor.kyc?.panUrl ? (
+                    {activeKyc?.panUrl ? (
                       <div
-                        onClick={() => setPreviewImage(activeVendor.kyc?.panUrl || null)}
+                        onClick={() => setPreviewImage(activeKyc?.panUrl || null)}
                         className="relative group rounded-xl overflow-hidden border border-gray-200 cursor-pointer h-44 bg-gray-100 sm:w-80"
                       >
-                        <img src={activeVendor.kyc.panUrl} alt="PAN Document" className="w-full h-full object-cover" />
+                        <img src={activeKyc.panUrl} alt="PAN Document" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition text-xs font-bold gap-1">
                           <Eye size={16} /> Click to Enlarge
                         </div>
@@ -350,20 +374,20 @@ export function AdminKycReviewModal({
                 </div>
 
                 {/* Business License / FSSAI */}
-                {activeVendor.kyc?.licenseUrl && (
+                {activeKyc?.licenseUrl && (
                   <div className="border border-gray-200 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-black text-gray-900 uppercase text-[10px] tracking-wider">4. Business License / Certificate</h4>
                       <span className="text-xs font-mono font-bold text-gray-700">
-                        {activeVendor.kyc.licenseNumber ? `License: ${activeVendor.kyc.licenseNumber}` : ''}
+                        {activeKyc.licenseNumber ? `License: ${activeKyc.licenseNumber}` : ''}
                       </span>
                     </div>
 
                     <div
-                      onClick={() => setPreviewImage(activeVendor.kyc?.licenseUrl || null)}
+                      onClick={() => setPreviewImage(activeKyc?.licenseUrl || null)}
                       className="relative group rounded-xl overflow-hidden border border-gray-200 cursor-pointer h-44 bg-gray-100 sm:w-80"
                     >
-                      <img src={activeVendor.kyc.licenseUrl} alt="License Document" className="w-full h-full object-cover" />
+                      <img src={activeKyc.licenseUrl} alt="License Document" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition text-xs font-bold gap-1">
                         <Eye size={16} /> Click to Enlarge
                       </div>

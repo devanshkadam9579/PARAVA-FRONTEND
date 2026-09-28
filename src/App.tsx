@@ -14,7 +14,7 @@ import {
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
-  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail
+  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -41,6 +41,7 @@ import AuthModal from './components/AuthModal';
 import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
 import { AdminKycReviewModal } from './components/admin/AdminKycReviewModal';
+import { AdminDatabaseHealthModal } from './components/admin/AdminDatabaseHealthModal';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -1353,6 +1354,7 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminKycOpen, setIsAdminKycOpen] = useState(false);
+  const [isAdminDbHealthOpen, setIsAdminDbHealthOpen] = useState(false);
   const [razorpayAmount, setRazorpayAmount] = useState(4999);
   const [razorpayStatus, setRazorpayStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [razorpayUpi, setRazorpayUpi] = useState('thegritfuel@okhdfcbank');
@@ -5614,6 +5616,26 @@ export default function App() {
                         <ChevronRight size={16} className="text-gray-400" />
                       </button>
 
+                      {/* Admin Database & Cloudflare Storage Health */}
+                      <button
+                        onClick={() => setIsAdminDbHealthOpen(true)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-sky-50/60 bg-sky-50/20 text-left transition border-b border-sky-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center">
+                            <Database size={16} />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-brand-text text-xs flex items-center gap-1.5">
+                              <span>Database Health & Cloudflare Storage Status</span>
+                              <span className="text-[9px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-black">HEALTH</span>
+                            </h5>
+                            <p className="text-[10px] text-brand-text-secondary mt-0.5">Live storage meter, edge rules, document limits & customer data traverser</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400" />
+                      </button>
+
                       {[
                         { label: 'Booking Preferences', desc: 'Default city, contact phone, GST details' },
                         { label: 'Saved Event Templates', desc: 'Pre-selected packages and vendor drafts' },
@@ -6131,6 +6153,16 @@ export default function App() {
         vendors={vendors}
         onApproveKyc={handleApproveKyc}
         onRejectKyc={handleRejectKyc}
+      />
+
+      {/* ADMIN DATABASE & CLOUDFLARE HEALTH MODAL */}
+      <AdminDatabaseHealthModal
+        isOpen={isAdminDbHealthOpen}
+        onClose={() => setIsAdminDbHealthOpen(false)}
+        vendors={vendors}
+        bookings={bookings}
+        leads={leadsList}
+        currentUser={currentUser}
       />
 
       {/* FILTER MODAL */}
