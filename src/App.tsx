@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getAuthInstance, getDb, handleFirestoreError, OperationType } from './lib/firebase';
 import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
@@ -451,6 +452,9 @@ const VendorDashboardCalendar = ({
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:5000';
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // Navigation State
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile'>(() => {
     return (sessionStorage.getItem('parva_activeTab') as any) || 'home';
@@ -459,6 +463,24 @@ export default function App() {
   useEffect(() => {
     sessionStorage.setItem('parva_activeTab', activeTab);
   }, [activeTab]);
+
+  const handleNavigateToTab = (tab: 'home' | 'explore' | 'bookings' | 'messages' | 'chat' | 'profile') => {
+    const normalizedTab = (tab === 'chat' ? 'messages' : tab) as 'home' | 'explore' | 'bookings' | 'messages' | 'profile';
+    setActiveTab(normalizedTab);
+    setSelectedVendor(null);
+    const targetPath = normalizedTab === 'home' ? '/' : `/${normalizedTab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
+
+  const handleCloseVendor = () => {
+    setSelectedVendor(null);
+    const targetPath = activeTab === 'home' ? '/' : `/${activeTab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
 
   const [currentCity, setCurrentCity] = useState('Kolhapur');
 
@@ -1131,6 +1153,59 @@ export default function App() {
     }
   }, [activeTab, selectedVendor]);
 
+  // Bidirectional URL Routing & Deep-Linking Synchronizer
+  useEffect(() => {
+    const rawPath = location.pathname.toLowerCase();
+    const path = rawPath.replace(/\/+$/, '') || '/';
+
+    // 1. Vendor profile deep links: /vendor/:vendorId
+    if (path.startsWith('/vendor/')) {
+      const vendorId = path.split('/vendor/')[1];
+      if (vendorId && vendors.length > 0) {
+        const found = vendors.find((v) => v.id.toLowerCase() === vendorId.toLowerCase());
+        if (found && selectedVendor?.id !== found.id) {
+          setSelectedVendor(found);
+        }
+      }
+      return;
+    }
+
+    // Clear selected vendor if navigating away from /vendor/
+    if (selectedVendor && !path.startsWith('/vendor/')) {
+      setSelectedVendor(null);
+    }
+
+    // 2. Admin Deep Links
+    if (path === '/admin/kyc') {
+      setIsAdminKycOpen(true);
+      if (activeTab !== 'profile') setActiveTab('profile');
+      return;
+    }
+    if (path === '/admin/health' || path === '/admin/database') {
+      setIsAdminDbHealthOpen(true);
+      if (activeTab !== 'profile') setActiveTab('profile');
+      return;
+    }
+    if (path === '/admin/chats' || path === '/admin/logs') {
+      setIsAdminChatsOpen(true);
+      if (activeTab !== 'profile') setActiveTab('profile');
+      return;
+    }
+
+    // 3. Tab Routes
+    if (path === '/' || path === '/home') {
+      if (activeTab !== 'home') setActiveTab('home');
+    } else if (path === '/explore') {
+      if (activeTab !== 'explore') setActiveTab('explore');
+    } else if (path === '/bookings' || path === '/reservations' || path === '/cart') {
+      if (activeTab !== 'bookings') setActiveTab('bookings');
+    } else if (path === '/messages' || path === '/chat') {
+      if (activeTab !== 'messages') setActiveTab('messages');
+    } else if (path === '/profile' || path === '/account' || path === '/admin') {
+      if (activeTab !== 'profile') setActiveTab('profile');
+    }
+  }, [location.pathname, vendors]);
+
   // Share Booking State
 
   const [sharingBooking, setSharingBooking] = useState<Booking | null>(null);
@@ -1548,6 +1623,10 @@ export default function App() {
 
   const handleVendorSelect = async (v: Vendor) => {
     setSelectedVendor(v);
+    const targetPath = `/vendor/${v.id}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
     if (currentUser && currentUser.role === 'user') {
       try {
         const { doc, setDoc } = await import('firebase/firestore');
@@ -2029,7 +2108,7 @@ export default function App() {
     setBundledItems([]); // Clear active bundle items
 
     // Switch to Bookings Tab
-    setActiveTab('bookings');
+    handleNavigateToTab('bookings');
     showNotification('🎉 Your Unified Celebration Package has been booked successfully!');
   };
 
@@ -2230,7 +2309,7 @@ export default function App() {
     setBundledItems([]);
 
     // Go to Bookings tab
-    setActiveTab('bookings');
+    handleNavigateToTab('bookings');
     showNotification(`🎉 Congratulations! Your AI ${planName} has been booked!`);
   };
 
@@ -2238,7 +2317,7 @@ export default function App() {
   const handleVoiceSearchResult = (result: string) => {
     setSearchQuery(result);
     setSelectedExploreCategory('all');
-    setActiveTab('explore');
+    handleNavigateToTab('explore');
     showNotification(`Voice query: "${result}"`);
   };
 
@@ -2273,7 +2352,7 @@ export default function App() {
 
     setBookings((prev) => [newBooking, ...prev]);
     setBundledItems([]); // Clear active bundle console
-    setActiveTab('bookings');
+    handleNavigateToTab('bookings');
     showNotification('Premium Event Bundle Booked Successfully!');
   };
 
@@ -2999,10 +3078,10 @@ export default function App() {
             localStorage.removeItem('parva_user');
             showNotification('🚪 Logged out successfully.');
           }}
-          onNavigateTab={(tab) => setActiveTab(tab as any)}
+          onNavigateTab={(tab) => handleNavigateToTab(tab as any)}
           activeTab={activeTab}
           cartCount={bundledItems.length}
-          onOpenCart={() => setActiveTab('bookings')}
+          onOpenCart={() => handleNavigateToTab('bookings')}
           onOpenSupport={() => setIsSupportModalOpen(true)}
           onOpenNotifications={() => setIsNotificationCenterOpen(true)}
           unreadCount={unreadNotificationsCount}
@@ -3010,7 +3089,7 @@ export default function App() {
           onToggleWishlist={handleToggleWishlist}
           onSelectVendor={(v) => handleVendorSelect(v)}
           selectedVendor={selectedVendor}
-          onCloseVendorDetail={() => setSelectedVendor(null)}
+          onCloseVendorDetail={() => handleCloseVendor()}
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor || vendors[0], service)}
           bundledItems={bundledItems}
           onPay={async (bookingDetails) => {
@@ -3172,7 +3251,7 @@ export default function App() {
             }
 
             showNotification('🎉 Booking Confirmed! Email notification and vendor chat unlocked.');
-            setActiveTab('bookings');
+            handleNavigateToTab('bookings');
 
             // 5. Also launch payment gateway
             try {
@@ -3279,7 +3358,7 @@ export default function App() {
               {/* Cart showing bundle count */}
               <button
                 onClick={() => {
-                  setActiveTab('bookings');
+                  handleNavigateToTab('bookings');
                 }}
                 className="p-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary hover:text-white rounded-full transition relative shadow-xs"
                 id="cart-trigger"
@@ -3329,7 +3408,7 @@ export default function App() {
                 onSelectVendor={(v) => handleVendorSelect(v)}
                 onSelectCategory={(catName) => {
                   setSelectedExploreCategory(catName);
-                  setActiveTab('explore');
+                  handleNavigateToTab('explore');
                 }}
                 onOpenVoiceSearch={() => setIsVoiceOpen(true)}
                 onOpenFilters={() => setIsFilterModalOpen(true)}
@@ -3339,7 +3418,7 @@ export default function App() {
 
             {/* Real-time Hero Carousel from Firestore */}
             {promosList.length > 0 && currentPromo && (
-              <div className="relative rounded-[24px] overflow-hidden h-[200px] bg-slate-100 group cursor-pointer shadow-sm border border-slate-200/50" onClick={() => setActiveTab('explore')}>
+              <div className="relative rounded-[24px] overflow-hidden h-[200px] bg-slate-100 group cursor-pointer shadow-sm border border-slate-200/50" onClick={() => handleNavigateToTab('explore')}>
                 {promosList.map((promo, idx) => (
                   <div 
                     key={promo.id || idx}
@@ -3382,7 +3461,7 @@ export default function App() {
                     onClick={() => {
                       setSelectedExploreCategory(cat.name);
                       setExploreOccasion('all');
-                      setActiveTab('explore');
+                      handleNavigateToTab('explore');
                       trackCategorySelected(cat.name);
                     }}
                     className="flex flex-col items-center shrink-0 snap-center group"
@@ -3416,7 +3495,7 @@ export default function App() {
                   <h3 className="font-extrabold text-brand-text text-sm uppercase tracking-wider">Trending Vendors</h3>
                 </div>
                 <span 
-                  onClick={() => { setSelectedExploreCategory('all'); setActiveTab('explore'); }}
+                  onClick={() => { setSelectedExploreCategory('all'); handleNavigateToTab('explore'); }}
                   className="text-xs text-brand-primary font-semibold hover:underline cursor-pointer"
                 >
                   See All
@@ -3781,7 +3860,7 @@ export default function App() {
               currentUser={currentUser}
               onOpenLogin={() => setIsAuthModalOpen(true)}
               onShowNotification={showNotification}
-              onNavigateToExplore={() => setActiveTab('explore')}
+              onNavigateToExplore={() => handleNavigateToTab('explore')}
             />
           </div>
         )}
@@ -4163,7 +4242,7 @@ export default function App() {
                 <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
                 <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
                 <button
-                  onClick={() => setActiveTab('explore')}
+                  onClick={() => handleNavigateToTab('explore')}
                   className="bg-brand-primary text-white px-8 py-3 rounded-xl text-xs font-bold transition shadow-md shadow-brand-primary/15 active:scale-95"
                 >
                   Explore Vendors
@@ -4206,7 +4285,7 @@ export default function App() {
                           {b.status === 'Pending' ? 'Awaiting Confirmation' : b.status}
                         </span>
                         <div className="flex justify-end w-full">
-                          <button onClick={() => setActiveTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">💬 Message Vendor</button>
+                          <button onClick={() => handleNavigateToTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">💬 Message Vendor</button>
                         </div>
                       </div>
 
@@ -4759,7 +4838,7 @@ export default function App() {
                                     {b.customerPhone && (
                                       <button
                                         onClick={() => {
-                                          setActiveTab('chat');
+                                          handleNavigateToTab('chat');
                                         }}
                                         className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm"
                                       >
@@ -5767,9 +5846,8 @@ export default function App() {
             <button
               key={item.id}
               onClick={() => {
-                setActiveTab(item.id as any);
-                // Reset active chat thread if going to messages tab
-                if (item.id === 'messages') {
+                handleNavigateToTab(item.id as any);
+                if (item.id === 'messages' || item.id === 'chat') {
                   setActiveChatVendorId(null);
                 }
               }}
@@ -5836,7 +5914,7 @@ export default function App() {
           setActiveFilterMinPrice(filters.min ? Number(filters.min) : null);
           setActiveFilterMaxPrice(filters.max ? Number(filters.max) : null);
           setActiveFilterTypes(filters.types || []);
-          setActiveTab('explore');
+          handleNavigateToTab('explore');
           trackFilterApplied({
             category: selectedExploreCategory,
             min_price: filters.min ? Number(filters.min) : null,
@@ -5860,10 +5938,10 @@ export default function App() {
         onClearAll={() => setNotifications([])}
         onActionClick={(notif) => {
           if (notif.type === 'offer') {
-            setActiveTab('explore');
+            handleNavigateToTab('explore');
             setIsNotificationCenterOpen(false);
           } else if (notif.type === 'slot') {
-            setActiveTab('bookings');
+            handleNavigateToTab('bookings');
             setIsNotificationCenterOpen(false);
           }
         }}
@@ -5978,7 +6056,7 @@ export default function App() {
             showNotification('Vendor logged out safely.');
           }}
           showNotification={showNotification}
-          onNavigateToMessages={() => setActiveTab('messages')}
+          onNavigateToMessages={() => handleNavigateToTab('messages')}
         />
       )}
 
@@ -5993,7 +6071,7 @@ export default function App() {
         <VendorDetailSheet
           vendor={selectedVendor}
           isOpen={selectedVendor !== null}
-          onClose={() => setSelectedVendor(null)}
+          onClose={() => handleCloseVendor()}
           bundledServices={bundledItems.filter(item => item.vendor.id === selectedVendor.id).map(item => item.service)}
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor, service)}
           onRemoveServiceFromBundle={(serviceName) => handleRemoveServiceFromBundle(selectedVendor.id, serviceName)}
@@ -6067,8 +6145,8 @@ export default function App() {
           onSelectTimeSlot={setPlanningTimeSlot}
           planningGuestSize={planningGuestSize}
           bookingFeePercentage={bookingFeePercentage}
-          onNavigateToBookings={() => setActiveTab('bookings')}
-            onNavigateToMessages={(vid) => { handleSelectThread(vid); setActiveTab('messages'); }}
+          onNavigateToBookings={() => handleNavigateToTab('bookings')}
+          onNavigateToMessages={(vid) => { handleSelectThread(vid); handleNavigateToTab('messages'); }}
           handlePayWithRazorpay={(params: any) => {
             setRazorpayAmount(params.totalAmountDue);
             setRazorpayPurpose('connection');
@@ -6186,7 +6264,7 @@ export default function App() {
         onClick={() => {
           const totalVal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
           trackCartOpened(bundledItems.length, totalVal);
-          setActiveTab('bookings');
+          handleNavigateToTab('bookings');
         }}
         isVisible={bundledItems.length > 0 && activeTab !== 'bookings' && activeTab !== 'profile' && !selectedVendor}
       />
