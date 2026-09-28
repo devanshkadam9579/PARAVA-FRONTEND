@@ -130,6 +130,7 @@ export function AirbnbDesktopMarketplace({
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minRating, setMinRating] = useState<number>(0);
+  const [selectedChatVendorId, setSelectedChatVendorId] = useState<string | null>(null);
 
   const activeSearchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const handleSearchChange = (val: string) => {
@@ -270,8 +271,6 @@ export function AirbnbDesktopMarketplace({
       </div>
     );
   }
-
-  const [selectedChatVendorId, setSelectedChatVendorId] = useState<string | null>(null);
 
   // 3. Bookings Tab View
   if (activeTab === 'bookings') {
