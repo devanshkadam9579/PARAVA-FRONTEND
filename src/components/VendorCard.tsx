@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, memo } from 'react';
-import { Heart, Star, MapPin, Play } from 'lucide-react';
+import { Heart, Star, MapPin, Play, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Vendor } from '../types';
 
@@ -185,7 +185,7 @@ const VendorCard = memo(function VendorCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="font-extrabold text-lg sm:text-xl text-gray-900 leading-snug line-clamp-1">
                 {vendor.name}
               </h3>
@@ -196,6 +196,12 @@ const VendorCard = memo(function VendorCard({
                   className="w-4 h-4 sm:w-5 sm:h-5 object-contain shrink-0" 
                   title="Admin Verified Specialist" 
                 />
+              )}
+              {((vendor.isVerified || vendor.verified) || vendor.kyc?.status === 'VERIFIED') && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <ShieldCheck size={11} className="text-emerald-600" />
+                  <span>KYC Verified</span>
+                </span>
               )}
             </div>
 

@@ -640,12 +640,20 @@ export default function VendorDetailSheet({
                   <h2 className="text-xl font-bold text-brand-text leading-tight">
                     {vendor.name}
                   </h2>
-                  {vendor.verified && (
-                    <div className="flex items-center gap-1 text-[10px] bg-brand-primary-light text-brand-primary-dark px-2.5 py-1 rounded-lg font-bold shrink-0">
-                      <ShieldCheck size={13} />
-                      <span>TRUSTED</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                    {((vendor.isVerified || vendor.verified) || vendor.kyc?.status === 'VERIFIED') && (
+                      <div className="flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-black shadow-2xs">
+                        <ShieldCheck size={13} className="text-emerald-600" />
+                        <span>KYC VERIFIED</span>
+                      </div>
+                    )}
+                    {vendor.verified && (
+                      <div className="flex items-center gap-1 text-[10px] bg-brand-primary-light text-brand-primary-dark px-2.5 py-1 rounded-lg font-bold">
+                        <ShieldCheck size={13} />
+                        <span>TRUSTED</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {isAdmin ? (

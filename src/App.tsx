@@ -42,6 +42,10 @@ import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
 import { AdminKycReviewModal } from './components/admin/AdminKycReviewModal';
 import { AdminDatabaseHealthModal } from './components/admin/AdminDatabaseHealthModal';
+import { AdminChatLogsViewer } from './components/admin/AdminChatLogsViewer';
+import { AdminChatLogsModal } from './components/admin/AdminChatLogsModal';
+import { PaymentProcessingModal } from './components/PaymentProcessingModal';
+import { PaymentSuccessCelebrationModal } from './components/PaymentSuccessCelebrationModal';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -1355,6 +1359,11 @@ export default function App() {
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminKycOpen, setIsAdminKycOpen] = useState(false);
   const [isAdminDbHealthOpen, setIsAdminDbHealthOpen] = useState(false);
+  const [isAdminChatsOpen, setIsAdminChatsOpen] = useState(false);
+  const [isPaymentProcessingModalOpen, setIsPaymentProcessingModalOpen] = useState(false);
+  const [processingPaymentDetails, setProcessingPaymentDetails] = useState<{ amount: number; vendorName: string; serviceName: string } | null>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successPaymentData, setSuccessPaymentData] = useState<any>(null);
   const [razorpayAmount, setRazorpayAmount] = useState(4999);
   const [razorpayStatus, setRazorpayStatus] = useState<'idle' | 'processing' | 'success'>('idle');
   const [razorpayUpi, setRazorpayUpi] = useState('thegritfuel@okhdfcbank');
@@ -1521,9 +1530,18 @@ export default function App() {
           waUrl
         });
 
-        // Close Razorpay after a brief success delay
+        // Close Razorpay after a brief success delay and trigger PhonePe celebration popup
         setIsRazorpayOpen(false);
-        showNotification('🎉 Payment successful! Vendor connection unlocked! 📲');
+        setSuccessPaymentData({
+          amount: razorpayAmount,
+          orderId: newBookingObj.id || `PRV-${Date.now()}`,
+          vendorName: newBookingObj.vendor?.name || 'Parva Verified Partner',
+          serviceName: newBookingObj.selectedServices?.[0]?.name || 'Direct Connection Fee',
+          eventDate: newBookingObj.eventDate || planningStartDate,
+          timeSlot: newBookingObj.eventType || 'Event Reservation',
+          customerName: targetUser?.name || currentUser?.name || 'Valued Customer'
+        });
+        setIsSuccessModalOpen(true);
       }
     }, 2200);
   };
@@ -1563,13 +1581,23 @@ export default function App() {
       return;
     }
 
+    const vendorObj = vendors.find(v => v.id === (params.vendorId || params.bookingData?.vendor?.id)) || params.bookingData?.vendor;
+    const vendorName = vendorObj?.name || 'Parva Partner';
+    const serviceName = params.bookingData?.selectedServices?.[0]?.name || params.bookingData?.serviceName || vendorObj?.category || 'Event Reservation';
+
+    setProcessingPaymentDetails({
+      amount: params.amount || 0,
+      vendorName,
+      serviceName
+    });
     setIsPaymentProcessing(true);
-    showNotification('🔒 Initializing secure Cashfree checkout...');
+    setIsPaymentProcessingModalOpen(true);
     trackCheckoutStarted(params.bookingData?.selectedServices?.length || 1, params.amount || 0);
 
     const CashfreeSDK = await loadCashfreeScript();
     if (!CashfreeSDK) {
       setIsPaymentProcessing(false);
+      setIsPaymentProcessingModalOpen(false);
       showNotification('❌ Could not load Cashfree Web SDK. Please check your connection.');
       return;
     }
@@ -1596,13 +1624,13 @@ export default function App() {
           styleSuggestions: params.bookingData?.styleSuggestions || '',
           eventDate: params.bookingData?.eventDate || planningStartDate,
           eventTimeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'evening'
-
         })
       });
 
       const orderData = await response.json();
       if (!orderData.success || !orderData.paymentSessionId) {
         setIsPaymentProcessing(false);
+        setIsPaymentProcessingModalOpen(false);
         showNotification(`❌ Error creating Cashfree order: ${orderData.error || 'Gateway offline'}`);
         trackPaymentFailed('unassigned', orderData.error || 'Gateway offline');
         return;
@@ -1624,6 +1652,7 @@ export default function App() {
         redirectTarget: '_modal'
       }).then(async (result: any) => {
         setIsPaymentProcessing(false);
+        setIsPaymentProcessingModalOpen(false);
         console.log(`[Cashfree Result]:`, result);
 
         if (result.error) {
@@ -1660,39 +1689,58 @@ export default function App() {
 
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            showNotification('🎉 Payment Confirmed via Cashfree! Receipt dispatched to your email.');
             trackPaymentSuccess(orderId, verifyData.transaction?.id || orderId, amount);
             trackBookingConfirmed(verifyData.booking?.id || orderId, params.vendorId || params.bookingData?.vendor?.id || 'vendor', amount);
 
             // Clear draft cart
             setBundledItems([]);
             sessionStorage.removeItem('parva_bundled_items');
-            setActiveTab('bookings');
 
             // Set state for fresh booking view
             if (verifyData.booking) {
               setBookings(prev => [verifyData.booking, ...prev.filter(b => b.id !== verifyData.booking.id)]);
             }
+
+            // Launch PhonePe-Style Celebration Popup
+            setSuccessPaymentData({
+              amount: amount,
+              orderId,
+              vendorName,
+              serviceName,
+              eventDate: params.bookingData?.eventDate || planningStartDate,
+              timeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'Evening',
+              customerName: params.bookingData?.customerName || currentUser?.name || 'Valued Customer'
+            });
+            setIsSuccessModalOpen(true);
           } else {
             showNotification('⚠️ Payment verified with notice: ' + (verifyData.error || 'Pending gateway sync'));
             trackPaymentFailed(orderId, verifyData.error || 'unverified');
           }
         } catch (vErr: any) {
           console.error('[Cashfree Verify Error]:', vErr);
-          showNotification('🎉 Payment captured! Syncing booking record in background.');
           trackPaymentSuccess(orderId, `pending_sync_${orderId}`, amount);
-          setActiveTab('bookings');
+          setSuccessPaymentData({
+            amount: amount,
+            orderId,
+            vendorName,
+            serviceName,
+            eventDate: params.bookingData?.eventDate || planningStartDate,
+            timeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'Evening',
+            customerName: params.bookingData?.customerName || currentUser?.name || 'Valued Customer'
+          });
+          setIsSuccessModalOpen(true);
         }
       }).catch((chkErr: any) => {
         setIsPaymentProcessing(false);
+        setIsPaymentProcessingModalOpen(false);
         console.error('[Cashfree Checkout Modal Error]:', chkErr);
         showNotification('⚠️ Payment window closed.');
         trackPaymentFailed(orderId, 'modal_closed');
       });
 
-
     } catch (error: any) {
       setIsPaymentProcessing(false);
+      setIsPaymentProcessingModalOpen(false);
       console.error('[Cashfree Initiation Error]:', error);
       showNotification('❌ Payment initiation error. Please try again.');
     }
@@ -3733,6 +3781,7 @@ export default function App() {
               currentUser={currentUser}
               onOpenLogin={() => setIsAuthModalOpen(true)}
               onShowNotification={showNotification}
+              onNavigateToExplore={() => setActiveTab('explore')}
             />
           </div>
         )}
@@ -5619,7 +5668,7 @@ export default function App() {
                       {/* Admin Database & Cloudflare Storage Health */}
                       <button
                         onClick={() => setIsAdminDbHealthOpen(true)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-sky-50/60 bg-sky-50/20 text-left transition border-b border-sky-100"
+                        className="w-full p-4 flex items-center justify-between hover:bg-sky-50/60 bg-sky-50/20 text-left transition border-b border-sky-100 cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center">
@@ -5631,6 +5680,26 @@ export default function App() {
                               <span className="text-[9px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-black">HEALTH</span>
                             </h5>
                             <p className="text-[10px] text-brand-text-secondary mt-0.5">Live storage meter, edge rules, document limits & customer data traverser</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400" />
+                      </button>
+
+                      {/* Admin Live Chat Logs & Customer Inquiries */}
+                      <button
+                        onClick={() => setIsAdminChatsOpen(true)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-emerald-50/60 bg-emerald-50/20 text-left transition border-b border-emerald-100 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                            <MessageSquare size={16} />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-brand-text text-xs flex items-center gap-1.5">
+                              <span>Admin Live Chat Logs & Communications Hub</span>
+                              <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black">CHATS</span>
+                            </h5>
+                            <p className="text-[10px] text-brand-text-secondary mt-0.5">Real-time transcripts, customer demands, vendor responses & conversation audit</p>
                           </div>
                         </div>
                         <ChevronRight size={16} className="text-gray-400" />
@@ -6163,6 +6232,39 @@ export default function App() {
         bookings={bookings}
         leads={leadsList}
         currentUser={currentUser}
+      />
+
+      {/* ADMIN CHAT LOGS & COMMUNICATIONS HUB MODAL */}
+      <AdminChatLogsModal
+        isOpen={isAdminChatsOpen}
+        onClose={() => setIsAdminChatsOpen(false)}
+        vendors={vendors}
+        bookings={bookings}
+      />
+
+      {/* STEP-BY-STEP PAYMENT PROCESSING ANIMATION MODAL */}
+      <PaymentProcessingModal
+        isOpen={isPaymentProcessingModalOpen}
+        amount={processingPaymentDetails?.amount}
+        vendorName={processingPaymentDetails?.vendorName}
+        serviceName={processingPaymentDetails?.serviceName}
+      />
+
+      {/* PHONEPE-STYLE PAYMENT SUCCESS CELEBRATION MODAL */}
+      <PaymentSuccessCelebrationModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        onViewReservations={() => {
+          setIsSuccessModalOpen(false);
+          setActiveTab('bookings');
+        }}
+        amount={successPaymentData?.amount || 0}
+        orderId={successPaymentData?.orderId}
+        vendorName={successPaymentData?.vendorName}
+        serviceName={successPaymentData?.serviceName}
+        eventDate={successPaymentData?.eventDate}
+        timeSlot={successPaymentData?.timeSlot}
+        customerName={successPaymentData?.customerName}
       />
 
       {/* FILTER MODAL */}

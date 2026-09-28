@@ -308,6 +308,7 @@ export function AirbnbDesktopMarketplace({
             initialVendorId={selectedChatVendorId}
             onOpenLogin={() => onOpenLogin?.('signin')}
             onShowNotification={(msg) => console.log(msg)}
+            onNavigateToExplore={() => onNavigateTab('home')}
           />
         </div>
         <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />

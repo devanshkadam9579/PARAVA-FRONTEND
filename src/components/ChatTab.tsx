@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageSquare, Send, Phone, User, CheckCheck, Clock, 
   Sparkles, Calendar, MapPin, ShieldCheck, Search, 
-  ExternalLink, MessageCircle, AlertCircle
+  ExternalLink, MessageCircle, AlertCircle, Lock, ArrowRight
 } from 'lucide-react';
 import { Vendor, Booking } from '../types';
 import { getDb } from '../lib/firebase';
@@ -15,12 +15,18 @@ export interface ChatTabProps {
   initialVendorId?: string | null;
   onOpenLogin: () => void;
   onShowNotification: (msg: string) => void;
+  onNavigateToExplore?: () => void;
 }
 
 interface ChatMessage {
   id?: string;
   bookingId?: string;
   vendorId?: string;
+  vendorName?: string;
+  userId?: string;
+  userName?: string;
+  userPhone?: string;
+  userEmail?: string;
   sender: 'user' | 'vendor';
   senderName?: string;
   text: string;
@@ -34,9 +40,10 @@ export default function ChatTab({
   currentUser,
   initialVendorId,
   onOpenLogin,
-  onShowNotification
+  onShowNotification,
+  onNavigateToExplore
 }: ChatTabProps) {
-  // Determine relevant vendors (booked vendors first, then rest)
+  // Only confirmed vendors (vendors for which the user has a reservation or active booking)
   const bookedVendorIds = bookings.map(b => b.vendor?.id || (b as any).vendorId).filter(Boolean);
   const bookedVendors = vendors.filter(v => bookedVendorIds.includes(v.id));
   const otherVendors = vendors.filter(v => !bookedVendorIds.includes(v.id));
@@ -103,6 +110,11 @@ export default function ChatTab({
               id: docSnap.id,
               bookingId: data.bookingId,
               vendorId: data.vendorId,
+              vendorName: data.vendorName,
+              userId: data.userId,
+              userName: data.userName,
+              userPhone: data.userPhone,
+              userEmail: data.userEmail,
               sender: data.sender || 'vendor',
               senderName: data.senderName,
               text: data.text || '',
@@ -134,7 +146,7 @@ export default function ChatTab({
           <MessageSquare size={28} />
         </div>
         <div className="space-y-1.5">
-          <h3 className="font-black text-xl text-gray-900 font-display">Sign In to Chat with Verified Vendors</h3>
+          <h3 className="font-black text-xl text-gray-900 font-display">Sign In to Chat with Confirmed Vendors</h3>
           <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
             Communicate directly with verified decorators, caterers, banquet managers and photographers after booking with instant notifications.
           </p>
@@ -150,8 +162,9 @@ export default function ChatTab({
     );
   }
 
-  const activeVendor = vendors.find(v => v.id === activeVendorId) || allPartners[0];
+  const activeVendor = vendors.find(v => v.id === activeVendorId) || bookedVendors[0] || allPartners[0];
   const activeBooking = bookings.find(b => (b.vendor?.id === activeVendor?.id) || ((b as any).vendorId === activeVendor?.id));
+  const isVendorConfirmed = Boolean(activeBooking) || bookedVendorIds.includes(activeVendor?.id || '');
 
   // Filter partners by search
   const filteredPartners = allPartners.filter(v => 
@@ -182,7 +195,7 @@ export default function ChatTab({
       {
         sender: 'vendor' as const,
         senderName: activeVendor?.name || 'Vendor Team',
-        text: `Namaste ${currentUser.name || 'Valued Client'}! Thank you for connecting with us. How can we make your upcoming celebration extraordinary?`,
+        text: `Namaste ${currentUser.name || 'Valued Client'}! Once your booking is confirmed, direct priority chat and calendar sync will activate here.`,
         time: 'Just now'
       }
     ]
@@ -191,6 +204,11 @@ export default function ChatTab({
   // Send Message
   const handleSendMessage = async (e?: React.FormEvent, customText?: string) => {
     if (e) e.preventDefault();
+    if (!isVendorConfirmed) {
+      onShowNotification('🔒 Chat is exclusively unlocked for confirmed bookings. Please confirm your reservation first!');
+      return;
+    }
+
     const textToSend = (customText || inputText).trim();
     if (!textToSend || !activeVendor) return;
 
@@ -198,6 +216,11 @@ export default function ChatTab({
     const newMsg: ChatMessage = {
       bookingId: activeBooking?.id || '',
       vendorId: activeVendor.id,
+      vendorName: activeVendor.name,
+      userId: currentUser?.uid || currentUser?.id || '',
+      userName: currentUser.name || currentUser.displayName || 'Customer',
+      userPhone: currentUser.phone || '',
+      userEmail: currentUser.email || '',
       sender: 'user',
       senderName: currentUser.name || currentUser.displayName || 'Customer',
       text: textToSend,
@@ -218,6 +241,11 @@ export default function ChatTab({
       await addDoc(collection(db, 'chats'), {
         bookingId: activeBooking?.id || '',
         vendorId: activeVendor.id,
+        vendorName: activeVendor.name,
+        userId: currentUser?.uid || currentUser?.id || '',
+        userName: currentUser.name || currentUser.displayName || 'Customer',
+        userPhone: currentUser.phone || '',
+        userEmail: currentUser.email || '',
         sender: 'user',
         senderName: currentUser.name || currentUser.displayName || 'Customer',
         text: textToSend,
@@ -250,7 +278,7 @@ export default function ChatTab({
             <h2 className="font-extrabold text-lg text-gray-900 font-display flex items-center gap-2">
               <span>Celebration Messages & Live Coordination</span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Live Sync
+                Confirmed Partners
               </span>
             </h2>
             <p className="text-xs text-gray-500">
@@ -262,7 +290,7 @@ export default function ChatTab({
         {/* Quick Booking Count Summary */}
         <div className="flex items-center gap-2 text-xs font-bold text-gray-600 bg-gray-50 px-3.5 py-2 rounded-2xl border border-gray-200">
           <Calendar size={14} className="text-rose-600" />
-          <span>{bookings.length} Active Booked Services</span>
+          <span>{bookedVendors.length} Confirmed Vendor Channels</span>
         </div>
       </div>
 
@@ -275,7 +303,7 @@ export default function ChatTab({
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search partner or category..."
+              placeholder="Search confirmed partner..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-2xl text-xs outline-none focus:border-rose-600 shadow-xs"
@@ -284,9 +312,14 @@ export default function ChatTab({
 
           {/* Partner List */}
           <div className="flex-1 overflow-y-auto space-y-1.5 max-h-[500px] pr-1">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider px-2 block pt-1">
-              Event Partners ({filteredPartners.length})
-            </span>
+            <div className="flex items-center justify-between px-2 pt-1">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                Partners ({filteredPartners.length})
+              </span>
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                {bookedVendors.length} Unlocked
+              </span>
+            </div>
 
             {filteredPartners.length === 0 ? (
               <div className="p-4 text-center text-xs text-gray-400">
@@ -306,7 +339,7 @@ export default function ChatTab({
                     onClick={() => setActiveVendorId(vendor.id)}
                     className={`w-full p-3 rounded-2xl flex items-center gap-3 text-left transition cursor-pointer ${
                       isSelected
-                        ? 'bg-rose-50/80 border border-rose-200 shadow-xs'
+                        ? 'bg-rose-50/80 border border-rose-200 shadow-xs ring-1 ring-rose-200'
                         : 'hover:bg-white bg-white/70 border border-transparent hover:border-gray-200'
                     }`}
                   >
@@ -316,7 +349,13 @@ export default function ChatTab({
                         alt={vendor.name}
                         className="w-11 h-11 rounded-2xl object-cover border border-gray-200"
                       />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                      {hasBooking ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[7px] text-white font-black">
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-gray-400 border-2 border-white" />
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -325,12 +364,12 @@ export default function ChatTab({
                           {vendor.name}
                         </span>
                         {hasBooking ? (
-                          <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md shrink-0">
-                            Booked
+                          <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md shrink-0 flex items-center gap-0.5">
+                            <ShieldCheck size={9} /> Confirmed
                           </span>
                         ) : (
-                          <span className="text-[9px] text-gray-400 font-medium shrink-0">
-                            {vendor.location || 'Partner'}
+                          <span className="text-[9px] text-gray-400 font-bold shrink-0 flex items-center gap-0.5">
+                            <Lock size={9} /> Locked
                           </span>
                         )}
                       </div>
@@ -339,9 +378,13 @@ export default function ChatTab({
                         {vendor.category}
                       </span>
 
-                      {lastMsg && (
+                      {lastMsg ? (
                         <p className="text-[10px] text-gray-500 truncate mt-0.5">
                           {lastMsg.sender === 'user' ? 'You: ' : ''}{lastMsg.text}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-gray-400 truncate mt-0.5">
+                          {hasBooking ? 'Click to open conversation' : 'Booking required to chat'}
                         </p>
                       )}
                     </div>
@@ -369,10 +412,17 @@ export default function ChatTab({
                       <h4 className="font-extrabold text-sm text-gray-900 truncate font-display">
                         {activeVendor.name}
                       </h4>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                        <ShieldCheck size={11} className="text-emerald-600" />
-                        <span>Verified Specialist</span>
-                      </span>
+                      {isVendorConfirmed ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                          <ShieldCheck size={11} className="text-emerald-600" />
+                          <span>Confirmed Booking Channel</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
+                          <Lock size={11} className="text-amber-600" />
+                          <span>Booking Required</span>
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500 truncate">
                       {activeVendor.category} • {activeVendor.location || 'Mumbai'}
@@ -381,31 +431,33 @@ export default function ChatTab({
                 </div>
 
                 {/* Quick Action Buttons: WhatsApp & Direct Phone */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {activeVendor.whatsapp && (
-                    <a
-                      href={`https://wa.me/${activeVendor.whatsapp.replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition shadow-2xs flex items-center gap-1.5 text-xs font-bold"
-                      title="Open WhatsApp Chat"
-                    >
-                      <MessageCircle size={15} />
-                      <span className="hidden sm:inline">WhatsApp</span>
-                    </a>
-                  )}
+                {isVendorConfirmed && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {activeVendor.whatsapp && (
+                      <a
+                        href={`https://wa.me/${activeVendor.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition shadow-2xs flex items-center gap-1.5 text-xs font-bold"
+                        title="Open WhatsApp Chat"
+                      >
+                        <MessageCircle size={15} />
+                        <span className="hidden sm:inline">WhatsApp</span>
+                      </a>
+                    )}
 
-                  {activeVendor.phone && (
-                    <a
-                      href={`tel:${activeVendor.phone}`}
-                      className="p-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-rose-50 hover:text-rose-600 border border-gray-200 transition shadow-2xs flex items-center gap-1.5 text-xs font-bold"
-                      title="Direct Phone Call"
-                    >
-                      <Phone size={15} />
-                      <span className="hidden sm:inline">Call</span>
-                    </a>
-                  )}
-                </div>
+                    {activeVendor.phone && (
+                      <a
+                        href={`tel:${activeVendor.phone}`}
+                        className="p-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-rose-50 hover:text-rose-600 border border-gray-200 transition shadow-2xs flex items-center gap-1.5 text-xs font-bold"
+                        title="Direct Phone Call"
+                      >
+                        <Phone size={15} />
+                        <span className="hidden sm:inline">Call</span>
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Active Booking Context Bar */}
@@ -422,79 +474,110 @@ export default function ChatTab({
                     </span>
                   </div>
                   <span className="bg-emerald-600 text-white font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
-                    {activeBooking.status}
+                    {activeBooking.status || 'Confirmed'}
                   </span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Messages Bubble Stream */}
-          <div className="flex-1 overflow-y-auto py-4 space-y-3.5 px-1 max-h-[380px]">
-            <div className="text-center">
-              <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                Direct End-to-End Encrypted Coordination
-              </span>
-            </div>
+          {/* Conditional: If Not Confirmed, Show Dedicated Lock Screen */}
+          {!isVendorConfirmed ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 my-auto">
+              <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shadow-inner">
+                <Lock size={30} />
+              </div>
+              <div className="space-y-1.5 max-w-sm">
+                <h4 className="text-base font-black text-gray-900 font-display">
+                  Booking Required to Unlock Direct Chat
+                </h4>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  To ensure 100% verified calendar availability and priority crew dispatch, direct customer-to-vendor messaging is activated once a booking is confirmed on Parva.
+                </p>
+              </div>
 
-            {displayMessages.map((msg, idx) => {
-              const isUser = msg.sender === 'user';
-              return (
-                <div
-                  key={idx}
-                  className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+              {onNavigateToExplore && (
+                <button
+                  type="button"
+                  onClick={onNavigateToExplore}
+                  className="bg-brand-primary hover:bg-brand-primary-dark text-white text-xs font-black px-6 py-3 rounded-2xl shadow-md transition active:scale-95 flex items-center gap-2 uppercase tracking-wider cursor-pointer"
                 >
-                  {/* Sender Name label */}
-                  <span className="text-[10px] font-bold text-gray-400 px-2 mb-1">
-                    {msg.senderName || (isUser ? 'You' : activeVendor?.name)}
-                  </span>
-
-                  <div
-                    className={`max-w-[85%] sm:max-w-[75%] rounded-3xl p-4 text-xs leading-relaxed shadow-xs whitespace-pre-line ${
-                      isUser
-                        ? 'bg-rose-600 text-white rounded-br-xs font-normal'
-                        : 'bg-gray-50 text-gray-900 border border-gray-200/90 rounded-bl-xs'
-                    }`}
-                  >
-                    {msg.text}
-                  </div>
-
-                  <span className="text-[9px] text-gray-400 font-medium px-2 mt-1 flex items-center gap-1">
-                    <span>{msg.time}</span>
-                    {isUser && <CheckCheck size={12} className="text-rose-600" />}
+                  <span>Book {activeVendor?.name || 'Vendor'} Now</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Messages Bubble Stream */}
+              <div className="flex-1 overflow-y-auto py-4 space-y-3.5 px-1 max-h-[380px]">
+                <div className="text-center">
+                  <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                    Direct End-to-End Encrypted Coordination
                   </span>
                 </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {/* Quick Prompt Chips */}
-          <div className="py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            {quickPrompts.map((prompt, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => handleSendMessage(undefined, prompt)}
-                className="shrink-0 bg-gray-50 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-gray-200 text-gray-600 text-[11px] font-bold px-3 py-1.5 rounded-full transition cursor-pointer"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+                {displayMessages.map((msg, idx) => {
+                  const isUser = msg.sender === 'user';
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+                    >
+                      {/* Sender Name label */}
+                      <span className="text-[10px] font-bold text-gray-400 px-2 mb-1">
+                        {msg.senderName || (isUser ? 'You' : activeVendor?.name)}
+                      </span>
+
+                      <div
+                        className={`max-w-[85%] sm:max-w-[75%] rounded-3xl p-4 text-xs leading-relaxed shadow-xs whitespace-pre-line ${
+                          isUser
+                            ? 'bg-rose-600 text-white rounded-br-xs font-normal'
+                            : 'bg-gray-50 text-gray-900 border border-gray-200/90 rounded-bl-xs'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+
+                      <span className="text-[9px] text-gray-400 font-medium px-2 mt-1 flex items-center gap-1">
+                        <span>{msg.time}</span>
+                        {isUser && <CheckCheck size={12} className="text-rose-600" />}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Quick Prompt Chips */}
+              <div className="py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {quickPrompts.map((prompt, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSendMessage(undefined, prompt)}
+                    className="shrink-0 bg-gray-50 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-gray-200 text-gray-600 text-[11px] font-bold px-3 py-1.5 rounded-full transition cursor-pointer"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Message Input Box */}
-          <form onSubmit={handleSendMessage} className="pt-2 flex items-center gap-2">
+          <form onSubmit={handleSendMessage} className="pt-2 flex items-center gap-2 border-t border-gray-100">
             <input
               type="text"
-              placeholder={`Message ${activeVendor?.name || 'vendor'}...`}
+              disabled={!isVendorConfirmed}
+              placeholder={isVendorConfirmed ? `Message ${activeVendor?.name || 'vendor'}...` : '🔒 Book this vendor to unlock direct chat messaging'}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-xs sm:text-sm outline-none focus:border-rose-600 focus:bg-white transition shadow-xs"
+              className="flex-1 bg-gray-50 disabled:bg-gray-100/80 disabled:cursor-not-allowed border border-gray-200 rounded-2xl px-4 py-3 text-xs sm:text-sm outline-none focus:border-rose-600 focus:bg-white transition shadow-xs"
             />
             <button
               type="submit"
-              disabled={!inputText.trim() || isSending}
+              disabled={!isVendorConfirmed || !inputText.trim() || isSending}
               className="bg-rose-600 hover:bg-rose-700 text-white p-3 rounded-2xl shadow-md transition active:scale-95 disabled:opacity-40 cursor-pointer"
             >
               <Send size={16} />
