@@ -78,11 +78,11 @@ export function AirbnbNavbar({
   const [isScrolled, setIsScrolled] = useState(false);
 
   const isUserLoggedIn = Boolean(
-    currentUser && (
-      currentUser.uid || 
-      currentUser.email || 
-      currentUser.phone || 
-      (currentUser.name && currentUser.name !== 'Guest' && currentUser.name !== 'Guest Member' && currentUser.name !== 'Guest Planner')
+    currentUser && typeof currentUser === 'object' && !currentUser.isGuest && currentUser.uid !== 'guest-uid' && currentUser.uid !== 'guest' && (
+      (typeof currentUser.email === 'string' && currentUser.email.includes('@') && !currentUser.email.includes('guest')) ||
+      (typeof currentUser.phone === 'string' && currentUser.phone.replace(/\D/g, '').length >= 10) ||
+      (typeof currentUser.name === 'string' && currentUser.name.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner', 'anonymous planner'].includes(currentUser.name.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5) ||
+      (typeof currentUser.displayName === 'string' && currentUser.displayName.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner'].includes(currentUser.displayName.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5)
     )
   );
 
@@ -188,6 +188,16 @@ export function AirbnbNavbar({
                 Messages
               </button>
 
+              <button
+                type="button"
+                onClick={() => isUserLoggedIn ? onNavigateTab('profile') : onOpenLogin()}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'profile' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {isUserLoggedIn ? 'Profile' : 'Log In'}
+              </button>
+
               {isAdminUser && (
                 <button
                   type="button"
@@ -224,7 +234,7 @@ export function AirbnbNavbar({
           <button
             type="button"
             onClick={onOpenSupport}
-            className="hidden lg:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition cursor-pointer"
+            className="hidden xl:flex items-center gap-2 text-xs font-bold text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-full transition cursor-pointer"
             title="24/7 Celebration Assistance"
           >
             <Headphones size={15} className="text-rose-600" />
@@ -261,16 +271,16 @@ export function AirbnbNavbar({
             )}
           </button>
 
-          {/* Guaranteed Visible Sign In Button When Logged Out */}
+          {/* Guaranteed Visible Log In / Sign Up Button When Logged Out */}
           {!isUserLoggedIn && (
             <button
               type="button"
               onClick={onOpenLogin}
-              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-sm hover:shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
               id="desktop-signin-button"
             >
               <UserIcon size={14} />
-              <span>Sign In</span>
+              <span>Log In</span>
             </button>
           )}
 
@@ -284,7 +294,7 @@ export function AirbnbNavbar({
             >
               <Menu size={16} className="text-gray-600" />
               <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
-                {getInitials()}
+                {isUserLoggedIn ? getInitials() : <UserIcon size={14} />}
               </div>
             </button>
 

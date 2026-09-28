@@ -349,6 +349,7 @@ export function AirbnbDesktopMarketplace({
           onNavigateTab={onNavigateTab}
           onLogout={onLogout}
           onOpenSupport={onOpenSupport}
+          onOpenLogin={() => onOpenLogin('signin')}
         />
         <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
       </div>

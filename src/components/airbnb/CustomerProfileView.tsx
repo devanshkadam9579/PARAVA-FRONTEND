@@ -14,6 +14,7 @@ export interface CustomerProfileViewProps {
   onNavigateTab: (tab: 'home' | 'bookings' | 'chat' | 'profile') => void;
   onLogout: () => void;
   onOpenSupport: () => void;
+  onOpenLogin?: () => void;
 }
 
 export function CustomerProfileView({
@@ -24,10 +25,20 @@ export function CustomerProfileView({
   onSelectVendor,
   onNavigateTab,
   onLogout,
-  onOpenSupport
+  onOpenSupport,
+  onOpenLogin
 }: CustomerProfileViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'saved' | 'rewards' | 'referrals' | 'settings'>('profile');
   const [copiedCode, setCopiedCode] = useState(false);
+
+  const isUserLoggedIn = Boolean(
+    currentUser && typeof currentUser === 'object' && !currentUser.isGuest && currentUser.uid !== 'guest-uid' && currentUser.uid !== 'guest' && (
+      (typeof currentUser.email === 'string' && currentUser.email.includes('@') && !currentUser.email.includes('guest')) ||
+      (typeof currentUser.phone === 'string' && currentUser.phone.replace(/\D/g, '').length >= 10) ||
+      (typeof currentUser.name === 'string' && currentUser.name.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner', 'anonymous planner'].includes(currentUser.name.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5) ||
+      (typeof currentUser.displayName === 'string' && currentUser.displayName.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner'].includes(currentUser.displayName.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5)
+    )
+  );
 
   const savedVendors = vendors.filter(v => wishlist.includes(v.id));
   const userInitials = currentUser?.name
@@ -41,6 +52,42 @@ export function CustomerProfileView({
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
+
+  if (!isUserLoggedIn) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 border border-gray-200/90 shadow-xl text-center space-y-6">
+          <div className="w-20 h-20 rounded-3xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+            <User size={40} />
+          </div>
+          <div className="max-w-md mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 font-display">
+              Welcome to Parva Celebrations
+            </h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Sign in or create an account to view your confirmed reservations, track invoices, access direct vendor chat, and manage your wishlist.
+            </p>
+          </div>
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto">
+            <button
+              type="button"
+              onClick={() => onOpenLogin ? onOpenLogin() : null}
+              className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black text-sm px-8 py-3.5 rounded-full shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer"
+            >
+              Sign In / Register Now
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('home')}
+              className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-sm px-6 py-3.5 rounded-full transition cursor-pointer"
+            >
+              Explore Services
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[1500px] mx-auto px-4 sm:px-8 lg:px-12 py-10">
