@@ -39,6 +39,7 @@ import ShareBookingModal from './components/ShareBookingModal';
 import SlidablePromoBanner from './components/SlidablePromoBanner';
 import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarketplace';
 import AuthModal from './components/AuthModal';
+import { signOutUser, isMasterAdminEmail, CustomerProfileData } from './services/authService';
 import VendorDashboardFull from './components/vendor/VendorDashboardFull';
 import ChatTab from './components/ChatTab';
 import { AdminKycReviewModal } from './components/admin/AdminKycReviewModal';
@@ -519,7 +520,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(false);
 
-  // Authentication persistence
+  // Authentication persistence - Single Source of Truth via Firebase Auth
   useEffect(() => {
     const authInstance = getAuthInstance();
     const unsubscribe = onAuthStateChanged(authInstance, (user) => {
@@ -530,42 +531,51 @@ export default function App() {
           const cleanUser = {
             uid: user.uid,
             email: user.email || '',
+            name: user.displayName || user.email?.split('@')[0] || 'Parva Client',
             displayName: user.displayName || '',
             photoURL: user.photoURL || '',
           };
-          const isMasterAdminEmail = ['devenshkadam2@gmail.com', 'devanshkadam2@gmail.com'].includes(user.email || '');
+          const isAdminUser = isMasterAdminEmail(user.email);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            if (isMasterAdminEmail && userData.role !== 'master_admin') {
+            if (isAdminUser && userData.role !== 'master_admin') {
               userData.role = 'master_admin';
               setDoc(userRef, { role: 'master_admin' }, { merge: true }).catch(() => {});
             }
-            setCurrentUser((prev: any) => ({ ...prev, ...cleanUser, ...userData }));
+            const merged = { ...cleanUser, ...userData };
+            setCurrentUser(merged);
+            try {
+              localStorage.setItem('parva_user', JSON.stringify(merged));
+            } catch (e) {}
             setIsAdmin(userData.role === 'admin' || userData.role === 'master_admin');
             setIsMasterAdmin(userData.role === 'master_admin');
           } else {
-            // Default user
-            const defaultRole = isMasterAdminEmail ? 'master_admin' : 'user';
-            const defaultUser = { ...cleanUser, role: defaultRole };
-            if (isMasterAdminEmail) {
-              setDoc(userRef, defaultUser, { merge: true }).catch(() => {});
-            }
-            setCurrentUser((prev: any) => ({ ...prev, ...cleanUser, role: defaultRole }));
-            setIsAdmin(isMasterAdminEmail);
-            setIsMasterAdmin(isMasterAdminEmail);
+            // Default user profile
+            const defaultRole = isAdminUser ? 'master_admin' : 'customer';
+            const defaultUser = { ...cleanUser, role: defaultRole, city: 'Kolhapur' };
+            setDoc(userRef, defaultUser, { merge: true }).catch(() => {});
+            setCurrentUser(defaultUser);
+            try {
+              localStorage.setItem('parva_user', JSON.stringify(defaultUser));
+            } catch (e) {}
+            setIsAdmin(isAdminUser);
+            setIsMasterAdmin(isAdminUser);
           }
         }, (error) => {
           console.warn("Profile fetch error (might be offline):", error);
-          if (!currentUser) {
-            const cleanUser = {
-              uid: user.uid,
-              email: user.email || '',
-              displayName: user.displayName || '',
-              photoURL: user.photoURL || '',
-            };
-            const isMasterAdminEmail = ['devenshkadam2@gmail.com', 'devanshkadam2@gmail.com'].includes(user.email || '');
-            setCurrentUser({ ...cleanUser, role: isMasterAdminEmail ? 'master_admin' : 'user' });
-          }
+          const isAdminUser = isMasterAdminEmail(user.email);
+          const fallbackUser = {
+            uid: user.uid,
+            email: user.email || '',
+            name: user.displayName || user.email?.split('@')[0] || 'Parva Client',
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            role: isAdminUser ? 'master_admin' : 'customer',
+            city: 'Kolhapur'
+          };
+          setCurrentUser(fallbackUser);
+          setIsAdmin(isAdminUser);
+          setIsMasterAdmin(isAdminUser);
         });
 
         return () => unsubProfile();
@@ -573,6 +583,9 @@ export default function App() {
         setCurrentUser(null);
         setIsAdmin(false);
         setIsMasterAdmin(false);
+        try {
+          localStorage.removeItem('parva_user');
+        } catch (e) {}
       }
     });
     return unsubscribe;
@@ -1051,7 +1064,10 @@ export default function App() {
   // Filter Modal & Dynamic Sorting State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const [authContextTitle, setAuthContextTitle] = useState<string | undefined>(undefined);
+  const [authContextSubtitle, setAuthContextSubtitle] = useState<string | undefined>(undefined);
+  const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
   const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
   const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
   const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
@@ -2396,6 +2412,188 @@ export default function App() {
     showNotification('Premium Event Bundle Booked Successfully!');
   };
 
+  // Centralized payment and booking reservation execution
+  const executeBookingPayment = async (bookingDetails: any, activeUser?: any) => {
+    const userToUse = activeUser || currentUser;
+    const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
+    const bookingFee = Math.round(servicesTotal * 0.05);
+    const gst = Math.round(bookingFee * 0.18);
+    const finalPayableTotal = Math.max(0, bookingFee + gst - couponDiscount);
+
+    const custName = bookingDetails?.clientName || userToUse?.name || userToUse?.displayName || 'Valued Client';
+    const custPhone = bookingDetails?.clientPhone || userToUse?.phone || '';
+    const custEmail = bookingDetails?.clientEmail || userToUse?.email || '';
+    const custAge = bookingDetails?.clientAge || '';
+    const eventAddr = bookingDetails?.eventAddress || '';
+    const eventCoords = bookingDetails?.gpsCoords || null;
+    const styleNotes = bookingDetails?.styleSuggestions || '';
+    const primaryVendor = bundledItems[0]?.vendor || vendors[0];
+
+    const newBooking: Booking = {
+      id: `b-new-${Date.now()}`,
+      vendor: primaryVendor,
+      vendorId: primaryVendor?.id,
+      serviceName: bundledItems[0]?.service?.name || primaryVendor?.category || 'Celebration Service',
+      selectedServices: bundledItems.map(item => item.service),
+      eventDate: planningStartDate,
+      eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
+      customTime: customDeliveryTime || '',
+      eventType: planningEventType || 'Celebration',
+      status: 'Confirmed',
+      totalPrice: servicesTotal,
+      bundleDiscount: couponDiscount,
+      finalPrice: servicesTotal - couponDiscount,
+      paymentStatus: 'Paid',
+      bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
+      customerName: custName,
+      customerPhone: custPhone,
+      customerEmail: custEmail,
+      customerAge: custAge,
+      eventLocationAddress: eventAddr,
+      eventLocationCoords: eventCoords,
+      styleSuggestions: styleNotes,
+      notes: styleNotes,
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Immediately update client bookings state and clear cart
+    setBookings(prev => [newBooking, ...prev]);
+    setBundledItems([]);
+    sessionStorage.removeItem('parva_bundled_items');
+    sessionStorage.removeItem('parva_checkout_draft');
+
+    // 2. Add in-app notification for individual account
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        type: 'slot',
+        title: 'Booking Confirmed',
+        message: `Your reservation for ${newBooking.serviceName} with ${primaryVendor?.name} on ${planningStartDate} has been confirmed.`,
+        timestamp: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
+
+    // 3. Save to Firestore (bookings, leads, chats, vendor busyDates)
+    try {
+      const db = getDb();
+      const { doc, setDoc, addDoc, collection, arrayUnion } = await import('firebase/firestore');
+
+      // Save booking doc
+      await setDoc(doc(db, 'bookings', newBooking.id), newBooking, { merge: true });
+
+      // Save lead record
+      const leadId = `lead-direct-${Date.now()}`;
+      await setDoc(doc(db, 'leads', leadId), {
+        id: leadId,
+        vendorId: primaryVendor?.id,
+        vendorName: primaryVendor?.name,
+        name: custName,
+        phone: custPhone,
+        email: custEmail,
+        age: custAge,
+        eventLocationAddress: eventAddr,
+        eventLocationCoords: eventCoords,
+        styleSuggestions: styleNotes,
+        city: primaryVendor?.location || currentCity || 'Mumbai',
+        budget: `Direct Reservation: ₹${servicesTotal.toLocaleString('en-IN')}`,
+        eventDate: planningStartDate,
+        timestamp: new Date().toLocaleString('en-IN'),
+        status: 'Confirmed & Paid'
+      });
+
+      // Initialize automated chat messages
+      if (primaryVendor?.id) {
+        await addDoc(collection(db, 'chats'), {
+          bookingId: newBooking.id,
+          vendorId: primaryVendor.id,
+          sender: 'user',
+          senderName: custName,
+          text: `Namaste ${primaryVendor.name}! New Direct Booking Confirmed for "${newBooking.serviceName}" on ${planningStartDate} (${formatTimeSlot(newBooking.eventTimeSlot)}).\n\nCustomer Requirements & Event Info:\n• Client Name: ${custName}\n• Contact Number: ${custPhone}\n• Email: ${custEmail || 'N/A'}\n• Event Location / Address: ${eventAddr}\n• Style & Theme Demands: ${styleNotes || 'Standard package as listed'}\n• Booking Advance Paid: ₹${finalPayableTotal.toLocaleString('en-IN')}\n• Total Service Value: ₹${servicesTotal.toLocaleString('en-IN')}`,
+          createdAt: new Date()
+        });
+
+        await addDoc(collection(db, 'chats'), {
+          bookingId: newBooking.id,
+          vendorId: primaryVendor.id,
+          sender: 'vendor',
+          senderName: `${primaryVendor.name} Concierge`,
+          text: `Welcome to MyParva, ${custName}! Your reservation for ${newBooking.serviceName} is locked with 100% Escrow Protection. Our team is coordinating all arrangements for your event on ${planningStartDate}. Feel free to share any references, audio tracks, or theme preferences here. We look forward to your valuable feedback and rating after the celebration!`,
+          createdAt: new Date(Date.now() + 1000)
+        });
+
+        setUnlockedConnections(prev => [...new Set([...prev, primaryVendor.id])]);
+
+        try {
+          await setDoc(doc(db, 'vendors', primaryVendor.id), {
+            busyDates: arrayUnion(planningStartDate)
+          }, { merge: true });
+        } catch (vErr) {
+          console.debug('Vendor date lock synced via server:', vErr);
+        }
+      }
+
+      // Dispatch automated confirmation email via backend
+      try {
+        fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: `DIR_${newBooking.id}`,
+            paymentId: `pay_direct_${Date.now()}`,
+            userId: userToUse?.uid || 'guest-uid',
+            vendorId: primaryVendor?.id || 'system',
+            type: 'booking',
+            totalAmount: finalPayableTotal,
+            bookingData: newBooking,
+            customerData: {
+              name: custName,
+              email: custEmail,
+              phone: custPhone,
+              age: custAge,
+              eventLocationAddress: eventAddr,
+              styleSuggestions: styleNotes
+            }
+          })
+        }).catch(e => console.warn('Email dispatch note:', e));
+      } catch (e) {}
+
+    } catch (fsErr) {
+      console.error('Error saving booking to Firestore:', fsErr);
+    }
+
+    showNotification('Booking Confirmed! Email notification and vendor chat unlocked.');
+    handleNavigateToTab('bookings');
+
+    try {
+      handlePayWithRazorpay({
+        vendorId: primaryVendor?.id,
+        type: 'booking',
+        amount: finalPayableTotal,
+        bookingData: newBooking
+      });
+    } catch (pErr) {
+      console.warn('Payment gateway launch note:', pErr);
+    }
+  };
+
+  // Auth Success Handler: updates user, closes modal, resumes pending actions
+  const handleAuthSuccess = async (loggedUser: CustomerProfileData) => {
+    setCurrentUser(loggedUser);
+    try {
+      localStorage.setItem('parva_user', JSON.stringify(loggedUser));
+    } catch (e) {}
+    setIsAuthModalOpen(false);
+
+    if (pendingBookingDetails) {
+      const details = pendingBookingDetails;
+      setPendingBookingDetails(null);
+      showNotification(`Welcome, ${loggedUser.name || 'valued customer'}! Resuming your booking reservation...`);
+      await executeBookingPayment(details, loggedUser);
+    }
+  };
+
   // Chat/Messaging Handlers
   const handleSelectThread = (vendorId: string) => {
     const canBypass = isAdmin || isMasterAdmin || currentUser?.role === 'vendor';
@@ -3110,13 +3308,16 @@ export default function App() {
           currentUser={currentUser}
           onOpenLogin={(tab) => {
             setAuthModalTab(tab || 'signin');
+            setAuthContextTitle(undefined);
+            setAuthContextSubtitle(undefined);
             setIsAuthModalOpen(true);
           }}
-          onLogout={() => {
+          onLogout={async () => {
+            await signOutUser();
             setCurrentUser(null);
             setIsAdmin(false);
-            localStorage.removeItem('parva_user');
-            showNotification('🚪 Logged out successfully.');
+            setIsMasterAdmin(false);
+            showNotification('Logged out successfully.');
           }}
           onNavigateTab={(tab) => handleNavigateToTab(tab as any)}
           activeTab={activeTab}
@@ -3134,176 +3335,14 @@ export default function App() {
           bundledItems={bundledItems}
           onPay={async (bookingDetails) => {
             if (!currentUser) {
+              setPendingBookingDetails(bookingDetails);
               setAuthModalTab('signin');
+              setAuthContextTitle('Sign in to complete booking');
+              setAuthContextSubtitle('Your selected event services and dates are saved. Sign in or create an account to finalize your reservation.');
               setIsAuthModalOpen(true);
               return;
             }
-            const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
-            const bookingFee = Math.round(servicesTotal * 0.05);
-            const gst = Math.round(bookingFee * 0.18);
-            const finalPayableTotal = Math.max(0, bookingFee + gst - couponDiscount);
-
-            const custName = bookingDetails?.clientName || currentUser?.name || currentUser?.displayName || 'Valued Client';
-            const custPhone = bookingDetails?.clientPhone || currentUser?.phone || '';
-            const custEmail = bookingDetails?.clientEmail || currentUser?.email || '';
-            const custAge = bookingDetails?.clientAge || '';
-            const eventAddr = bookingDetails?.eventAddress || '';
-            const eventCoords = bookingDetails?.gpsCoords || null;
-            const styleNotes = bookingDetails?.styleSuggestions || '';
-            const primaryVendor = bundledItems[0]?.vendor || vendors[0];
-
-            const newBooking: Booking = {
-              id: `b-new-${Date.now()}`,
-              vendor: primaryVendor,
-              vendorId: primaryVendor?.id,
-              serviceName: bundledItems[0]?.service?.name || primaryVendor?.category || 'Celebration Service',
-              selectedServices: bundledItems.map(item => item.service),
-              eventDate: planningStartDate,
-              eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
-              customTime: customDeliveryTime || '',
-              eventType: planningEventType || 'Celebration',
-              status: 'Confirmed',
-              totalPrice: servicesTotal,
-              bundleDiscount: couponDiscount,
-              finalPrice: servicesTotal - couponDiscount,
-              paymentStatus: 'Paid',
-              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
-              customerName: custName,
-              customerPhone: custPhone,
-              customerEmail: custEmail,
-              customerAge: custAge,
-              eventLocationAddress: eventAddr,
-              eventLocationCoords: eventCoords,
-              styleSuggestions: styleNotes,
-              notes: styleNotes,
-              createdAt: new Date().toISOString()
-            };
-
-            // 1. Immediately update client bookings state and clear cart
-            setBookings(prev => [newBooking, ...prev]);
-            setBundledItems([]);
-            sessionStorage.removeItem('parva_bundled_items');
-            sessionStorage.removeItem('parva_checkout_draft');
-
-            // 2. Add in-app notification for individual account
-            setNotifications(prev => [
-              {
-                id: `notif-${Date.now()}`,
-                type: 'slot',
-                title: '🎉 Booking Confirmed!',
-                message: `Your reservation for ${newBooking.serviceName} with ${primaryVendor?.name} on ${planningStartDate} has been confirmed.`,
-                timestamp: 'Just now',
-                read: false
-              },
-              ...prev
-            ]);
-
-            // 3. Save to Firestore (bookings, leads, chats, vendor busyDates)
-            try {
-              const db = getDb();
-              const { doc, setDoc, addDoc, collection, arrayUnion, updateDoc } = await import('firebase/firestore');
-
-              // Save booking doc
-              await setDoc(doc(db, 'bookings', newBooking.id), newBooking, { merge: true });
-
-              // Save lead record
-              const leadId = `lead-direct-${Date.now()}`;
-              await setDoc(doc(db, 'leads', leadId), {
-                id: leadId,
-                vendorId: primaryVendor?.id,
-                vendorName: primaryVendor?.name,
-                name: custName,
-                phone: custPhone,
-                email: custEmail,
-                age: custAge,
-                eventLocationAddress: eventAddr,
-                eventLocationCoords: eventCoords,
-                styleSuggestions: styleNotes,
-                city: primaryVendor?.location || currentCity || 'Mumbai',
-                budget: `Direct Reservation: ₹${servicesTotal.toLocaleString('en-IN')}`,
-                eventDate: planningStartDate,
-                timestamp: new Date().toLocaleString('en-IN'),
-                status: 'Confirmed & Paid'
-              });
-
-              // Initialize dual automated chat messages for real-time conversation between vendor and customer
-              if (primaryVendor?.id) {
-                // 1. Automated Message to Vendor with customer demands & details
-                await addDoc(collection(db, 'chats'), {
-                  bookingId: newBooking.id,
-                  vendorId: primaryVendor.id,
-                  sender: 'user',
-                  senderName: custName,
-                  text: `Namaste ${primaryVendor.name}! 🎉 New Direct Booking Confirmed for "${newBooking.serviceName}" on ${planningStartDate} (${formatTimeSlot(newBooking.eventTimeSlot)}).\n\n📋 Customer Requirements & Event Info:\n• Client Name: ${custName}\n• Contact Number: ${custPhone}\n• Email: ${custEmail || 'N/A'}\n• Event Location / Address: ${eventAddr}\n• Style & Theme Demands: ${styleNotes || 'Standard package as listed'}\n• Booking Advance Paid: ₹${finalPayableTotal.toLocaleString('en-IN')}\n• Total Service Value: ₹${servicesTotal.toLocaleString('en-IN')}`,
-                  createdAt: new Date()
-                });
-
-                // 2. Automated Welcome & Feedback Prompt to Customer
-                await addDoc(collection(db, 'chats'), {
-                  bookingId: newBooking.id,
-                  vendorId: primaryVendor.id,
-                  sender: 'vendor',
-                  senderName: `${primaryVendor.name} Concierge`,
-                  text: `Welcome to MyParva, ${custName}! 🎊 Your reservation for ${newBooking.serviceName} is locked with 100% Escrow Protection. Our team is coordinating all arrangements for your event on ${planningStartDate}. Feel free to share any references, audio tracks, or theme preferences here. We look forward to your valuable feedback and rating after the celebration! ✨`,
-                  createdAt: new Date(Date.now() + 1000)
-                });
-
-                // Unlock vendor connection in user state
-                setUnlockedConnections(prev => [...new Set([...prev, primaryVendor.id])]);
-
-                // Lock vendor busyDate in Firestore
-                try {
-                  await setDoc(doc(db, 'vendors', primaryVendor.id), {
-                    busyDates: arrayUnion(planningStartDate)
-                  }, { merge: true });
-                } catch (vErr) {
-                  console.debug('Vendor date lock synced via server:', vErr);
-                }
-              }
-
-              // 4. Dispatch automated confirmation email via backend
-              try {
-                fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    orderId: `DIR_${newBooking.id}`,
-                    paymentId: `pay_direct_${Date.now()}`,
-                    userId: currentUser?.uid || 'guest-uid',
-                    vendorId: primaryVendor?.id || 'system',
-                    type: 'booking',
-                    totalAmount: finalPayableTotal,
-                    bookingData: newBooking,
-                    customerData: {
-                      name: custName,
-                      email: custEmail,
-                      phone: custPhone,
-                      age: custAge,
-                      eventLocationAddress: eventAddr,
-                      styleSuggestions: styleNotes
-                    }
-                  })
-                }).catch(e => console.warn('Email dispatch note:', e));
-              } catch (e) {}
-
-            } catch (fsErr) {
-              console.error('Error saving booking to Firestore:', fsErr);
-            }
-
-            showNotification('🎉 Booking Confirmed! Email notification and vendor chat unlocked.');
-            handleNavigateToTab('bookings');
-
-            // 5. Also launch payment gateway
-            try {
-              handlePayWithRazorpay({
-                vendorId: primaryVendor?.id,
-                type: 'booking',
-                amount: finalPayableTotal,
-                bookingData: newBooking
-              });
-            } catch (pErr) {
-              console.warn('Payment gateway launch note:', pErr);
-            }
+            await executeBookingPayment(bookingDetails);
           }}
           couponDiscount={couponDiscount}
           couponCode={couponCode}
@@ -4566,9 +4605,9 @@ export default function App() {
                       </div>
 
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          await signOutUser();
                           setCurrentUser(null);
-                          localStorage.removeItem('parva_user');
                           showNotification('Vendor logged out safely.');
                         }}
                         className="mt-5 text-xs font-bold text-brand-danger hover:underline"
@@ -5202,79 +5241,33 @@ export default function App() {
                         </p>
                       </div>
 
-                      {/* Google Sign-in Card inside Profile */}
-                      <div className="mt-6 space-y-3 max-w-sm mx-auto text-left">
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Your Full Name (Optional)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Devansh Kadam"
-                            value={googleLoginName}
-                            onChange={(e) => setGoogleLoginName(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Mobile Phone Number</label>
-                          <div className="flex items-center gap-2">
-                            <span className="bg-gray-100 border border-gray-200 text-xs font-bold text-gray-700 px-3 py-2.5 rounded-xl">+91</span>
-                            <input
-                              type="tel"
-                              maxLength={10}
-                              placeholder="10-digit number"
-                              value={googleLoginPhone}
-                              onChange={(e) => setGoogleLoginPhone(e.target.value.replace(/\D/g, ''))}
-                              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:border-brand-primary transition font-mono tracking-wider"
-                            />
-                          </div>
-                        </div>
+                      {/* Sign In & Create Account triggers for Mobile Profile */}
+                      <div className="mt-6 space-y-3 max-w-sm mx-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthModalTab('signin');
+                            setAuthContextTitle(undefined);
+                            setAuthContextSubtitle(undefined);
+                            setIsAuthModalOpen(true);
+                          }}
+                          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-black py-3.5 px-4 rounded-2xl shadow-md transition active:scale-98 text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <User size={16} />
+                          <span>Sign In to Your Account</span>
+                        </button>
 
                         <button
                           type="button"
-                          onClick={async () => {
-                            trackLoginStarted('google');
-                            try {
-                              const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
-                              const provider = new GoogleAuthProvider();
-                              const result = await signInWithPopup(getAuthInstance(), provider);
-                              const user = result.user;
-
-                              const db = getDb();
-                              const { doc, getDoc, setDoc } = await import('firebase/firestore');
-                              const userDoc = await getDoc(doc(db, 'users', user.uid));
-                              const existingData = userDoc.exists() ? userDoc.data() : {};
-
-                              const finalName = googleLoginName.trim() || user.displayName || existingData.name || 'Parva User';
-                              const finalPhone = googleLoginPhone.trim() || existingData.phone || '';
-
-                              const loggedUser = {
-                                uid: user.uid,
-                                name: finalName,
-                                email: user.email || '',
-                                phone: finalPhone,
-                                photoURL: user.photoURL || '',
-                                city: existingData.city || currentCity || 'Kolhapur',
-                                address: existingData.address || '',
-                                role: existingData.role || 'user'
-                              };
-
-                              await setDoc(doc(db, 'users', user.uid), loggedUser, { merge: true });
-                              setCurrentUser(loggedUser);
-                              localStorage.setItem('parva_user', JSON.stringify(loggedUser));
-                              trackLoginSuccess('google');
-                              showNotification(`🎉 Welcome, ${finalName}!`);
-                            } catch (err: any) {
-                              console.error("Google sign in error:", err);
-                              trackLoginFailed('google', err.message);
-                              showNotification(`⚠️ Sign-in failed: ${err.message}`);
-                            }
+                          onClick={() => {
+                            setAuthModalTab('signup');
+                            setAuthContextTitle(undefined);
+                            setAuthContextSubtitle(undefined);
+                            setIsAuthModalOpen(true);
                           }}
-                          className="w-full bg-white hover:bg-gray-50 text-gray-900 font-black py-3.5 px-4 rounded-2xl border-2 border-gray-200 hover:border-brand-primary flex items-center justify-center gap-3 transition shadow-md active:scale-98 text-xs uppercase tracking-wider mt-2"
-
+                          className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3.5 px-4 rounded-2xl transition active:scale-98 text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                          <span>Sign in with Google</span>
+                          <span>Create New Account</span>
                         </button>
                       </div>
                     </div>
@@ -5680,13 +5673,14 @@ export default function App() {
                     <div className="bg-gray-50 border border-gray-200 rounded-[20px] p-4 text-center">
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
+                          await signOutUser();
                           setCurrentUser(null);
                           setIsAdmin(false);
-                          localStorage.removeItem('parva_user');
-                          showNotification('🚪 Logged out successfully.');
+                          setIsMasterAdmin(false);
+                          showNotification('Logged out successfully.');
                         }}
-                        className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline uppercase tracking-wider"
+                        className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline uppercase tracking-wider cursor-pointer"
                       >
                         Log Out of Account
                       </button>
@@ -5762,17 +5756,6 @@ export default function App() {
       </nav>
 
       {/* 4. DIALOGS & MODAL DRAWER PORTALS */}
-      {/* High-Fidelity Multi-Tab Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialTab={authModalTab}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-          localStorage.setItem('parva_user', JSON.stringify(user));
-        }}
-        onShowNotification={showNotification}
-      />
 
       {/* Filter and Sorting Modal */}
       <FilterModal
@@ -5919,9 +5902,9 @@ export default function App() {
           currentUser={currentUser}
           vendors={vendors}
           bookings={bookings}
-          onLogout={() => {
+          onLogout={async () => {
+            await signOutUser();
             setCurrentUser(null);
-            localStorage.removeItem('parva_user');
             showNotification('Vendor logged out safely.');
           }}
           showNotification={showNotification}
@@ -6214,31 +6197,19 @@ export default function App() {
         customerName={successPaymentData?.customerName}
       />
 
-      {/* FILTER MODAL */}
-      <FilterModal
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApply={(f) => {
-          setActiveSortOption(f.sort || 'Distance');
-          setActiveFilterMinPrice(f.min ? Number(f.min) : null);
-          setActiveFilterMaxPrice(f.max ? Number(f.max) : null);
-          setActiveFilterTypes(f.types || []);
-          setIsFilterModalOpen(false);
-          showNotification('✓ Filters applied successfully!');
-        }}
-      />
-
-      {/* AUTHENTICATION & LOGIN/SIGNUP MODAL */}
+      {/* CENTRAL CUSTOMER AUTHENTICATION MODAL */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialTab={authModalTab}
-        onSuccess={(loggedUser) => {
-          setCurrentUser(loggedUser);
-          localStorage.setItem('parva_user', JSON.stringify(loggedUser));
+        onClose={() => {
           setIsAuthModalOpen(false);
-          showNotification(`🎉 Welcome, ${loggedUser.name || 'User'}!`);
+          setPendingBookingDetails(null);
+          setAuthContextTitle(undefined);
+          setAuthContextSubtitle(undefined);
         }}
+        initialTab={authModalTab}
+        contextTitle={authContextTitle}
+        contextSubtitle={authContextSubtitle}
+        onSuccess={handleAuthSuccess}
         onShowNotification={showNotification}
       />
     </div>
