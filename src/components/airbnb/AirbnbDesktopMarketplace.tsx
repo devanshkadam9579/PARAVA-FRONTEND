@@ -223,7 +223,7 @@ export function AirbnbDesktopMarketplace({
         if (activeTab !== 'home' && activeTab !== 'explore') onNavigateTab('home');
       }}
       currentUser={currentUser}
-      onOpenLogin={() => onOpenLogin('signin')}
+      onOpenLogin={(tab) => onOpenLogin(tab || 'signin')}
       onLogout={onLogout}
       onNavigateTab={onNavigateTab}
       activeTab={activeTab}

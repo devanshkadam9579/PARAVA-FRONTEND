@@ -2439,11 +2439,11 @@ export default function App() {
       eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
       customTime: customDeliveryTime || '',
       eventType: planningEventType || 'Celebration',
-      status: 'Confirmed',
+      status: 'Pending',
       totalPrice: servicesTotal,
       bundleDiscount: couponDiscount,
       finalPrice: servicesTotal - couponDiscount,
-      paymentStatus: 'Paid',
+      paymentStatus: 'Unpaid',
       bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
       customerName: custName,
       customerPhone: custPhone,
@@ -2456,125 +2456,17 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
-    // 1. Immediately update client bookings state and clear cart
-    setBookings(prev => [newBooking, ...prev]);
-    setBundledItems([]);
-    sessionStorage.removeItem('parva_bundled_items');
-    sessionStorage.removeItem('parva_checkout_draft');
-
-    // 2. Add in-app notification for individual account
-    setNotifications(prev => [
-      {
-        id: `notif-${Date.now()}`,
-        type: 'slot',
-        title: 'Booking Confirmed',
-        message: `Your reservation for ${newBooking.serviceName} with ${primaryVendor?.name} on ${planningStartDate} has been confirmed.`,
-        timestamp: 'Just now',
-        read: false
-      },
-      ...prev
-    ]);
-
-    // 3. Save to Firestore (bookings, leads, chats, vendor busyDates)
+    // Launch Cashfree Payment Modal
     try {
-      const db = getDb();
-      const { doc, setDoc, addDoc, collection, arrayUnion } = await import('firebase/firestore');
-
-      // Save booking doc
-      await setDoc(doc(db, 'bookings', newBooking.id), newBooking, { merge: true });
-
-      // Save lead record
-      const leadId = `lead-direct-${Date.now()}`;
-      await setDoc(doc(db, 'leads', leadId), {
-        id: leadId,
-        vendorId: primaryVendor?.id,
-        vendorName: primaryVendor?.name,
-        name: custName,
-        phone: custPhone,
-        email: custEmail,
-        age: custAge,
-        eventLocationAddress: eventAddr,
-        eventLocationCoords: eventCoords,
-        styleSuggestions: styleNotes,
-        city: primaryVendor?.location || currentCity || 'Mumbai',
-        budget: `Direct Reservation: ₹${servicesTotal.toLocaleString('en-IN')}`,
-        eventDate: planningStartDate,
-        timestamp: new Date().toLocaleString('en-IN'),
-        status: 'Confirmed & Paid'
-      });
-
-      // Initialize automated chat messages
-      if (primaryVendor?.id) {
-        await addDoc(collection(db, 'chats'), {
-          bookingId: newBooking.id,
-          vendorId: primaryVendor.id,
-          sender: 'user',
-          senderName: custName,
-          text: `Namaste ${primaryVendor.name}! New Direct Booking Confirmed for "${newBooking.serviceName}" on ${planningStartDate} (${formatTimeSlot(newBooking.eventTimeSlot)}).\n\nCustomer Requirements & Event Info:\n• Client Name: ${custName}\n• Contact Number: ${custPhone}\n• Email: ${custEmail || 'N/A'}\n• Event Location / Address: ${eventAddr}\n• Style & Theme Demands: ${styleNotes || 'Standard package as listed'}\n• Booking Advance Paid: ₹${finalPayableTotal.toLocaleString('en-IN')}\n• Total Service Value: ₹${servicesTotal.toLocaleString('en-IN')}`,
-          createdAt: new Date()
-        });
-
-        await addDoc(collection(db, 'chats'), {
-          bookingId: newBooking.id,
-          vendorId: primaryVendor.id,
-          sender: 'vendor',
-          senderName: `${primaryVendor.name} Concierge`,
-          text: `Welcome to MyParva, ${custName}! Your reservation for ${newBooking.serviceName} is locked with 100% Escrow Protection. Our team is coordinating all arrangements for your event on ${planningStartDate}. Feel free to share any references, audio tracks, or theme preferences here. We look forward to your valuable feedback and rating after the celebration!`,
-          createdAt: new Date(Date.now() + 1000)
-        });
-
-        setUnlockedConnections(prev => [...new Set([...prev, primaryVendor.id])]);
-
-        try {
-          await setDoc(doc(db, 'vendors', primaryVendor.id), {
-            busyDates: arrayUnion(planningStartDate)
-          }, { merge: true });
-        } catch (vErr) {
-          console.debug('Vendor date lock synced via server:', vErr);
-        }
-      }
-
-      // Dispatch automated confirmation email via backend
-      try {
-        fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: `DIR_${newBooking.id}`,
-            paymentId: `pay_direct_${Date.now()}`,
-            userId: userToUse?.uid || 'guest-uid',
-            vendorId: primaryVendor?.id || 'system',
-            type: 'booking',
-            totalAmount: finalPayableTotal,
-            bookingData: newBooking,
-            customerData: {
-              name: custName,
-              email: custEmail,
-              phone: custPhone,
-              age: custAge,
-              eventLocationAddress: eventAddr,
-              styleSuggestions: styleNotes
-            }
-          })
-        }).catch(e => console.warn('Email dispatch note:', e));
-      } catch (e) {}
-
-    } catch (fsErr) {
-      console.error('Error saving booking to Firestore:', fsErr);
-    }
-
-    showNotification('Booking Confirmed! Email notification and vendor chat unlocked.');
-    handleNavigateToTab('bookings');
-
-    try {
-      handlePayWithRazorpay({
+      await handlePayWithCashfree({
         vendorId: primaryVendor?.id,
         type: 'booking',
         amount: finalPayableTotal,
         bookingData: newBooking
       });
     } catch (pErr) {
-      console.warn('Payment gateway launch note:', pErr);
+      console.warn('Payment gateway launch error:', pErr);
+      showNotification('Payment initialization error. Please try again.');
     }
   };
 

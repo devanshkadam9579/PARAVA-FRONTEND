@@ -12,7 +12,7 @@ export interface AirbnbNavbarProps {
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   currentUser: any;
-  onOpenLogin: () => void;
+  onOpenLogin: (tab?: 'signin' | 'signup') => void;
   onLogout: () => void;
   onNavigateTab: (tab: 'home' | 'explore' | 'bookings' | 'chat' | 'messages' | 'profile') => void;
   activeTab: string;
