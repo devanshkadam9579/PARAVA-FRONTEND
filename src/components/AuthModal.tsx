@@ -249,17 +249,21 @@ export default function AuthModal({
 
   const modalContent = (
     <div 
-      className="fixed inset-0 z-[999999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      style={{ zIndex: 999999999 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) {
+          onClose();
+        }
+      }}
     >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
+      <div
         className="w-full max-w-[440px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 relative my-auto"
+        style={{ zIndex: 999999999, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
@@ -755,7 +759,7 @@ export default function AuthModal({
             </a>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 

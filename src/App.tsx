@@ -5814,10 +5814,11 @@ export default function App() {
         </Helmet>
       )}
       {selectedVendor && (
-        <VendorDetailSheet
-          vendor={selectedVendor}
-          isOpen={selectedVendor !== null}
-          onClose={() => handleCloseVendor()}
+        <div className="block lg:hidden">
+          <VendorDetailSheet
+            vendor={selectedVendor}
+            isOpen={selectedVendor !== null}
+            onClose={() => handleCloseVendor()}
           bundledServices={bundledItems.filter(item => item.vendor.id === selectedVendor.id).map(item => item.service)}
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor, service)}
           onRemoveServiceFromBundle={(serviceName) => handleRemoveServiceFromBundle(selectedVendor.id, serviceName)}
@@ -5900,7 +5901,7 @@ export default function App() {
             setIsRazorpayOpen(true);
           }}
         />
-
+        </div>
       )}
 
       {/* 6. CASHFREE SECURE CHECKOUT TRIGGER OVERLAY */}
