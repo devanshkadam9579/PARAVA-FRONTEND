@@ -4,6 +4,7 @@ import {
   ChevronRight, Copy, Check, Sparkles, LogOut, ArrowRight, ExternalLink, HelpCircle
 } from 'lucide-react';
 import { Booking, Vendor } from '../../types';
+import { isUserAuthenticated } from '../../services/authService';
 
 export interface CustomerProfileViewProps {
   currentUser: any;
@@ -31,14 +32,7 @@ export function CustomerProfileView({
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'saved' | 'rewards' | 'referrals' | 'settings'>('profile');
   const [copiedCode, setCopiedCode] = useState(false);
 
-  const isUserLoggedIn = Boolean(
-    currentUser && typeof currentUser === 'object' && !currentUser.isGuest && currentUser.uid !== 'guest-uid' && currentUser.uid !== 'guest' && (
-      (typeof currentUser.email === 'string' && currentUser.email.includes('@') && !currentUser.email.includes('guest')) ||
-      (typeof currentUser.phone === 'string' && currentUser.phone.replace(/\D/g, '').length >= 10) ||
-      (typeof currentUser.name === 'string' && currentUser.name.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner', 'anonymous planner'].includes(currentUser.name.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5) ||
-      (typeof currentUser.displayName === 'string' && currentUser.displayName.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner'].includes(currentUser.displayName.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5)
-    )
-  );
+  const isUserLoggedIn = isUserAuthenticated(currentUser);
 
   const savedVendors = vendors.filter(v => wishlist.includes(v.id));
   const userInitials = currentUser?.name

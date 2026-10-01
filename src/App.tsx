@@ -5754,8 +5754,10 @@ export default function App() {
           );
         })}
       </nav>
+    </div>
+  </div>
 
-      {/* 4. DIALOGS & MODAL DRAWER PORTALS */}
+      {/* 4. DIALOGS & MODAL DRAWER PORTALS (Rendered at Root Level for Desktop & Mobile) */}
 
       {/* Filter and Sorting Modal */}
       <FilterModal
@@ -6212,8 +6214,6 @@ export default function App() {
         onSuccess={handleAuthSuccess}
         onShowNotification={showNotification}
       />
-    </div>
-    </div>
     </>
   );
 }

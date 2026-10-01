@@ -5,6 +5,7 @@ import {
   Award, Users, ChevronDown, Check, Search, MapPin, Activity
 } from 'lucide-react';
 import { ParvaLogo } from './ParvaLogo';
+import { isUserAuthenticated, isMasterAdminEmail } from '../../services/authService';
 
 export interface AirbnbNavbarProps {
   categories: { id: string; name: string; icon?: any; image?: string }[];
@@ -77,20 +78,13 @@ export function AirbnbNavbar({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const isUserLoggedIn = Boolean(
-    currentUser && typeof currentUser === 'object' && !currentUser.isGuest && currentUser.uid !== 'guest-uid' && currentUser.uid !== 'guest' && (
-      (typeof currentUser.email === 'string' && currentUser.email.includes('@') && !currentUser.email.includes('guest')) ||
-      (typeof currentUser.phone === 'string' && currentUser.phone.replace(/\D/g, '').length >= 10) ||
-      (typeof currentUser.name === 'string' && currentUser.name.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner', 'anonymous planner'].includes(currentUser.name.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5) ||
-      (typeof currentUser.displayName === 'string' && currentUser.displayName.trim().length > 0 && !['guest', 'guest planner', 'guest member', 'planner'].includes(currentUser.displayName.trim().toLowerCase()) && currentUser.uid && currentUser.uid.length > 5)
-    )
-  );
+  const isUserLoggedIn = isUserAuthenticated(currentUser);
 
   const isAdminUser = Boolean(
     currentUser && (
       currentUser.role === 'admin' || 
       currentUser.role === 'master_admin' || 
-      ['devenshkadam2@gmail.com', 'devanshkadam2@gmail.com', 'devansh@parva.com'].includes(currentUser.email || '')
+      isMasterAdminEmail(currentUser.email)
     )
   );
 
@@ -103,9 +97,12 @@ export function AirbnbNavbar({
   }, []);
 
   const getInitials = () => {
-    if (!currentUser) return 'G';
+    if (!currentUser) return '';
     if (currentUser.name) {
       return currentUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (currentUser.email) {
+      return currentUser.email.charAt(0).toUpperCase();
     }
     return 'U';
   };
@@ -280,7 +277,7 @@ export function AirbnbNavbar({
               id="desktop-signin-button"
             >
               <UserIcon size={14} />
-              <span>Log In</span>
+              <span>Sign In</span>
             </button>
           )}
 
@@ -293,7 +290,7 @@ export function AirbnbNavbar({
               id="desktop-user-menu-pill"
             >
               <Menu size={16} className="text-gray-600" />
-              <div className="w-8 h-8 rounded-full bg-rose-600 text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
+              <div className={`w-8 h-8 rounded-full ${isUserLoggedIn ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-500 border border-gray-200'} text-xs font-extrabold flex items-center justify-center shadow-xs`}>
                 {isUserLoggedIn ? getInitials() : <UserIcon size={14} />}
               </div>
             </button>
