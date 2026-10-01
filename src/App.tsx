@@ -2104,11 +2104,11 @@ export default function App() {
         selectedServices,
         eventDate: planningDate,
         eventType: planningEventType,
-        status: 'Confirmed',
+        status: 'Pending',
         totalPrice: price,
         bundleDiscount: discountPct,
         finalPrice: finalPrice,
-        paymentStatus: 'Paid',
+        paymentStatus: 'Unpaid',
         bookingIdString: `PRV-PLAN-${Math.floor(1000 + Math.random() * 9000)}`
       };
     });
@@ -2342,11 +2342,11 @@ export default function App() {
         selectedServices,
         eventDate: planningDate,
         eventType: planningEventType,
-        status: 'Confirmed',
+        status: 'Pending',
         totalPrice: price,
         bundleDiscount: discountPct,
         finalPrice: finalPrice,
-        paymentStatus: 'Paid',
+        paymentStatus: 'Unpaid',
         bookingIdString: `PRV-AI-${Math.floor(1000 + Math.random() * 9000)}`
       };
     });
@@ -4178,7 +4178,7 @@ export default function App() {
                               totalPrice: servicesTotal,
                               bundleDiscount: discountVal,
                               finalPrice: finalVal,
-                              paymentStatus: 'Paid',
+                              paymentStatus: 'Unpaid',
                               bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
                             };
 
