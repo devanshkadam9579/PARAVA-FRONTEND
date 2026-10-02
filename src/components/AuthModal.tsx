@@ -45,7 +45,13 @@ export default function AuthModal({
   contextTitle,
   contextSubtitle
 }: AuthModalProps) {
-  const [tab, setTab] = useState<'signin' | 'signup' | 'forgot' | 'complete_profile'>(initialTab);
+  const sanitizeTab = (t: any): 'signin' | 'signup' | 'forgot' => {
+    if (t === 'signup') return 'signup';
+    if (t === 'forgot') return 'forgot';
+    return 'signin';
+  };
+
+  const [tab, setTab] = useState<'signin' | 'signup' | 'forgot' | 'complete_profile'>(() => sanitizeTab(initialTab));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +68,7 @@ export default function AuthModal({
 
   useEffect(() => {
     if (isOpen) {
-      setTab(initialTab);
+      setTab(sanitizeTab(initialTab));
       setError(null);
       setResetSent(false);
       setShowPassword(false);

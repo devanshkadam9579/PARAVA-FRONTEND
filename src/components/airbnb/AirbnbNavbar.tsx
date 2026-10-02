@@ -187,7 +187,7 @@ export function AirbnbNavbar({
 
               <button
                 type="button"
-                onClick={() => isUserLoggedIn ? onNavigateTab('profile') : onOpenLogin()}
+                onClick={() => isUserLoggedIn ? onNavigateTab('profile') : onOpenLogin('signin')}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
                   activeTab === 'profile' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -272,7 +272,7 @@ export function AirbnbNavbar({
           {!isUserLoggedIn && (
             <button
               type="button"
-              onClick={onOpenLogin}
+              onClick={() => onOpenLogin('signin')}
               className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-full shadow-sm hover:shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
               id="desktop-signin-button"
             >
@@ -402,7 +402,7 @@ export function AirbnbNavbar({
                   <div className="space-y-1">
                     <button
                       type="button"
-                      onClick={onOpenLogin}
+                      onClick={() => onOpenLogin('signin')}
                       className="w-full px-5 py-2.5 text-left text-xs font-extrabold text-gray-900 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
                     >
                       Log In / Sign Up

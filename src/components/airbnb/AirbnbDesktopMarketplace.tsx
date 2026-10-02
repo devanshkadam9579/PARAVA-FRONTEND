@@ -219,13 +219,20 @@ export function AirbnbDesktopMarketplace({
       categories={categories}
       selectedCategory={selectedCategory}
       onSelectCategory={(c) => {
+        setIsCheckoutOpen(false);
         onSelectCategory(c);
         if (activeTab !== 'home' && activeTab !== 'explore') onNavigateTab('home');
       }}
       currentUser={currentUser}
-      onOpenLogin={(tab) => onOpenLogin(tab || 'signin')}
+      onOpenLogin={(tab) => {
+        const safeTab = tab === 'signup' ? 'signup' : 'signin';
+        onOpenLogin(safeTab);
+      }}
       onLogout={onLogout}
-      onNavigateTab={onNavigateTab}
+      onNavigateTab={(tab) => {
+        setIsCheckoutOpen(false);
+        onNavigateTab(tab);
+      }}
       activeTab={activeTab}
       cartCount={cartCount}
       onOpenCart={() => setIsCheckoutOpen(true)}
@@ -256,14 +263,21 @@ export function AirbnbDesktopMarketplace({
           currentUser={currentUser}
           onPay={onPay}
           onBack={() => setIsCheckoutOpen(false)}
-          onOpenLogin={onOpenLogin}
+          onOpenLogin={(tab) => onOpenLogin(tab === 'signup' ? 'signup' : 'signin')}
           couponDiscount={couponDiscount}
           couponCode={couponCode}
           setCouponCode={setCouponCode}
           onApplyCoupon={onApplyCoupon}
           couponMessage={couponMessage}
         />
-        <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport}
+          onOpenLogin={() => onOpenLogin('signin')}
+        />
       </div>
     );
   }
@@ -285,7 +299,14 @@ export function AirbnbDesktopMarketplace({
           onToggleWishlist={onToggleWishlist}
           onProceedToCheckout={() => setIsCheckoutOpen(true)}
         />
-        <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport} 
+          onOpenLogin={() => onOpenLogin('signin')} 
+        />
       </div>
     );
   }
@@ -308,7 +329,14 @@ export function AirbnbDesktopMarketplace({
             onExploreServices={() => onNavigateTab('home')}
           />
         </div>
-        <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport} 
+          onOpenLogin={() => onOpenLogin('signin')} 
+        />
       </div>
     );
   }
@@ -324,13 +352,20 @@ export function AirbnbDesktopMarketplace({
             bookings={bookings}
             currentUser={currentUser}
             initialVendorId={selectedChatVendorId}
-            onOpenLogin={() => onOpenLogin?.('signin')}
+            onOpenLogin={() => onOpenLogin('signin')}
             onShowNotification={(msg) => console.log(msg)}
             onNavigateToExplore={() => onNavigateTab('explore')}
             onSelectVendor={onSelectVendor}
           />
         </div>
-        <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport} 
+          onOpenLogin={() => onOpenLogin('signin')} 
+        />
       </div>
     );
   }
@@ -351,7 +386,14 @@ export function AirbnbDesktopMarketplace({
           onOpenSupport={onOpenSupport}
           onOpenLogin={() => onOpenLogin('signin')}
         />
-        <FooterSection onNavigateTab={onNavigateTab} onOpenSupport={onOpenSupport} />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport} 
+          onOpenLogin={() => onOpenLogin('signin')} 
+        />
       </div>
     );
   }
@@ -758,9 +800,12 @@ export function AirbnbDesktopMarketplace({
 
       {/* Polished Light Marketplace Footer */}
       <FooterSection
-        onNavigateTab={onNavigateTab}
+        onNavigateTab={(tab) => {
+          setIsCheckoutOpen(false);
+          onNavigateTab(tab);
+        }}
         onOpenSupport={onOpenSupport}
-        onOpenLogin={onOpenLogin}
+        onOpenLogin={() => onOpenLogin('signin')}
       />
     </div>
   );

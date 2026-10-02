@@ -3199,7 +3199,8 @@ export default function App() {
           onGuestCountChange={(g) => setPlanningGuestSize(g)}
           currentUser={currentUser}
           onOpenLogin={(tab) => {
-            setAuthModalTab(tab || 'signin');
+            const safeTab = tab === 'signup' ? 'signup' : tab === 'forgot' ? 'forgot' : 'signin';
+            setAuthModalTab(safeTab);
             setAuthContextTitle(undefined);
             setAuthContextSubtitle(undefined);
             setIsAuthModalOpen(true);
