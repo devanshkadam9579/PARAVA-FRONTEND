@@ -15,7 +15,7 @@ export interface CustomerProfileViewProps {
   onNavigateTab: (tab: 'home' | 'bookings' | 'chat' | 'profile') => void;
   onLogout: () => void;
   onOpenSupport: () => void;
-  onOpenLogin?: () => void;
+  onOpenLogin?: (tab?: 'signin' | 'signup') => void;
 }
 
 export function CustomerProfileView({
@@ -62,18 +62,26 @@ export function CustomerProfileView({
               Sign in or create an account to view your confirmed reservations, track invoices, access direct vendor chat, and manage your wishlist.
             </p>
           </div>
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
             <button
               type="button"
-              onClick={() => onOpenLogin ? onOpenLogin() : null}
-              className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black text-sm px-8 py-3.5 rounded-full shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer"
+              onClick={() => onOpenLogin ? onOpenLogin('signin') : null}
+              className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-black text-sm px-8 py-3.5 rounded-full shadow-md hover:shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
             >
-              Sign In / Register Now
+              <User size={16} />
+              <span>Sign In to Account</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenLogin ? onOpenLogin('signup') : null}
+              className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold text-sm px-6 py-3.5 rounded-full transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Create New Account</span>
             </button>
             <button
               type="button"
               onClick={() => onNavigateTab('home')}
-              className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-sm px-6 py-3.5 rounded-full transition cursor-pointer"
+              className="w-full sm:w-auto border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-sm px-6 py-3.5 rounded-full transition cursor-pointer"
             >
               Explore Services
             </button>
