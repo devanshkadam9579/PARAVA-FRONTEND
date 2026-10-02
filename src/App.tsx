@@ -7,7 +7,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getAuthInstance, getDb, handleFirestoreError, OperationType } from './lib/firebase';
-import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { authenticatedFetch } from './lib/apiClient';
+import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import { Helmet } from 'react-helmet-async';
 import { 
@@ -748,13 +749,8 @@ export default function App() {
       });
     }
 
-    // Listen for Bookings collection
-    const unsubscribeBookings = onSnapshot(collection(db, 'bookings'), (snapshot) => {
-      const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setBookings(bookingsData as any);
-    }, (error) => {
-      console.debug("Bookings sync info:", error?.message);
-    });
+    // Initial bookings listener placeholder (authoritative scoped listener is mounted below)
+    const unsubscribeBookings: (() => void) | undefined = undefined;
 
     // Listen for Leads collection (only for admins)
     let unsubscribeLeads: (() => void) | undefined;
@@ -841,10 +837,9 @@ export default function App() {
     return () => {
       unsubscribeVendors();
       unsubscribePromos();
-      unsubscribeCoupons();
-      unsubscribeAdmins();
-      unsubscribeBookings();
-      unsubscribeLeads();
+      if (unsubscribeAdmins) unsubscribeAdmins();
+      if (unsubscribeBookings) unsubscribeBookings();
+      if (unsubscribeLeads) unsubscribeLeads();
       unsubscribeSettings();
       unsubscribeGlobalSettings();
       unsubscribeCategories();
@@ -852,6 +847,40 @@ export default function App() {
       unsubscribeConnections();
     };
   }, []);
+
+  // Real-time Authoritative Scoped Bookings Listener (Customer / Vendor / Admin)
+  useEffect(() => {
+    const db = getDb();
+    if (!db) return;
+    let unsubscribe: (() => void) | undefined;
+
+    if (isAdmin || isMasterAdmin) {
+      unsubscribe = onSnapshot(collection(db, 'bookings'), (snapshot) => {
+        const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBookings(bookingsData as any);
+      }, (error) => {
+        console.debug("Admin bookings sync info:", error?.message);
+      });
+    } else if (currentUser?.uid) {
+      const isVendor = currentUser.role === 'vendor' && (currentUser as any).vendorId;
+      const bookingsQuery = isVendor
+        ? query(collection(db, 'bookings'), where('vendorId', '==', (currentUser as any).vendorId))
+        : query(collection(db, 'bookings'), where('userId', '==', currentUser.uid));
+
+      unsubscribe = onSnapshot(bookingsQuery, (snapshot) => {
+        const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBookings(bookingsData as any);
+      }, (error) => {
+        console.debug("Scoped bookings sync info:", error?.message);
+      });
+    } else {
+      setBookings([]);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser?.uid, (currentUser as any)?.vendorId, (currentUser as any)?.role, isAdmin, isMasterAdmin]);
 
   // Synchronize Vendor edit form states on login
   useEffect(() => {
@@ -1412,10 +1441,10 @@ export default function App() {
     return bookings.filter(b => {
       if (b.userId && cUid && b.userId === cUid) return true;
       if ((b as any).customerUid && cUid && (b as any).customerUid === cUid) return true;
-      if (b.customerEmail && cEmail && cEmail.includes('@') && b.customerEmail.toLowerCase().trim() === cEmail) return true;
-      if (b.customerPhone && cPhone && cPhone.length >= 10) {
+      if (b.customerEmail && cEmail && cEmail.includes('@') && !cEmail.includes('customer@parva') && b.customerEmail.toLowerCase().trim() === cEmail && !b.customerEmail.toLowerCase().includes('customer@parva')) return true;
+      if (b.customerPhone && cPhone && cPhone.length === 10 && cPhone !== '9999999999') {
         const bPhone = b.customerPhone.replace(/\D/g, '').slice(-10);
-        if (bPhone && bPhone === cPhone) return true;
+        if (bPhone && bPhone === cPhone && bPhone !== '9999999999') return true;
       }
       return false;
     });
@@ -1555,7 +1584,7 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab === 'profile' && adminSubTab === 'dashboard' && (isAdmin || isMasterAdmin)) {
-      fetch(`${BACKEND_API_URL}/api/admin/dashboard`)
+      authenticatedFetch(`${BACKEND_API_URL}/api/admin/dashboard`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
@@ -1573,7 +1602,7 @@ export default function App() {
     if (!confirmReset) return;
 
     try {
-      const res = await fetch(`${BACKEND_API_URL}/api/admin/reset-defaults`, { method: 'POST' });
+      const res = await authenticatedFetch(`${BACKEND_API_URL}/api/admin/reset-defaults`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         showNotification('🎉 Database successfully reset to defaults!');
@@ -1879,9 +1908,8 @@ export default function App() {
       headers['Authorization'] = `Bearer ${idToken}`;
     }
 
-    const verifyRes = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
+    const verifyRes = await authenticatedFetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
       method: 'POST',
-      headers,
       body: JSON.stringify({
         orderId,
         paymentId,
@@ -1970,7 +1998,7 @@ export default function App() {
 
     try {
       // 1. Request Order & Payment Session ID from Secure Backend
-      const response = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/create-order`, {
+      const response = await authenticatedFetch(`${BACKEND_API_URL}/api/payments/cashfree/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4592,7 +4620,7 @@ export default function App() {
                                 if (window.confirm('Are you sure you want to cancel this booking request?')) {
                                   try {
                                     showNotification('⏳ Processing cancellation request...');
-                                    const cRes = await fetch(`${BACKEND_API_URL}/api/bookings/${b.id}/cancel`, {
+                                    const cRes = await authenticatedFetch(`${BACKEND_API_URL}/api/bookings/${b.id}/cancel`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
@@ -4869,7 +4897,7 @@ export default function App() {
                                             onClick={async () => {
                                               try {
                                                 showNotification('⏳ Confirming booking acceptance...');
-                                                const res = await fetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
+                                                const res = await authenticatedFetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
                                                   method: 'POST',
                                                   headers: { 'Content-Type': 'application/json' },
                                                   body: JSON.stringify({
@@ -4900,7 +4928,7 @@ export default function App() {
                                             if (reason !== null) {
                                               try {
                                                 showNotification('⏳ Processing rejection & refund request...');
-                                                const res = await fetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
+                                                const res = await authenticatedFetch(`${BACKEND_API_URL}/api/vendor/bookings/${b.id}/respond`, {
                                                   method: 'POST',
                                                   headers: { 'Content-Type': 'application/json' },
                                                   body: JSON.stringify({

@@ -71,13 +71,13 @@ export default function ChatTab({
     const cEmail = (currentUser.email || '').toLowerCase().trim();
 
     const uidMatch = Boolean(cUid && ((b.userId && b.userId === cUid) || ((b as any).customerUid && (b as any).customerUid === cUid)));
-    const phoneMatch = Boolean(cPhone && cPhone.length >= 10 && (
-      (b.customerPhone && b.customerPhone.replace(/\D/g, '').slice(-10) === cPhone) ||
-      ((b as any).clientPhone && (b as any).clientPhone.replace(/\D/g, '').slice(-10) === cPhone)
+    const phoneMatch = Boolean(cPhone && cPhone.length >= 10 && cPhone !== '9999999999' && (
+      (b.customerPhone && b.customerPhone.replace(/\D/g, '').slice(-10) === cPhone && b.customerPhone.replace(/\D/g, '').slice(-10) !== '9999999999') ||
+      ((b as any).clientPhone && (b as any).clientPhone.replace(/\D/g, '').slice(-10) === cPhone && (b as any).clientPhone.replace(/\D/g, '').slice(-10) !== '9999999999')
     ));
-    const emailMatch = Boolean(cEmail && cEmail.includes('@') && (
-      (b.customerEmail && b.customerEmail.toLowerCase().trim() === cEmail) ||
-      ((b as any).clientEmail && (b as any).clientEmail.toLowerCase().trim() === cEmail)
+    const emailMatch = Boolean(cEmail && cEmail.includes('@') && !cEmail.includes('customer@parva') && (
+      (b.customerEmail && b.customerEmail.toLowerCase().trim() === cEmail && !b.customerEmail.toLowerCase().includes('customer@parva')) ||
+      ((b as any).clientEmail && (b as any).clientEmail.toLowerCase().trim() === cEmail && !(b as any).clientEmail.toLowerCase().includes('customer@parva'))
     ));
     return uidMatch || phoneMatch || emailMatch;
   };

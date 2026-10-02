@@ -13,17 +13,91 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.role in ['admin', 'master_admin'] ||
-        request.auth.token.email in ['admin@myparva.com', 'rohan@myparva.com'] ||
+        request.auth.token.email in [
+          'devanshkadam2@gmail.com',
+          'devenshkadam2@gmail.com',
+          'devansh@parva.com',
+          'admin@myparva.com',
+          'rohan@myparva.com'
+        ] ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
-    // Public Marketplace Catalogs (Read-only for guests, write for admin/vendor owner)
-    match /vendors/{vendorId} {
-      allow read: if true;
-      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == vendorId);
+    // 1. Users: Users can read and update their own profile fields. Privilege escalation (role/admin flags) is blocked.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role', 'isAdmin', 'isMasterAdmin']) || request.resource.data.role == 'customer') || isAdmin();
+      allow update: if (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin', 'isMasterAdmin', 'emailVerified'])) || isAdmin();
+      allow delete: if isAdmin();
     }
 
+    // 2. Vendors: Public catalog read; updates restricted to verified vendor owner. Status/verification changes require Admin.
+    match /vendors/{vendorId} {
+      allow read: if true;
+      allow create: if (isAuthenticated() && (request.auth.uid == vendorId || request.resource.data.ownerUid == request.auth.uid) && !request.resource.data.keys().hasAny(['verified', 'featured', 'status', 'commissionPercentage'])) || isAdmin();
+      allow update: if (isAuthenticated() && (request.auth.uid == vendorId || resource.data.ownerUid == request.auth.uid || resource.data.userId == request.auth.uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'featured', 'status', 'commissionPercentage'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 3. Bookings: Customer can read/update own bookings; Vendor can read/update assigned bookings; Admin manages all.
+    match /bookings/{bookingId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.customerUid == request.auth.uid ||
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendor.id == request.auth.uid ||
+        resource.data.vendorOwnerUid == request.auth.uid
+      ));
+      allow create: if isAdmin() || (isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.customerUid == request.auth.uid
+      ));
+      allow update: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.customerUid == request.auth.uid ||
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendor.id == request.auth.uid ||
+        resource.data.vendorOwnerUid == request.auth.uid
+      ));
+      allow delete: if isAdmin();
+    }
+
+    // 4. Chats: Authenticated participants only (Customer, Vendor, or Admin)
+    match /chats/{chatId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.customerUid == request.auth.uid ||
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendor.id == request.auth.uid ||
+        resource.data.vendorOwnerUid == request.auth.uid
+      ));
+      allow create: if isAdmin() || (isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || 
+        request.resource.data.customerUid == request.auth.uid ||
+        request.resource.data.vendorId == request.auth.uid ||
+        request.resource.data.vendorOwnerUid == request.auth.uid
+      ));
+      allow update, delete: if isAdmin();
+    }
+
+    // 5. Notifications: Strictly scoped to recipient. Admin notifications readable only by verified admins.
+    match /notifications/{notificationId} {
+      allow read: if (isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.recipientUid == request.auth.token.vendorId
+      )) || (isAdmin() && (resource.data.recipientUid == 'admin' || true));
+      allow create: if isAdmin() || isAuthenticated();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
+    }
+
+    // 6. Broadcast Notifications: Public read for announcements, admin only write
+    match /broadcast_notifications/{broadcastId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 7. Public Marketplace Catalogs (Categories, Promos, Cities, Coupons, Settings)
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -44,94 +118,50 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow write: if isAuthenticated() || isAdmin();
-    }
-
-    // User profiles: User can read/write own profile; Admin can read/write all
-    match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    // Bookings: Users read their own bookings; Vendors read bookings assigned to them; Admin reads all
-    match /bookings/{bookingId} {
-      allow read: if isAdmin() || (isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.vendorId == request.auth.uid ||
-        resource.data.vendor.id == request.auth.uid
-      )) || (!isAuthenticated() && resource.data.userId == null);
-      allow create: if true; // Allow guest/initial booking creation
-      allow update, delete: if isAdmin() || (isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.vendorId == request.auth.uid
-      ));
-    }
-
-    // Chats: Authenticated participants only (Client or Vendor or Admin)
-    match /chats/{chatId} {
-      allow read: if isAdmin() || (isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.customerUid == request.auth.uid ||
-        resource.data.vendorId == request.auth.uid ||
-        resource.data.vendor.id == request.auth.uid
-      ));
-      allow create: if isAuthenticated() && (
-        request.resource.data.userId == request.auth.uid || 
-        request.resource.data.customerUid == request.auth.uid ||
-        request.resource.data.vendorId == request.auth.uid ||
-        isAdmin()
-      );
-      allow update, delete: if isAdmin() || (isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.customerUid == request.auth.uid ||
-        resource.data.vendorId == request.auth.uid
-      ));
-    }
-
-    // Notifications: Recipient only or Admin
-    match /notifications/{notificationId} {
-      allow read: if isAdmin() || (isAuthenticated() && (
-        resource.data.recipientUid == request.auth.uid ||
-        resource.data.recipientUid == request.auth.token.vendorId ||
-        resource.data.recipientUid == 'admin'
-      ));
-      allow write: if isAdmin() || isAuthenticated();
-    }
-
-    // Broadcast notifications (system-wide announcements)
-    match /broadcast_notifications/{broadcastId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Admin collection
-    match /admins/{adminId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Leads & Settings & Transactions
-    match /leads/{leadId} {
-      allow read, write: if isAdmin();
-    }
-
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    match /connections/{connectionId} {
-      allow read, write: if isAdmin() || isAuthenticated();
-    }
-
-    match /transactions/{txId} {
-      allow read, write: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-    }
-
-    // Fallback rule for backwards compatibility with any nested collections
-    match /{document=**} {
+    // 8. Reviews: Public read, authenticated user write own review
+    match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    // 9. Transactions: Read only by transaction owner or admin; write only by admin/backend
+    match /transactions/{txId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerUid == request.auth.uid
+      ));
+      allow write: if isAdmin();
+    }
+
+    // 10. Leads: Admin or assigned vendor
+    match /leads/{leadId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendorOwnerUid == request.auth.uid
+      ));
+      allow write: if isAdmin();
+    }
+
+    // 11. Connections: Customer access only
+    match /connections/{connectionId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin() || (isAuthenticated() && request.resource.data.userId == request.auth.uid);
+    }
+
+    // 12. Admins collection: Strict admin only
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 13. Secure Default Deny Fallback: Replaces insecure wildcard match
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
