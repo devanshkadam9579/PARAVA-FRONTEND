@@ -255,8 +255,8 @@ export default function AuthModal({
 
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
-      style={{ zIndex: 999999999 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto"
+      style={{ zIndex: 99999, position: 'fixed' }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -267,22 +267,22 @@ export default function AuthModal({
       }}
     >
       <div
-        className="w-full max-w-[440px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 relative my-auto"
-        style={{ zIndex: 999999999, opacity: 1 }}
+        className="w-full max-w-[460px] bg-white rounded-3xl shadow-2xl border border-gray-100 relative my-auto flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        style={{ width: 'min(100% - 24px, 460px)', maxHeight: 'calc(100vh - 32px)', opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Sticky Close Button */}
         <button
           type="button"
           onClick={onClose}
           disabled={loading}
           aria-label="Close modal"
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-full transition z-20 cursor-pointer disabled:opacity-40"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-full transition z-30 cursor-pointer disabled:opacity-40"
         >
           <X size={18} />
         </button>
 
-        <div className="p-6 sm:p-8 space-y-5">
+        <div className="p-5 sm:p-7 md:p-8 space-y-4 sm:space-y-5 overflow-y-auto flex-1 overscroll-contain">
           {/* Header */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">

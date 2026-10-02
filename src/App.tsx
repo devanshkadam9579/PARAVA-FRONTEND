@@ -3305,8 +3305,14 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               {!isUserLoggedIn && (
                 <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full transition shadow-xs active:scale-95 mr-1"
+                  type="button"
+                  onClick={() => {
+                    setAuthModalTab('signin');
+                    setAuthContextTitle(undefined);
+                    setAuthContextSubtitle(undefined);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full transition shadow-xs active:scale-95 mr-1 cursor-pointer"
                 >
                   Log In
                 </button>
