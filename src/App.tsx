@@ -1226,7 +1226,18 @@ export default function App() {
       return;
     }
 
-    // 3. Tab Routes
+    // 3. Tab & Auth Routes
+    if (path === '/login' || path === '/signin') {
+      setAuthModalTab('signin');
+      setIsAuthModalOpen(true);
+      return;
+    }
+    if (path === '/signup' || path === '/register') {
+      setAuthModalTab('signup');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     if (path === '/' || path === '/home') {
       if (activeTab !== 'home') setActiveTab('home');
     } else if (path === '/explore') {
