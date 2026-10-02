@@ -276,7 +276,7 @@ ${servicesStr}
                 <span className="text-[9px] font-bold text-brand-text-secondary uppercase tracking-wider block mb-1">
                   INCLUDED SERVICES
                 </span>
-                {booking.selectedServices.map((svc) => (
+                {(booking.selectedServices || []).map((svc) => (
                   <div key={svc.name} className="flex justify-between items-center text-[11px]">
                     <span className="text-brand-text font-medium truncate max-w-[150px]">
                       {svc.name}

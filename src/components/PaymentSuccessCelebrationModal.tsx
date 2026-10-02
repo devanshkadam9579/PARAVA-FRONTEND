@@ -9,6 +9,7 @@ export interface PaymentSuccessCelebrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onViewReservations: () => void;
+  onContinueExploring?: () => void;
   amount: number;
   orderId?: string;
   vendorName?: string;
@@ -56,6 +57,7 @@ export function PaymentSuccessCelebrationModal({
   isOpen,
   onClose,
   onViewReservations,
+  onContinueExploring,
   amount,
   orderId,
   vendorName = 'Parva Partner',
@@ -185,13 +187,21 @@ export function PaymentSuccessCelebrationModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2.5 pt-2">
             <button
               onClick={onViewReservations}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-6 rounded-2xl text-sm transition shadow-lg shadow-emerald-600/25 active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-6 rounded-2xl text-sm transition shadow-lg shadow-emerald-600/25 active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>View in My Reservations</span>
               <ArrowRight size={18} />
+            </button>
+
+            <button
+              type="button"
+              onClick={onContinueExploring || onClose}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold py-3 px-6 rounded-2xl text-xs transition active:scale-98 cursor-pointer"
+            >
+              Continue Exploring
             </button>
 
             <p className="text-[11px] text-gray-400 text-center font-medium">

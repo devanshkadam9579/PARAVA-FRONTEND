@@ -2,74 +2,136 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow full read/write for all application collections in production
-    match /users/{userId} {
-      allow read, write: if true;
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role in ['admin', 'master_admin'] ||
+        request.auth.token.email in ['admin@myparva.com', 'rohan@myparva.com'] ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Public Marketplace Catalogs (Read-only for guests, write for admin/vendor owner)
     match /vendors/{vendorId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == vendorId);
     }
 
     match /categories/{categoryId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /promos/{promoId} {
-      allow read, write: if true;
-    }
-
-    match /bookings/{bookingId} {
-      allow read, write: if true;
-    }
-
-    match /chats/{chatId} {
-      allow read, write: if true;
-    }
-
-    match /leads/{leadId} {
-      allow read, write: if true;
-    }
-
-    match /admins/{adminId} {
-      allow read, write: if true;
-    }
-
-    match /settings/{settingId} {
-      allow read, write: if true;
-    }
-
-    match /notifications/{notificationId} {
-      allow read, write: if true;
-    }
-
-    match /broadcast_notifications/{broadcastId} {
-      allow read, write: if true;
-    }
-
-    match /coupons/{couponId} {
-      allow read, write: if true;
-    }
-
-    match /connections/{connectionId} {
-      allow read, write: if true;
-    }
-
-    match /reviews/{reviewId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /cities/{cityId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    // User profiles: User can read/write own profile; Admin can read/write all
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // Bookings: Users read their own bookings; Vendors read bookings assigned to them; Admin reads all
+    match /bookings/{bookingId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendor.id == request.auth.uid
+      )) || (!isAuthenticated() && resource.data.userId == null);
+      allow create: if true; // Allow guest/initial booking creation
+      allow update, delete: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.vendorId == request.auth.uid
+      ));
+    }
+
+    // Chats: Authenticated participants only (Client or Vendor or Admin)
+    match /chats/{chatId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.customerUid == request.auth.uid ||
+        resource.data.vendorId == request.auth.uid ||
+        resource.data.vendor.id == request.auth.uid
+      ));
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || 
+        request.resource.data.customerUid == request.auth.uid ||
+        request.resource.data.vendorId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update, delete: if isAdmin() || (isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerUid == request.auth.uid ||
+        resource.data.vendorId == request.auth.uid
+      ));
+    }
+
+    // Notifications: Recipient only or Admin
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.recipientUid == request.auth.token.vendorId ||
+        resource.data.recipientUid == 'admin'
+      ));
+      allow write: if isAdmin() || isAuthenticated();
+    }
+
+    // Broadcast notifications (system-wide announcements)
+    match /broadcast_notifications/{broadcastId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin collection
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Leads & Settings & Transactions
+    match /leads/{leadId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /connections/{connectionId} {
+      allow read, write: if isAdmin() || isAuthenticated();
     }
 
     match /transactions/{txId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
-    // Default match for any subcollections or extra documents
+    // Fallback rule for backwards compatibility with any nested collections
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
     }
   }
 }

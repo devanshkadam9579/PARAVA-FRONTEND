@@ -17,7 +17,7 @@ export function FooterSection({
     <footer className="w-full bg-gray-50 border-t border-gray-200/80 text-gray-700 font-sans mt-16 transition-colors">
       {/* Top Banner: Confidence & Guarantees */}
       <div className="w-full border-b border-gray-200/60 bg-white">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
               <ShieldCheck size={20} />
@@ -77,7 +77,7 @@ export function FooterSection({
       </div>
 
       {/* Main Footer Links Columns */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
           {/* Brand Col */}
           <div className="lg:col-span-2 space-y-4">

@@ -30,9 +30,9 @@ export function HeroSection({
   onSearchQueryChange
 }: HeroSectionProps) {
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 font-sans text-center">
+    <section className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 pt-8 pb-6 font-sans text-center">
       {/* Clean Open Marketplace Hero */}
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div className="max-w-5xl mx-auto space-y-4">
         {/* Tagline Badge */}
         <div className="inline-flex items-center gap-2 bg-rose-50 px-4 py-1.5 rounded-full border border-rose-200 text-xs font-extrabold text-rose-700 shadow-xs">
           <Sparkles size={14} className="text-rose-600" />
@@ -43,12 +43,12 @@ export function HeroSection({
         <div className="flex justify-center mb-2">
           <img src="/parva-logo.png" alt="MyParva" className="h-14 sm:h-18 object-contain" />
         </div>
-        <h1 className="text-3xl sm:text-5xl lg:text-5xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black font-display tracking-tight leading-[1.15] text-gray-900 justify-center flex">
           Plan less, celebrate more.
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">
+        <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl mx-auto font-medium leading-relaxed">
           Discover trusted vendors, services and experiences for your event.
         </p>
 

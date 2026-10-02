@@ -17,7 +17,7 @@ import { Vendor, VendorServiceItem, Booking } from '../../types';
 import { 
   ChevronRight, ChevronLeft, Sparkles, ShieldCheck, Headphones, Star, 
   User as UserIcon, Heart, LogOut, ArrowRight, Shield, Award, Clock,
-  Search, Filter, X, SlidersHorizontal, MapPin
+  Search, Filter, X, SlidersHorizontal, MapPin, ShoppingCart
 } from 'lucide-react';
 import { FooterSection } from '../ui/footer-section';
 import { BendingMarquee } from '../ui/bending-marquee';
@@ -71,6 +71,7 @@ export interface AirbnbDesktopMarketplaceProps {
   onOpenAdminHealth?: () => void;
   onOpenAdminChats?: () => void;
   onOpenVendorAuth?: () => void;
+  onOpenChatWithVendor?: (vendorId: string, bookingId: string) => void;
 }
 
 const ADDITIONAL_SERVICES = [
@@ -132,7 +133,8 @@ export function AirbnbDesktopMarketplace({
   onOpenAdminKyc,
   onOpenAdminHealth,
   onOpenAdminChats,
-  onOpenVendorAuth
+  onOpenVendorAuth,
+  onOpenChatWithVendor
 }: AirbnbDesktopMarketplaceProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'recommended' | 'price_low' | 'price_high' | 'rating'>('recommended');
@@ -141,6 +143,7 @@ export function AirbnbDesktopMarketplace({
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minRating, setMinRating] = useState<number>(0);
   const [selectedChatVendorId, setSelectedChatVendorId] = useState<string | null>(null);
+  const [selectedChatBookingId, setSelectedChatBookingId] = useState<string | null>(null);
 
   const activeSearchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const handleSearchChange = (val: string) => {
@@ -250,8 +253,8 @@ export function AirbnbDesktopMarketplace({
     />
   );
 
-  // 1. Checkout View
-  if (isCheckoutOpen && bundledItems.length > 0) {
+  // 1. Checkout / Cart View
+  if ((isCheckoutOpen || activeTab === 'cart') && bundledItems.length > 0) {
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
         {renderNavbar()}
@@ -262,7 +265,10 @@ export function AirbnbDesktopMarketplace({
           guestCount={planningGuestSize}
           currentUser={currentUser}
           onPay={onPay}
-          onBack={() => setIsCheckoutOpen(false)}
+          onBack={() => {
+            setIsCheckoutOpen(false);
+            if (activeTab === 'cart') onNavigateTab('home');
+          }}
           onOpenLogin={(tab) => onOpenLogin(tab === 'signup' ? 'signup' : 'signin')}
           couponDiscount={couponDiscount}
           couponCode={couponCode}
@@ -270,6 +276,40 @@ export function AirbnbDesktopMarketplace({
           onApplyCoupon={onApplyCoupon}
           couponMessage={couponMessage}
         />
+        <FooterSection 
+          onNavigateTab={(tab) => {
+            setIsCheckoutOpen(false);
+            onNavigateTab(tab);
+          }} 
+          onOpenSupport={onOpenSupport}
+          onOpenLogin={() => onOpenLogin('signin')}
+        />
+      </div>
+    );
+  }
+
+  // 1b. Empty Cart View
+  if (activeTab === 'cart' && bundledItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col justify-between">
+        {renderNavbar()}
+        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-20 text-center space-y-4">
+          <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-600">
+            <ShoppingCart size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Your Cart is Empty</h2>
+          <p className="text-gray-500 max-w-md mx-auto text-sm">
+            Explore our verified vendors and add services to your celebration bundle to get started.
+          </p>
+          <div>
+            <button
+              onClick={() => onNavigateTab('home')}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-brand-primary text-white font-semibold text-sm hover:opacity-95 transition shadow-sm cursor-pointer"
+            >
+              Explore Services
+            </button>
+          </div>
+        </div>
         <FooterSection 
           onNavigateTab={(tab) => {
             setIsCheckoutOpen(false);
@@ -316,12 +356,17 @@ export function AirbnbDesktopMarketplace({
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
         {renderNavbar()}
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8">
           <MyBookingsView
             bookings={bookings}
             onOpenChatWithVendor={(vendorId, bookingId) => {
               setSelectedChatVendorId(vendorId);
-              onNavigateTab('chat');
+              setSelectedChatBookingId(bookingId);
+              if (onOpenChatWithVendor) {
+                onOpenChatWithVendor(vendorId, bookingId);
+              } else {
+                onNavigateTab('chat');
+              }
             }}
             onDownloadVoucher={onDownloadVoucher}
             onCancelBooking={onCancelBooking}
@@ -343,18 +388,36 @@ export function AirbnbDesktopMarketplace({
 
   // 4. Chat Tab View
   if (activeTab === 'chat' || activeTab === 'messages') {
+    const isMasterOrAdmin = Boolean(currentUser && (currentUser.role === 'admin' || currentUser.role === 'master_admin'));
+    const ALLOWED_CHAT_STATUSES = ['confirmed', 'accepted', 'in progress', 'pending', 'paid'];
+    const userAuthorizedBookings = bookings.filter(b => {
+      if (!currentUser) return false;
+      if (isMasterOrAdmin) return true;
+      const status = (b.status || (b as any).bookingStatus || '').toLowerCase();
+      const isAllowed = !status || ALLOWED_CHAT_STATUSES.includes(status);
+      if (!isAllowed) return false;
+      const uidMatch = Boolean((b.userId && b.userId === currentUser.uid) || ((b as any).customerUid && (b as any).customerUid === currentUser.uid));
+      const phoneMatch = Boolean(currentUser.phone && (b.customerPhone === currentUser.phone || (b as any).clientPhone === currentUser.phone));
+      const emailMatch = Boolean(currentUser.email && (b.customerEmail === currentUser.email || (b as any).clientEmail === currentUser.email));
+      return uidMatch || phoneMatch || emailMatch;
+    });
+    const authorizedVendorIds = Array.from(new Set(userAuthorizedBookings.map(b => b.vendor?.id || (b as any).vendorId).filter(Boolean)));
+    const eligibleChatVendors = isMasterOrAdmin ? vendors : vendors.filter(v => authorizedVendorIds.includes(v.id));
+
     return (
       <div className="min-h-screen bg-white text-gray-900 font-sans">
         {renderNavbar()}
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8">
           <ChatTab
-            vendors={vendors}
-            bookings={bookings}
+            vendors={eligibleChatVendors}
+            bookings={userAuthorizedBookings}
             currentUser={currentUser}
             initialVendorId={selectedChatVendorId}
+            initialBookingId={selectedChatBookingId}
             onOpenLogin={() => onOpenLogin('signin')}
             onShowNotification={(msg) => console.log(msg)}
             onNavigateToExplore={() => onNavigateTab('explore')}
+            onNavigateToReservations={() => onNavigateTab('bookings')}
             onSelectVendor={onSelectVendor}
           />
         </div>
@@ -427,7 +490,7 @@ export function AirbnbDesktopMarketplace({
       </div>
 
       {/* Main Centered Marketplace Content */}
-      <main id="marketplace-cards-section" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 scroll-mt-6">
+      <main id="marketplace-cards-section" className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8 space-y-12 scroll-mt-6">
 
         {/* Search, Filter & Sort Toolbar */}
         <div className="bg-gray-50/80 border border-gray-200 rounded-3xl p-4 sm:p-5 space-y-4 shadow-xs">
@@ -580,7 +643,7 @@ export function AirbnbDesktopMarketplace({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 sm:gap-7 lg:gap-8">
                 {filteredVendors.map((vendor) => (
                   <AirbnbVendorCard
                     key={vendor.id}
@@ -729,7 +792,7 @@ export function AirbnbDesktopMarketplace({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 sm:gap-7 lg:gap-8">
                 {filteredVendors.map((vendor) => (
                   <AirbnbVendorCard
                     key={vendor.id}

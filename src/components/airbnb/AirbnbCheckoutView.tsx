@@ -163,7 +163,7 @@ export function AirbnbCheckoutView({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
+    <div className="max-w-[1240px] 2xl:max-w-[1360px] mx-auto px-6 sm:px-8 lg:px-10 py-8 font-sans">
       {/* Back Button */}
       <button
         type="button"

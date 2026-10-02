@@ -70,7 +70,7 @@ export function AirbnbCategoryRail({
   };
 
   return (
-    <div className={`relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white border-b border-gray-100 ${className}`}>
+    <div className={`relative w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 bg-white border-b border-gray-100 ${className}`}>
       <div className="flex items-center relative py-1">
         {/* Left Scroll Chevron */}
         {canScrollLeft && (

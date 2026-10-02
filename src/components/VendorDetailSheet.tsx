@@ -9,7 +9,7 @@ import {
   CheckCircle2, ArrowRight, User, ThumbsUp, CalendarIcon, Heart,
   ChevronLeft, ChevronRight, Instagram, Phone, MessageCircle, Lock, Play, Video,
   Download, FileText, User as UserIcon, DollarSign, Info, Smartphone, CreditCard, Users,
-  MessageSquare, Image as ImageIcon, ShoppingCart, Trash2
+  MessageSquare, Image as ImageIcon, ShoppingCart, Trash2, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -591,7 +591,28 @@ export default function VendorDetailSheet({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const message = `Check out ${vendor.name} on PARVA!%0A${vendor.tagline}%0A${window.location.origin}`;
+                        const vendorShareUrl = `${window.location.origin}/vendor/${vendor.id}`;
+                        if (navigator.share) {
+                          navigator.share({
+                            title: `${vendor.name} | Parva Celebrations`,
+                            text: `Check out ${vendor.name} on Parva!`,
+                            url: vendorShareUrl
+                          }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(vendorShareUrl);
+                          alert('Vendor link copied to clipboard!');
+                        }
+                      }}
+                      className="p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition"
+                      title="Share vendor link"
+                    >
+                      <Share2 size={20} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const vendorShareUrl = `${window.location.origin}/vendor/${vendor.id}`;
+                        const message = `Check out ${vendor.name} on PARVA!%0A${encodeURIComponent(vendor.tagline || '')}%0A${vendorShareUrl}`;
                         window.open(`https://wa.me/?text=${message}`, '_blank');
                       }}
                       className="p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition"

@@ -119,7 +119,7 @@ export function AirbnbNavbar({
   return (
     <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-40 transition-all font-sans">
       {/* Top Bar: Logo, City Pill, Nav Capsule, Actions */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between gap-4">
+      <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 h-[72px] flex items-center justify-between gap-4">
         
         {/* Brand Logo & City Selector Pill */}
         <div className="flex items-center gap-3 shrink-0">
@@ -185,15 +185,17 @@ export function AirbnbNavbar({
                 Messages
               </button>
 
-              <button
-                type="button"
-                onClick={() => isUserLoggedIn ? onNavigateTab('profile') : onOpenLogin('signin')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                  activeTab === 'profile' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {isUserLoggedIn ? 'Profile' : 'Log In'}
-              </button>
+              {isUserLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('profile')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                    activeTab === 'profile' ? 'bg-white text-gray-900 shadow-xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Profile
+                </button>
+              )}
 
               {isAdminUser && (
                 <button

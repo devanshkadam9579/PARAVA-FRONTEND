@@ -471,7 +471,7 @@ export default function App() {
   const navigate = useNavigate();
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile'>(() => {
+  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile' | 'cart'>(() => {
     return (sessionStorage.getItem('parva_activeTab') as any) || 'home';
   });
 
@@ -479,8 +479,16 @@ export default function App() {
     sessionStorage.setItem('parva_activeTab', activeTab);
   }, [activeTab]);
 
-  const handleNavigateToTab = (tab: 'home' | 'explore' | 'bookings' | 'messages' | 'chat' | 'profile') => {
-    const normalizedTab = (tab === 'chat' ? 'messages' : tab) as 'home' | 'explore' | 'bookings' | 'messages' | 'profile';
+  const handleNavigateToTab = (tab: 'home' | 'explore' | 'bookings' | 'messages' | 'chat' | 'profile' | 'cart') => {
+    if (tab === 'cart') {
+      setActiveTab('cart');
+      setSelectedVendor(null);
+      if (location.pathname !== '/cart') {
+        navigate('/cart');
+      }
+      return;
+    }
+    const normalizedTab = (tab === 'chat' ? 'messages' : tab) as 'home' | 'explore' | 'bookings' | 'messages' | 'profile' | 'cart';
     setActiveTab(normalizedTab);
     setSelectedVendor(null);
     const targetPath = normalizedTab === 'home' ? '/' : `/${normalizedTab}`;
@@ -580,12 +588,20 @@ export default function App() {
 
         return () => unsubProfile();
       } else {
-        setCurrentUser(null);
-        setIsAdmin(false);
-        setIsMasterAdmin(false);
+        let isLocal = false;
         try {
-          localStorage.removeItem('parva_user');
+          const cached = localStorage.getItem('parva_user');
+          if (cached) isLocal = Boolean(JSON.parse(cached)?.isLocalSession);
         } catch (e) {}
+
+        if (!isLocal) {
+          setCurrentUser(null);
+          setIsAdmin(false);
+          setIsMasterAdmin(false);
+          try {
+            localStorage.removeItem('parva_user');
+          } catch (e) {}
+        }
       }
     });
     return unsubscribe;
@@ -599,7 +615,7 @@ export default function App() {
   // Dynamic Vendors, Categories, Promos, Settings State
   const [vendors, setVendors] = useState<Vendor[]>(() => {
     try {
-      const cached = localStorage.getItem('parva_cached_vendors');
+      const cached = localStorage.getItem('parva_vendors_list') || localStorage.getItem('parva_cached_vendors');
       if (cached) return JSON.parse(cached);
     } catch (e) {}
     return VENDORS;
@@ -785,14 +801,6 @@ export default function App() {
       console.warn("Connections sync error:", error);
     });
 
-    // Listen for Chats collection
-    const unsubscribeChats = onSnapshot(collection(db, 'chats'), (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setChatMessages(chatsData as any);
-    }, (error) => {
-      console.warn("Chats sync error:", error);
-    });
-
     // Listen for Categories collection
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), async (snapshot) => {
       if (snapshot.empty) {
@@ -839,7 +847,6 @@ export default function App() {
       unsubscribeLeads();
       unsubscribeSettings();
       unsubscribeGlobalSettings();
-      unsubscribeChats();
       unsubscribeCategories();
       unsubscribeCities();
       unsubscribeConnections();
@@ -911,92 +918,112 @@ export default function App() {
 
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    const saved = localStorage.getItem('parva_app_notifications');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
-    }
-    return [
-      {
-        id: 'notif_init_1',
-        type: 'slot',
-        title: 'Slot Confirmation Engine Active',
-        message: 'Real-time vendor calendar sync is active. Booked slots receive instant phone confirmations.',
-        timestamp: '10m ago',
-        read: false
-      },
-      {
-        id: 'notif_init_2',
-        type: 'offer',
-        title: 'Exclusive Kolhapur Offer: Flat 15% OFF',
-        message: 'Use coupon code WELCOME10 at checkout to unlock instant celebration discounts.',
-        timestamp: '1h ago',
-        read: false,
-        actionText: 'Use Coupon'
-      },
-      {
-        id: 'notif_init_3',
-        type: 'delivery',
-        title: 'Equipment & Vendor Dispatch Tracking',
-        message: 'Live stage setup and delivery alerts will stream directly to your notification feed.',
-        timestamp: 'Yesterday',
-        read: true
+    try {
+      const userCached = localStorage.getItem('parva_user');
+      const parsedUser = userCached ? JSON.parse(userCached) : null;
+      if (parsedUser?.uid) {
+        const saved = localStorage.getItem(`parva_app_notifications_${parsedUser.uid}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.filter((n: any) => !n.id?.startsWith('notif_init_'));
+          }
+        }
       }
-    ];
+    } catch (e) {}
+    return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('parva_app_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    if (currentUser?.uid) {
+      localStorage.setItem(`parva_app_notifications_${currentUser.uid}`, JSON.stringify(notifications));
+    }
+  }, [notifications, currentUser?.uid]);
 
-  // Real-time Firestore Live Notification & Pop-up Broadcaster Listener
+  // Real-time Firestore Scoped Notifications Listener (Customer / Vendor / Admin)
   useEffect(() => {
+    if (!currentUser || !currentUser.uid) {
+      setNotifications([]);
+      return;
+    }
+
+    // Load user-scoped cache immediately upon user switch
+    try {
+      const saved = localStorage.getItem(`parva_app_notifications_${currentUser.uid}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setNotifications(parsed.filter((n: any) => !n.id?.startsWith('notif_init_')));
+        }
+      } else {
+        setNotifications([]);
+      }
+    } catch (e) {}
+
     let unsubscribe: (() => void) | undefined;
     try {
       const db = getDb();
-      import('firebase/firestore').then(({ collection, query, orderBy, limit, onSnapshot }) => {
-        const notifQuery = query(collection(db, 'broadcast_notifications'), orderBy('createdAt', 'desc'), limit(15));
+      import('firebase/firestore').then(({ collection, query, where, limit, onSnapshot }) => {
+        const targetRecipient = (isAdmin || isMasterAdmin)
+          ? 'admin'
+          : (currentUser.role === 'vendor' && (currentUser as any).vendorId ? (currentUser as any).vendorId : currentUser.uid);
+
+        // Resilient single-field query without orderBy (avoids requiring composite index in Firestore)
+        const notifQuery = query(
+          collection(db, 'notifications'),
+          where('recipientUid', '==', targetRecipient),
+          limit(50)
+        );
+
         unsubscribe = onSnapshot(notifQuery, (snapshot) => {
-          snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added') {
-              const data = change.doc.data();
-              const notifId = change.doc.id;
-              
-              // Only notify if notification is fresh (less than 2 minutes old)
-              const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().getTime() : Date.now();
-              const isRecent = (Date.now() - createdAt) < 120000;
-              
-              const incomingNotif: AppNotification = {
-                id: notifId,
-                type: data.type || 'offer',
-                title: data.title || 'Special Announcement',
-                message: data.message || '',
-                timestamp: 'Just now',
-                read: false,
-                imageUrl: data.imageUrl || undefined,
-                actionText: data.actionText || undefined
-              };
-
-              setNotifications((prev) => {
-                if (prev.some((n) => n.id === notifId)) return prev;
-                return [incomingNotif, ...prev];
-              });
-
-              if (isRecent) {
-                sendNativePhoneNotification(incomingNotif.title, incomingNotif.message, incomingNotif.type);
-              }
+          const freshNotifs: (AppNotification & { _millis?: number })[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            let timeStr = 'Just now';
+            let millis = 0;
+            if (data.createdAt?.toDate) {
+              const d = data.createdAt.toDate();
+              timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              millis = d.getTime();
+            } else if (data.createdAt) {
+              try {
+                const d = new Date(data.createdAt);
+                timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                millis = d.getTime();
+              } catch (e) {}
             }
+
+            freshNotifs.push({
+              id: docSnap.id,
+              type: data.type === 'BOOKING_CONFIRMED' || data.type === 'slot' ? 'slot' : data.type === 'offer' ? 'offer' : 'system',
+              title: data.title || 'Notification',
+              message: data.message || '',
+              timestamp: timeStr,
+              read: Boolean(data.read),
+              actionPayload: data.bookingId ? { bookingId: data.bookingId } : undefined,
+              _millis: millis
+            });
           });
+
+          // Sort client-side descending by creation timestamp
+          freshNotifs.sort((a, b) => (b._millis || 0) - (a._millis || 0));
+
+          setNotifications(freshNotifs);
+          if (currentUser?.uid) {
+            localStorage.setItem(`parva_app_notifications_${currentUser.uid}`, JSON.stringify(freshNotifs));
+          }
         }, (err) => {
-          console.warn("Broadcast notifications listener:", err);
+          console.debug('[Notifications Scoped Listener Info]:', err?.message);
         });
       });
     } catch (e) {
-      console.warn("Notification listener init:", e);
+      console.warn('Notifications listener init error:', e);
     }
+
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [currentUser?.uid, (currentUser as any)?.vendorId, (currentUser as any)?.role, isAdmin, isMasterAdmin]);
 
 
   const requestNotificationPermission = async () => {
@@ -1192,20 +1219,85 @@ export default function App() {
     const rawPath = location.pathname.toLowerCase();
     const path = rawPath.replace(/\/+$/, '') || '/';
 
-    // 1. Vendor profile deep links: /vendor/:vendorId
-    if (path.startsWith('/vendor/')) {
-      const vendorId = path.split('/vendor/')[1];
-      if (vendorId && vendors.length > 0) {
-        const found = vendors.find((v) => v.id.toLowerCase() === vendorId.toLowerCase());
-        if (found && selectedVendor?.id !== found.id) {
-          setSelectedVendor(found);
+    // 1. Vendor profile deep links: /vendor/:vendorKey or /vendors/:vendorKey or ?vendor=:vendorKey
+    const searchParams = new URLSearchParams(location.search);
+    const queryVendor = searchParams.get('vendor') || searchParams.get('v');
+    const isVendorRoute = path.startsWith('/vendor/') || path.startsWith('/vendors/') || Boolean(queryVendor);
+    if (isVendorRoute) {
+      const rawVendorKey = queryVendor || path.replace(/^\/vendors?\//i, '').split('/')[0].split('?')[0];
+      const vendorKey = decodeURIComponent(rawVendorKey).trim();
+      if (vendorKey) {
+        const normalizedKey = vendorKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (vendors.length > 0) {
+          const found = vendors.find((v) => {
+            if (!v) return false;
+            if (v.id && v.id.toLowerCase() === vendorKey.toLowerCase()) return true;
+            if (v.name && v.name.toLowerCase() === vendorKey.toLowerCase()) return true;
+            const vNameNorm = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (vNameNorm && vNameNorm === normalizedKey) return true;
+            const vIdNorm = (v.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (vIdNorm && vIdNorm === normalizedKey) return true;
+            return false;
+          });
+
+          if (found) {
+            if (selectedVendor?.id !== found.id) {
+              setSelectedVendor(found);
+            }
+            if (queryVendor && location.pathname !== `/vendor/${found.id}`) {
+              navigate(`/vendor/${found.id}`, { replace: true });
+            }
+            return;
+          }
         }
+
+        // Direct fetch from Firestore if vendors list not ready yet or specific doc needed
+        try {
+          const db = getDb();
+          import('firebase/firestore').then(async ({ doc, getDoc, collection, query, where, getDocs }) => {
+            // 1. Try by exact document ID
+            try {
+              const snap = await getDoc(doc(db, 'vendors', vendorKey));
+              if (snap.exists()) {
+                const vData = { id: snap.id, ...snap.data() } as Vendor;
+                setSelectedVendor(vData);
+                return;
+              }
+            } catch (e) {}
+
+            // 2. Try by exact name match
+            try {
+              const nameQ = query(collection(db, 'vendors'), where('name', '==', vendorKey));
+              const nameSnap = await getDocs(nameQ);
+              if (!nameSnap.empty) {
+                const docSnap = nameSnap.docs[0];
+                const vData = { id: docSnap.id, ...docSnap.data() } as Vendor;
+                setSelectedVendor(vData);
+                return;
+              }
+            } catch (e) {}
+
+            // 3. Fallback: match by normalized name across collection
+            try {
+              const allSnap = await getDocs(collection(db, 'vendors'));
+              for (const docSnap of allSnap.docs) {
+                const data = docSnap.data();
+                const dNameNorm = (data.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (dNameNorm && dNameNorm === normalizedKey) {
+                  setSelectedVendor({ id: docSnap.id, ...data } as Vendor);
+                  return;
+                }
+              }
+            } catch (e) {}
+          }).catch((e) => console.warn('[Direct Vendor DeepLink] Fetch error:', e));
+        } catch (e) {}
       }
       return;
     }
 
-    // Clear selected vendor if navigating away from /vendor/
-    if (selectedVendor && !path.startsWith('/vendor/')) {
+    // Clear selected vendor if navigating away from /vendor/ or /vendors/
+    if (selectedVendor && !path.startsWith('/vendor/') && !path.startsWith('/vendors/')) {
       setSelectedVendor(null);
     }
 
@@ -1242,14 +1334,21 @@ export default function App() {
       if (activeTab !== 'home') setActiveTab('home');
     } else if (path === '/explore') {
       if (activeTab !== 'explore') setActiveTab('explore');
-    } else if (path === '/bookings' || path === '/reservations' || path === '/cart') {
+    } else if (path === '/cart') {
+      if (activeTab !== 'cart') setActiveTab('cart');
+    } else if (path === '/bookings' || path === '/reservations') {
       if (activeTab !== 'bookings') setActiveTab('bookings');
     } else if (path === '/messages' || path === '/chat') {
       if (activeTab !== 'messages') setActiveTab('messages');
+      const params = new URLSearchParams(window.location.search);
+      const bId = params.get('bookingId');
+      const vId = params.get('vendorId');
+      if (bId) setActiveChatBookingId(bId);
+      if (vId) setActiveChatVendorId(vId);
     } else if (path === '/profile' || path === '/account' || path === '/admin') {
       if (activeTab !== 'profile') setActiveTab('profile');
     }
-  }, [location.pathname, vendors]);
+  }, [location.pathname, location.search, vendors]);
 
   // Share Booking State
 
@@ -1287,8 +1386,19 @@ export default function App() {
     const saved = sessionStorage.getItem('parva_bundledItems');
     return saved ? JSON.parse(saved) : [];
   });
-  // Bookings State
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  // Bookings State with resilient cache fallback
+  const [bookings, setBookings] = useState<Booking[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('parva_bookings') || localStorage.getItem('parva_user_bookings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
 
   const isUserLoggedIn = useMemo(() => isUserLoggedInHelper(currentUser), [currentUser]);
 
@@ -1298,26 +1408,55 @@ export default function App() {
     const cPhone = (currentUser.phone || '').replace(/\D/g, '').slice(-10);
     const cEmail = (currentUser.email || '').toLowerCase().trim();
     const cUid = currentUser.uid || '';
-    const cName = (currentUser.name || currentUser.displayName || '').toLowerCase().trim();
 
     return bookings.filter(b => {
       if (b.userId && cUid && b.userId === cUid) return true;
-      if (b.customerEmail && cEmail && b.customerEmail.toLowerCase().trim() === cEmail) return true;
-      if (b.customerPhone && cPhone) {
+      if ((b as any).customerUid && cUid && (b as any).customerUid === cUid) return true;
+      if (b.customerEmail && cEmail && cEmail.includes('@') && b.customerEmail.toLowerCase().trim() === cEmail) return true;
+      if (b.customerPhone && cPhone && cPhone.length >= 10) {
         const bPhone = b.customerPhone.replace(/\D/g, '').slice(-10);
         if (bPhone && bPhone === cPhone) return true;
       }
-      if (b.customerName && cName && b.customerName.toLowerCase().trim() === cName && cName !== 'guest' && cName !== 'user') return true;
       return false;
     });
   }, [bookings, currentUser, isUserLoggedIn]);
+
+  // Derived authorized vendors for messaging (customer cannot select unauthorized vendors)
+  const eligibleChatVendors = useMemo(() => {
+    if (isAdmin || isMasterAdmin) return vendors;
+    const ALLOWED_STATUSES = ['confirmed', 'accepted', 'in progress', 'pending', 'paid'];
+    const validBookings = userBookings.filter(b => {
+      const s = (b.status || (b as any).bookingStatus || '').toLowerCase();
+      return !s || ALLOWED_STATUSES.includes(s);
+    });
+    const validVendorIds = Array.from(new Set(validBookings.map(b => b.vendor?.id || (b as any).vendorId).filter(Boolean)));
+    return vendors.filter(v => validVendorIds.includes(v.id));
+  }, [vendors, userBookings, isAdmin, isMasterAdmin]);
 
   // Messages / Chat State
   const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeChatVendorId, setActiveChatVendorId] = useState<string | null>(null);
+  const [activeChatBookingId, setActiveChatBookingId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('bookingId');
+    }
+    return null;
+  });
   const [newMessageText, setNewMessageText] = useState('');
   const [isVendorTyping, setIsVendorTyping] = useState(false);
+
+  // Cashfree Pending Verification / Retry State
+  const [pendingVerificationOrder, setPendingVerificationOrder] = useState<{
+    orderId: string;
+    paymentId: string;
+    amount: number;
+    vendorName: string;
+    serviceName: string;
+    params: any;
+  } | null>(null);
+  const [isVerifyingPending, setIsVerifyingPending] = useState(false);
 
   // Success Notification state (for bundling/booking checkouts)
   const [successNotification, setSuccessNotification] = useState<string | null>(null);
@@ -1662,7 +1801,7 @@ export default function App() {
 
         // Generate prefilled whatsapp message
         const vendorPhone = newBookingObj.vendor.whatsapp || newBookingObj.vendor.phone || '919999999999';
-        const servicesStr = newBookingObj.selectedServices.map((s: any) => `• ${s.name} (₹${s.price.toLocaleString('en-IN')})`).join('\n');
+        const servicesStr = (newBookingObj.selectedServices || []).map((s: any) => `• ${s.name} (₹${s.price.toLocaleString('en-IN')})`).join('\n');
         const waText = `Hello ${newBookingObj.vendor.name},\n\nI have locked a Direct Booking with your services via Parva Celebrations (Connection Fee PAID)! 📲\n\nEvent Details:\n- Name: ${targetUser?.name}\n- Contact: ${targetUser?.phone}\n- Event Date: ${newBookingObj.eventDate}\n- Type: ${newBookingObj.eventType}\n\nSelected Services:\n${servicesStr}\n\nEstimated Event Value: ₹${newBookingObj.finalPrice.toLocaleString('en-IN')}\n\nPlease confirm availability & package customizations! Thank you!`;
         const waUrl = `https://wa.me/${vendorPhone}?text=${encodeURIComponent(waText)}`;
 
@@ -1715,6 +1854,87 @@ export default function App() {
   };
 
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+
+  const performVerification = async (
+    orderId: string,
+    paymentId: string,
+    amount: number,
+    vendorName: string,
+    serviceName: string,
+    params: any
+  ): Promise<boolean> => {
+    let idToken: string | null = null;
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      if (auth.currentUser) {
+        idToken = await auth.currentUser.getIdToken();
+      }
+    } catch (tokErr) {
+      console.debug('Could not get idToken:', tokErr);
+    }
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    }
+
+    const verifyRes = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        orderId,
+        paymentId,
+        userId: currentUser?.uid || 'guest-uid',
+        vendorId: params.vendorId || params.bookingData?.vendor?.id || 'system',
+        type: params.type,
+        totalAmount: amount,
+        bookingData: params.bookingData || null,
+        customerData: {
+          name: params.bookingData?.customerName || currentUser?.name || 'Valued Customer',
+          email: params.bookingData?.customerEmail || currentUser?.email || 'customer@parvaevents.com',
+          phone: params.bookingData?.customerPhone || currentUser?.phone || 'N/A',
+          age: params.bookingData?.customerAge || '',
+          eventLocationAddress: params.bookingData?.eventLocationAddress || '',
+          eventLocationCoords: params.bookingData?.eventLocationCoords || null,
+          styleSuggestions: params.bookingData?.styleSuggestions || ''
+        }
+      })
+    });
+
+    const verifyData = await verifyRes.json();
+    if (verifyData.success) {
+      trackPaymentSuccess(orderId, verifyData.transaction?.id || orderId, amount);
+      trackBookingConfirmed(verifyData.booking?.id || orderId, params.vendorId || params.bookingData?.vendor?.id || 'vendor', amount);
+
+      // Clear draft cart only on verified payment confirmation
+      setBundledItems([]);
+      sessionStorage.removeItem('parva_bundled_items');
+
+      if (verifyData.booking) {
+        setBookings(prev => [verifyData.booking, ...prev.filter(b => b.id !== verifyData.booking.id)]);
+      }
+
+      setPendingVerificationOrder(null);
+
+      // Launch PhonePe-Style Celebration Popup
+      setSuccessPaymentData({
+        amount: amount,
+        orderId,
+        vendorName,
+        serviceName,
+        eventDate: params.bookingData?.eventDate || planningStartDate,
+        timeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'Evening',
+        customerName: params.bookingData?.customerName || currentUser?.name || 'Valued Customer'
+      });
+      setIsSuccessModalOpen(true);
+      return true;
+    } else {
+      showNotification('⚠️ Payment verified with notice: ' + (verifyData.error || 'Pending gateway sync'));
+      trackPaymentFailed(orderId, verifyData.error || 'unverified');
+      return false;
+    }
+  };
 
   const handlePayWithCashfree = async (params: {
     vendorId?: string;
@@ -1810,71 +2030,36 @@ export default function App() {
         // 4. Verify Payment Server-side Upon Successful Payment
         showNotification('⏳ Verifying payment with Cashfree...');
         try {
-          const verifyRes = await fetch(`${BACKEND_API_URL}/api/payments/cashfree/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          const success = await performVerification(
+            orderId,
+            result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+            amount,
+            vendorName,
+            serviceName,
+            params
+          );
+          if (!success) {
+            setPendingVerificationOrder({
               orderId,
               paymentId: result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
-              userId: currentUser?.uid || 'guest-uid',
-              vendorId: params.vendorId || params.bookingData?.vendor?.id || 'system',
-              type: params.type,
-              totalAmount: amount,
-              bookingData: params.bookingData || null,
-              customerData: {
-                name: params.bookingData?.customerName || currentUser?.name || 'Valued Customer',
-                email: params.bookingData?.customerEmail || currentUser?.email || 'customer@parvaevents.com',
-                phone: params.bookingData?.customerPhone || currentUser?.phone || 'N/A',
-                age: params.bookingData?.customerAge || '',
-                eventLocationAddress: params.bookingData?.eventLocationAddress || '',
-                eventLocationCoords: params.bookingData?.eventLocationCoords || null,
-                styleSuggestions: params.bookingData?.styleSuggestions || ''
-              }
-            })
-          });
-
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            trackPaymentSuccess(orderId, verifyData.transaction?.id || orderId, amount);
-            trackBookingConfirmed(verifyData.booking?.id || orderId, params.vendorId || params.bookingData?.vendor?.id || 'vendor', amount);
-
-            // Clear draft cart
-            setBundledItems([]);
-            sessionStorage.removeItem('parva_bundled_items');
-
-            // Set state for fresh booking view
-            if (verifyData.booking) {
-              setBookings(prev => [verifyData.booking, ...prev.filter(b => b.id !== verifyData.booking.id)]);
-            }
-
-            // Launch PhonePe-Style Celebration Popup
-            setSuccessPaymentData({
-              amount: amount,
-              orderId,
+              amount,
               vendorName,
               serviceName,
-              eventDate: params.bookingData?.eventDate || planningStartDate,
-              timeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'Evening',
-              customerName: params.bookingData?.customerName || currentUser?.name || 'Valued Customer'
+              params
             });
-            setIsSuccessModalOpen(true);
-          } else {
-            showNotification('⚠️ Payment verified with notice: ' + (verifyData.error || 'Pending gateway sync'));
-            trackPaymentFailed(orderId, verifyData.error || 'unverified');
           }
         } catch (vErr: any) {
           console.error('[Cashfree Verify Error]:', vErr);
-          trackPaymentSuccess(orderId, `pending_sync_${orderId}`, amount);
-          setSuccessPaymentData({
-            amount: amount,
+          trackPaymentFailed(orderId, 'verification_network_error');
+          // Offer idempotent status verification retry
+          setPendingVerificationOrder({
             orderId,
+            paymentId: result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+            amount,
             vendorName,
             serviceName,
-            eventDate: params.bookingData?.eventDate || planningStartDate,
-            timeSlot: params.bookingData?.eventTimeSlot || planningTimeSlot || 'Evening',
-            customerName: params.bookingData?.customerName || currentUser?.name || 'Valued Customer'
+            params
           });
-          setIsSuccessModalOpen(true);
         }
       }).catch((chkErr: any) => {
         setIsPaymentProcessing(false);
@@ -2497,25 +2682,21 @@ export default function App() {
     }
   };
 
-  // Chat/Messaging Handlers
-  const handleSelectThread = (vendorId: string) => {
-    const canBypass = isAdmin || isMasterAdmin || currentUser?.role === 'vendor';
-    const isUnlocked = unlockedConnections.includes(vendorId);
+  // Chat/Messaging Navigation Handler
+  const handleOpenChatWithVendor = (vendorId?: string, bookingId?: string) => {
+    if (vendorId) setActiveChatVendorId(vendorId);
+    if (bookingId) setActiveChatBookingId(bookingId);
+    setActiveTab('messages');
+    const queryParts = [];
+    if (bookingId) queryParts.push(`bookingId=${encodeURIComponent(bookingId)}`);
+    if (vendorId) queryParts.push(`vendorId=${encodeURIComponent(vendorId)}`);
+    const qs = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    navigate(`/messages${qs}`);
+  };
 
-    if (!canBypass && !isUnlocked) {
-      const confirmPayment = window.confirm(
-        `💬 Chat Access Locked\n\nTo connect directly and chat with this vendor, a one-time connection activation fee of ₹499 (+18% GST) is required.\n\nTotal: ₹588.82\n\nWould you like to pay securely now via Razorpay?`
-      );
-      if (confirmPayment) {
-        handlePayWithRazorpay({ vendorId, type: 'connection' });
-      }
-      return;
-    }
-
-    setActiveChatVendorId(vendorId);
-    setChatThreads((prev) =>
-      prev.map((t) => (t.vendor.id === vendorId ? { ...t, unreadCount: 0 } : t))
-    );
+  const handleSelectThread = (vendorId: string, bookingId?: string) => {
+    const matched = userBookings.find(b => (b.vendor?.id === vendorId || (b as any).vendorId === vendorId));
+    handleOpenChatWithVendor(vendorId, bookingId || matched?.id);
   };
 
   // Chat message submission with realistic simulated vendor response!
@@ -3221,12 +3402,13 @@ export default function App() {
             setCurrentUser(null);
             setIsAdmin(false);
             setIsMasterAdmin(false);
+            setNotifications([]);
             showNotification('Logged out successfully.');
           }}
           onNavigateTab={(tab) => handleNavigateToTab(tab as any)}
           activeTab={activeTab}
           cartCount={bundledItems.length}
-          onOpenCart={() => handleNavigateToTab('bookings')}
+          onOpenCart={() => handleNavigateToTab('cart')}
           onOpenSupport={() => setIsSupportModalOpen(true)}
           onOpenNotifications={() => setIsNotificationCenterOpen(true)}
           unreadCount={unreadNotificationsCount}
@@ -3262,6 +3444,7 @@ export default function App() {
           onDownloadVoucher={handleDownloadVoucher}
           onCancelBooking={handleCancelBooking}
           onSubmitReview={handleSubmitReview}
+          onOpenChatWithVendor={handleOpenChatWithVendor}
         />
       </div>
 
@@ -3845,22 +4028,29 @@ export default function App() {
           </div>
         )}
 
-                {/* ==================== TAB: CHAT (Real-Time Vendor Messaging) ==================== */}
-        {activeTab === 'chat' && (
-          <div className="space-y-4" id="chat-tab-container">
-            <ChatTab
-              vendors={vendors}
-              bookings={bookings}
-              currentUser={currentUser}
-              onOpenLogin={() => setIsAuthModalOpen(true)}
-              onShowNotification={showNotification}
-              onNavigateToExplore={() => handleNavigateToTab('explore')}
-            />
+        {/* ==================== TAB: CART (EMPTY STATE) ==================== */}
+        {activeTab === 'cart' && bundledItems.length === 0 && (
+          <div className="space-y-5" id="cart-view-container">
+            <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center space-y-3">
+              <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-600">
+                <ShoppingCart size={28} />
+              </div>
+              <h3 className="font-extrabold text-base text-brand-text">Your Cart is Empty</h3>
+              <p className="text-xs text-brand-text-secondary max-w-xs">
+                Explore our verified vendors and add services to your celebration bundle to get started.
+              </p>
+              <button
+                onClick={() => handleNavigateToTab('home')}
+                className="bg-brand-primary text-white px-6 py-2.5 rounded-xl text-xs font-bold transition shadow-md shadow-brand-primary/15 active:scale-95 cursor-pointer"
+              >
+                Explore Services
+              </button>
+            </div>
           </div>
         )}
 
-        {/* ==================== TAB: BOOKINGS ==================== */}
-        {activeTab === 'bookings' && (
+        {/* ==================== TAB: BOOKINGS & CART BUNDLE ==================== */}
+        {(activeTab === 'bookings' || (activeTab === 'cart' && bundledItems.length > 0)) && (
           <div className="space-y-5" id="bookings-view-container">
             
             {/* Draft Selection Bundle (Add to Cart Bookings) */}
@@ -4221,10 +4411,12 @@ export default function App() {
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarDays className="text-brand-primary" />
-              <h3 className="font-extrabold text-brand-text text-base">Your Active Bookings</h3>
-            </div>
+            {activeTab === 'bookings' && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarDays className="text-brand-primary" />
+                  <h3 className="font-extrabold text-brand-text text-base">Your Active Bookings</h3>
+                </div>
 
             {userBookings.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
@@ -4302,7 +4494,7 @@ export default function App() {
                         <span className="text-[10px] font-semibold text-brand-text-secondary uppercase tracking-wider block">
                           Booked Services
                         </span>
-                        {b.selectedServices.map((svc) => (
+                        {(b.selectedServices || []).map((svc) => (
                           <div key={svc.name} className="flex justify-between items-center text-xs">
                             <span className="text-brand-text font-medium">{svc.name}</span>
                             <span className="font-bold text-brand-text">₹{svc.price.toLocaleString('en-IN')}</span>
@@ -4368,11 +4560,12 @@ export default function App() {
 
                         <div className="flex gap-1.5 flex-wrap">
                           <button
-                            onClick={() => handleSelectThread(b.vendor.id)}
-                            className="border border-brand-border hover:border-brand-primary text-brand-text font-semibold py-1.5 px-2.5 rounded-lg hover:bg-gray-50 transition text-xs"
+                            onClick={() => handleOpenChatWithVendor(b.vendor?.id, b.id)}
+                            className="bg-brand-primary/10 border border-brand-primary/20 hover:bg-brand-primary/20 text-brand-primary font-bold py-1.5 px-3 rounded-xl transition text-xs flex items-center gap-1.5"
                             id={`contact-vendor-booking-${b.id}`}
                           >
-                            Chat
+                            <MessageSquare size={12} className="text-brand-primary" />
+                            <span>Chat with Vendor</span>
                           </button>
                           <button
                             onClick={() => {
@@ -4434,7 +4627,8 @@ export default function App() {
                   );
                 })}
               </div>
-
+            )}
+              </>
             )}
           </div>
         )}
@@ -4443,15 +4637,18 @@ export default function App() {
         {(activeTab === 'messages' || (activeTab as any) === 'chat') && (
           <div className="h-[calc(100vh-140px)] flex flex-col" id="messages-view-container">
             <ChatTab
-              vendors={vendors}
+              vendors={eligibleChatVendors}
               bookings={userBookings}
               currentUser={currentUser}
+              initialBookingId={activeChatBookingId}
+              initialVendorId={activeChatVendorId}
               onOpenLogin={() => {
                 setAuthModalTab('signin');
                 setIsAuthModalOpen(true);
               }}
               onShowNotification={showNotification}
               onNavigateToExplore={() => handleNavigateToTab('explore')}
+              onNavigateToReservations={() => handleNavigateToTab('bookings')}
               onSelectVendor={(v) => setSelectedVendor(v)}
             />
           </div>
@@ -4518,6 +4715,7 @@ export default function App() {
                         onClick={async () => {
                           await signOutUser();
                           setCurrentUser(null);
+                          setNotifications([]);
                           showNotification('Vendor logged out safely.');
                         }}
                         className="mt-5 text-xs font-bold text-brand-danger hover:underline"
@@ -5588,6 +5786,7 @@ export default function App() {
                           setCurrentUser(null);
                           setIsAdmin(false);
                           setIsMasterAdmin(false);
+                          setNotifications([]);
                           showNotification('Logged out successfully.');
                         }}
                         className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline uppercase tracking-wider cursor-pointer"
@@ -5608,7 +5807,7 @@ export default function App() {
       <nav className="fixed bottom-4 inset-x-4 max-w-sm mx-auto glass-panel border border-brand-border rounded-[24px] shadow-lg py-2.5 px-4 z-40 flex items-center justify-between" id="bottom-floating-navigation">
         {[
           { id: 'home', label: 'Home', icon: Home, badge: 0 },
-          { id: 'bookings', label: 'Bookings', icon: Calendar, badge: bundledItems.length },
+          { id: 'bookings', label: 'Bookings', icon: Calendar, badge: 0 },
           { id: 'chat', label: 'Chat', icon: MessageSquare, badge: 0 },
           { id: 'profile', label: 'Profile', icon: User, badge: 0 }
         ].map((item) => {
@@ -5817,6 +6016,7 @@ export default function App() {
           onLogout={async () => {
             await signOutUser();
             setCurrentUser(null);
+            setNotifications([]);
             showNotification('Vendor logged out safely.');
           }}
           showNotification={showNotification}
@@ -6029,9 +6229,9 @@ export default function App() {
         onClick={() => {
           const totalVal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
           trackCartOpened(bundledItems.length, totalVal);
-          handleNavigateToTab('bookings');
+          handleNavigateToTab('cart');
         }}
-        isVisible={bundledItems.length > 0 && activeTab !== 'bookings' && activeTab !== 'profile' && !selectedVendor}
+        isVisible={bundledItems.length > 0 && activeTab !== 'cart' && activeTab !== 'bookings' && activeTab !== 'profile' && !selectedVendor}
       />
 
 
@@ -6093,13 +6293,75 @@ export default function App() {
         serviceName={processingPaymentDetails?.serviceName}
       />
 
+      {/* PENDING PAYMENT VERIFICATION & RETRY MODAL */}
+      {pendingVerificationOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-100 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+              <Clock size={32} className="animate-spin text-amber-600" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-extrabold text-lg text-gray-900 font-display">
+                Payment Verification In Progress
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Payment verification is taking longer than expected. If your account was debited, your reservation will not be lost. Click below to verify status idempotently.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={isVerifyingPending}
+                onClick={async () => {
+                  if (!pendingVerificationOrder) return;
+                  setIsVerifyingPending(true);
+                  try {
+                    showNotification('⏳ Checking payment status with Cashfree...');
+                    const success = await performVerification(
+                      pendingVerificationOrder.orderId,
+                      pendingVerificationOrder.paymentId,
+                      pendingVerificationOrder.amount,
+                      pendingVerificationOrder.vendorName,
+                      pendingVerificationOrder.serviceName,
+                      pendingVerificationOrder.params
+                    );
+                    if (!success) {
+                      showNotification('Payment is still processing with bank. Please try again in a few moments.');
+                    }
+                  } catch (err) {
+                    showNotification('Network error checking payment status. Please try again.');
+                  } finally {
+                    setIsVerifyingPending(false);
+                  }
+                }}
+                className="w-full py-3 bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs rounded-xl shadow-md transition disabled:opacity-50 cursor-pointer"
+              >
+                {isVerifyingPending ? 'Checking Status...' : 'Check Payment Status'}
+              </button>
+              <button
+                type="button"
+                disabled={isVerifyingPending}
+                onClick={() => setPendingVerificationOrder(null)}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Back to Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PHONEPE-STYLE PAYMENT SUCCESS CELEBRATION MODAL */}
       <PaymentSuccessCelebrationModal
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         onViewReservations={() => {
           setIsSuccessModalOpen(false);
-          setActiveTab('bookings');
+          handleNavigateToTab('bookings');
+        }}
+        onContinueExploring={() => {
+          setIsSuccessModalOpen(false);
+          handleNavigateToTab('home');
         }}
         amount={successPaymentData?.amount || 0}
         orderId={successPaymentData?.orderId}

@@ -123,7 +123,7 @@ export function AirbnbVendorDetailView({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 font-sans">
+    <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-6 space-y-8 font-sans">
       {/* Top Breadcrumb & Title Bar */}
       <div>
         <button
@@ -178,10 +178,15 @@ export function AirbnbVendorDetailView({
             <button
               type="button"
               onClick={() => {
+                const shareUrl = `${window.location.origin}/vendor/${vendor.id}`;
                 if (navigator.share) {
-                  navigator.share({ title: vendor.name, url: window.location.href });
+                  navigator.share({
+                    title: `${vendor.name} | Parva Celebrations`,
+                    text: `Book ${vendor.name} on Parva for your celebration!`,
+                    url: shareUrl
+                  }).catch(() => {});
                 } else {
-                  navigator.clipboard.writeText(window.location.href);
+                  navigator.clipboard.writeText(shareUrl);
                   alert('Listing link copied to clipboard!');
                 }
               }}

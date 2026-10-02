@@ -153,10 +153,11 @@ export function MyBookingsView({
                     <button
                       type="button"
                       onClick={() => onOpenChatWithVendor(b.vendor?.id, b.id)}
-                      className="p-2 rounded-xl text-gray-700 hover:bg-gray-100 border border-gray-200 transition"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition"
                       title="Chat with Vendor"
                     >
-                      <MessageSquare size={14} className="text-brand-primary" />
+                      <MessageSquare size={13} className="text-brand-primary" />
+                      <span>Chat with Vendor</span>
                     </button>
 
                     {/* PDF Voucher */}
