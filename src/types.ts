@@ -39,6 +39,14 @@ export interface VendorKycData {
   verifiedAt?: string;
 }
 
+export interface VendorAddon {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
 export interface Vendor {
   id: string;
   vendorPortalId?: string;
@@ -65,6 +73,8 @@ export interface Vendor {
   videos?: string[];
   location: string;
   features: string[];
+  inclusions?: string[];
+  addons?: VendorAddon[];
   services: VendorServiceItem[];
   reviews: Review[];
   bookingsCount: number;
@@ -131,6 +141,7 @@ export interface Booking {
   id: string;
   vendor: Vendor;
   selectedServices: VendorServiceItem[];
+  selectedAddons?: VendorAddon[];
   eventDate: string;
   eventTimeSlot?: string; // 'morning' | 'afternoon' | 'evening' | 'full_day'
   guestCount?: number;
@@ -171,6 +182,10 @@ export interface QuickCategory {
   name: string;
   iconName: string;
   image: string;
+  status?: 'active' | 'inactive';
+  displayOrder?: number;
+  description?: string;
+  services?: string[];
 }
 
 export interface HeroPromo {

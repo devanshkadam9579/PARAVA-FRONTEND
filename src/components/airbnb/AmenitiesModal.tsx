@@ -10,6 +10,7 @@ export interface AmenitiesModalProps {
   vendorName: string;
   category: string;
   features?: string[];
+  inclusions?: string[];
 }
 
 export function AmenitiesModal({
@@ -17,14 +18,15 @@ export function AmenitiesModal({
   onClose,
   vendorName,
   category,
-  features = []
+  features = [],
+  inclusions = []
 }: AmenitiesModalProps) {
   if (!isOpen) return null;
 
   // Curated category feature groups
   const defaultFeatureGroups = [
     {
-      group: 'Core Services & Execution',
+      group: 'Core Services & Highlights',
       items: features.length > 0 ? features : [
         'Dedicated On-Site Master Supervisor',
         'Pre-Event Layout & Acoustic Planning',
@@ -32,6 +34,10 @@ export function AmenitiesModal({
         'Aadhaar & Police Verified Professional Staff'
       ]
     },
+    ...(inclusions.length > 0 ? [{
+      group: 'Standard Package Inclusions',
+      items: inclusions
+    }] : []),
     {
       group: 'Equipment & Assurance',
       items: [

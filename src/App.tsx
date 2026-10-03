@@ -808,11 +808,18 @@ export default function App() {
           return {
             id: doc.id,
             name: d.name || 'Category',
+            status: d.status || 'active',
+            displayOrder: Number(d.displayOrder) || 100,
+            description: d.description || '',
+            services: Array.isArray(d.services) ? d.services : [],
             icon: d.icon || d.iconName || 'Sparkles',
             iconName: d.iconName || d.icon || 'Sparkles',
             image: d.image || (typeof d.icon === 'string' && d.icon.startsWith('http') ? d.icon : defaultImg)
           };
-        });
+        })
+        .filter(c => c.status !== 'inactive')
+        .sort((a, b) => (a.displayOrder || 100) - (b.displayOrder || 100));
+
         setCategoriesList(catsData as any);
       }
     }, (error) => {
@@ -834,6 +841,21 @@ export default function App() {
       }
     });
 
+    // Listen for Settings Cities (Single Source of Truth from Admin & Backend)
+    const unsubscribeSettingsCities = onSnapshot(doc(db, 'settings', 'cities'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const operational = Array.isArray(data.operationalCities) ? data.operationalCities : [];
+        const blocked = Array.isArray(data.blockedCities) ? data.blockedCities : [];
+        const activeCities = operational.filter(c => !blocked.includes(c));
+        if (activeCities.length > 0) {
+          setCitiesList(activeCities);
+        }
+      }
+    }, (error) => {
+      console.debug("Settings cities sync info:", error?.message);
+    });
+
     return () => {
       unsubscribeVendors();
       unsubscribePromos();
@@ -844,6 +866,7 @@ export default function App() {
       unsubscribeGlobalSettings();
       unsubscribeCategories();
       unsubscribeCities();
+      unsubscribeSettingsCities();
       unsubscribeConnections();
     };
   }, []);
@@ -3410,7 +3433,7 @@ export default function App() {
           }))}
           currentCity={currentCity}
           onSelectCity={(c) => setCurrentCity(c)}
-          cities={CITIES}
+          cities={citiesList}
           selectedCategory={selectedExploreCategory}
           onSelectCategory={(cat) => setSelectedExploreCategory(cat)}
           planningStartDate={planningStartDate}
@@ -5948,6 +5971,7 @@ export default function App() {
       />
       <LocationSelector
         currentCity={currentCity}
+        citiesList={citiesList}
         blockedCities={blockedCities}
         onSelectCity={(city) => setCurrentCity(city)}
         isOpen={isLocationOpen}

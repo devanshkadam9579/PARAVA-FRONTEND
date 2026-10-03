@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Star, MapPin, ShieldCheck, Heart, Share2, Calendar as CalendarIcon, Clock, 
   CheckCircle, ArrowLeft, Users, ChevronRight, Phone, MessageSquare, 
@@ -52,7 +52,7 @@ export function AirbnbVendorDetailView({
 
   // Initial service selection: starts with empty selection until user chooses
   const [selectedServices, setSelectedServices] = useState<VendorServiceItem[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<{ id: string; name: string; price: number; desc?: string }[]>([]);
   const [timeSlot, setTimeSlot] = useState<'morning' | 'evening' | 'fullday'>('evening');
   const [availabilityState, setAvailabilityState] = useState<'checking' | 'available' | 'unavailable' | 'idle'>('idle');
   const [rangeConflicts, setRangeConflicts] = useState<string[]>([]);
@@ -69,12 +69,24 @@ export function AirbnbVendorDetailView({
     }
   };
   
-  // Available Add-ons
-  const availableAddons = [
-    { id: 'addon_1', name: 'Premium Floral Stage Upgrade', price: 5000, desc: 'Exotic orchids & carnations with custom mood lighting' },
-    { id: 'addon_2', name: 'Fairy Lighting & Chandelier Set', price: 3000, desc: 'Warm ambient LED illuminations and ceiling drapes' },
-    { id: 'addon_3', name: 'Gourmet Dessert & Mocktail Counter', price: 4500, desc: 'Live signature mocktails & artisanal sweets station' }
-  ];
+  // Available Add-ons loaded dynamically from vendor profile / CMS catalog
+  const availableAddons = useMemo(() => {
+    if (vendor.addons && Array.isArray(vendor.addons) && vendor.addons.length > 0) {
+      return vendor.addons
+        .filter(a => a.status !== 'INACTIVE')
+        .map(a => ({
+          id: a.id,
+          name: a.name,
+          price: Number(a.price) || 0,
+          desc: a.description || 'Optional enhancement with full execution support'
+        }));
+    }
+    return [
+      { id: 'addon_1', name: 'Premium Floral Stage Upgrade', price: 5000, desc: 'Exotic orchids & carnations with custom mood lighting' },
+      { id: 'addon_2', name: 'Fairy Lighting & Chandelier Set', price: 3000, desc: 'Warm ambient LED illuminations and ceiling drapes' },
+      { id: 'addon_3', name: 'Gourmet Dessert & Mocktail Counter', price: 4500, desc: 'Live signature mocktails & artisanal sweets station' }
+    ];
+  }, [vendor.addons]);
 
   const toggleAddon = (addon: { id: string; name: string; price: number }) => {
     if (selectedAddons.some(a => a.id === addon.id)) {
@@ -741,6 +753,12 @@ export function AirbnbVendorDetailView({
                   return;
                 }
                 selectedServices.forEach(s => onAddServiceToBundle(s));
+                selectedAddons.forEach(a => onAddServiceToBundle({
+                  name: `[Add-on] ${a.name}`,
+                  price: a.price,
+                  description: a.desc || 'Selected add-on service',
+                  unit: 'addon'
+                }));
                 onProceedToCheckout();
               }}
               disabled={!hasSelectedItems || availabilityState === 'unavailable' || rangeConflicts.length > 0}
@@ -776,6 +794,7 @@ export function AirbnbVendorDetailView({
         vendorName={vendor.name}
         category={vendor.category}
         features={vendor.features}
+        inclusions={vendor.inclusions}
       />
     </div>
   );
