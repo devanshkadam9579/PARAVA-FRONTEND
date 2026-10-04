@@ -24,6 +24,33 @@ interface VendorCardProps {
   rankIndex?: number;
 }
 
+const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  catering: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+  food: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+  decorator: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800',
+  decorators: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800',
+  mandap: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800',
+  dj: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=800',
+  'dj musics': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=800',
+  music: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=800',
+  photographer: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800',
+  photography: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800',
+  makeup: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=800',
+  pandit: 'https://images.unsplash.com/photo-1609137144822-49195b6c23ef?auto=format&fit=crop&q=80&w=800',
+  venue: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800',
+  hall: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800',
+  planner: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800',
+  default: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800'
+};
+
+const getCategoryFallbackImage = (category?: string) => {
+  const cat = (category || '').toLowerCase().trim();
+  for (const [key, url] of Object.entries(CATEGORY_FALLBACK_IMAGES)) {
+    if (cat.includes(key)) return url;
+  }
+  return CATEGORY_FALLBACK_IMAGES.default;
+};
+
 const VendorCard = memo(function VendorCard({
   vendor,
   onSelect,
@@ -34,13 +61,23 @@ const VendorCard = memo(function VendorCard({
   rankIndex
 }: VendorCardProps): any {
   const isHorizontal = layout === 'horizontal';
-  const images = (vendor.images && vendor.images.length > 0) 
-    ? vendor.images 
-    : ['https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=600'];
+  const fallbackImg = getCategoryFallbackImage(vendor.category);
+
+  // Filter out any broken, empty, or blocked URLs
+  const validImages = (vendor.images || []).filter(
+    (u) => u && typeof u === 'string' && u.trim().length > 0 && !u.includes('brave.com') && !u.includes('jdmagicbox.com')
+  );
+
+  const images = validImages.length > 0 ? validImages : [fallbackImg];
 
   const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [currentImgSrc, setCurrentImgSrc] = useState(images[0] || fallbackImg);
   const [isHovered, setIsHovered] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+
+  useEffect(() => {
+    setCurrentImgSrc(images[activeImgIdx] || fallbackImg);
+  }, [activeImgIdx, images, fallbackImg]);
 
   // Cycle image ONLY when hovered to prevent background CPU/timer lag
   useEffect(() => {
@@ -115,13 +152,15 @@ const VendorCard = memo(function VendorCard({
             </div>
           ) : (
             <img
-              src={images[activeImgIdx]}
+              src={currentImgSrc}
               alt={vendor.name}
               className="w-full h-full object-cover transition-all duration-500 ease-in-out group-hover:scale-105"
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=600';
+              onError={() => {
+                if (currentImgSrc !== fallbackImg) {
+                  setCurrentImgSrc(fallbackImg);
+                }
               }}
             />
           )}
