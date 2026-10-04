@@ -286,9 +286,7 @@ export default function AuthModal({
           {/* Header */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 font-black text-lg">
-                P
-              </div>
+              <img src="/parva-logo.png" alt="Parva" className="h-8 sm:h-9 w-auto object-contain" />
               <h2 id="auth-modal-title" className="font-black text-gray-900 text-xl sm:text-2xl tracking-tight">
                 {contextTitle || (
                   tab === 'signin' 

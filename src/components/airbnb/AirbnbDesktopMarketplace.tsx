@@ -354,25 +354,46 @@ export function AirbnbDesktopMarketplace({
   // 3. Bookings Tab View
   if (activeTab === 'bookings') {
     return (
-      <div className="min-h-screen bg-white text-gray-900 font-sans">
+      <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col justify-between">
         {renderNavbar()}
-        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8">
-          <MyBookingsView
-            bookings={bookings}
-            onOpenChatWithVendor={(vendorId, bookingId) => {
-              setSelectedChatVendorId(vendorId);
-              setSelectedChatBookingId(bookingId);
-              if (onOpenChatWithVendor) {
-                onOpenChatWithVendor(vendorId, bookingId);
-              } else {
-                onNavigateTab('chat');
-              }
-            }}
-            onDownloadVoucher={onDownloadVoucher}
-            onCancelBooking={onCancelBooking}
-            onSubmitReview={onSubmitReview}
-            onExploreServices={() => onNavigateTab('home')}
-          />
+        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 2xl:px-12 py-8 flex-1">
+          {!currentUser ? (
+            <div className="max-w-xl mx-auto py-16 text-center space-y-4 bg-gray-50 rounded-3xl border border-gray-200 p-8 my-8 shadow-xs">
+              <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-600">
+                <Calendar size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Sign in to view your bookings</h2>
+              <p className="text-gray-500 max-w-md mx-auto text-sm">
+                Sign in with your Parva account to access your reserved celebration dates, invoices, and active vendor bookings.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin('signin')}
+                  className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-brand-primary text-white font-bold text-sm hover:opacity-95 transition shadow-sm cursor-pointer active:scale-95"
+                >
+                  Sign In Now
+                </button>
+              </div>
+            </div>
+          ) : (
+            <MyBookingsView
+              bookings={bookings}
+              onOpenChatWithVendor={(vendorId, bookingId) => {
+                setSelectedChatVendorId(vendorId);
+                setSelectedChatBookingId(bookingId);
+                if (onOpenChatWithVendor) {
+                  onOpenChatWithVendor(vendorId, bookingId);
+                } else {
+                  onNavigateTab('chat');
+                }
+              }}
+              onDownloadVoucher={onDownloadVoucher}
+              onCancelBooking={onCancelBooking}
+              onSubmitReview={onSubmitReview}
+              onExploreServices={() => onNavigateTab('home')}
+            />
+          )}
         </div>
         <FooterSection 
           onNavigateTab={(tab) => {

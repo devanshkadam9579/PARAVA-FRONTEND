@@ -1518,6 +1518,11 @@ export default function VendorDetailSheet({
                         type="button"
                         disabled={submittingReview}
                         onClick={async () => {
+                          if (!currentUser) {
+                            if (onShowNotification) onShowNotification('🔒 Please sign in to share your review.');
+                            onTriggerLogin(() => {});
+                            return;
+                          }
                           if (!userCommentInput.trim()) {
                             if (onShowNotification) onShowNotification('⚠️ Please enter review comment.');
                             return;
@@ -1545,35 +1550,48 @@ export default function VendorDetailSheet({
                       </button>
                     </div>
 
-                    {vendor.reviews.map((rev) => (
-                      <div key={rev.id} className="bg-white p-4 rounded-2xl border border-brand-border space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-2">
-                            <img loading="lazy"
-                              src={rev.userAvatar}
-                              alt={rev.userName}
-                              className="w-8 h-8 rounded-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                            <div>
-                              <h5 className="font-semibold text-brand-text text-xs">{rev.userName}</h5>
-                              <span className="text-[9px] text-brand-text-secondary">{rev.date}</span>
+                    {vendor.reviews && vendor.reviews.length > 0 ? (
+                      vendor.reviews.map((rev) => (
+                        <div key={rev.id} className="bg-white p-4 rounded-2xl border border-brand-border space-y-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              {rev.userAvatar ? (
+                                <img loading="lazy"
+                                  src={rev.userAvatar}
+                                  alt={rev.userName}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 font-bold text-xs flex items-center justify-center">
+                                  {rev.userName ? rev.userName.slice(0, 2).toUpperCase() : 'CU'}
+                                </div>
+                              )}
+                              <div>
+                                <h5 className="font-semibold text-brand-text text-xs">{rev.userName}</h5>
+                                <span className="text-[9px] text-brand-text-secondary">{rev.date}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-0.5 bg-brand-primary-light px-1.5 py-0.5 rounded text-[10px] font-bold text-brand-primary-dark">
+                              <span>{rev.rating}</span>
+                              <Star size={9} className="fill-brand-primary-dark" />
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 bg-brand-primary-light px-1.5 py-0.5 rounded text-[10px] font-bold text-brand-primary-dark">
-                            <span>{rev.rating}</span>
-                            <Star size={9} className="fill-brand-primary-dark" />
+                          <p className="text-xs text-brand-text-secondary leading-relaxed pl-1">
+                            "{rev.comment}"
+                          </p>
+                          <div className="flex justify-end gap-1.5 items-center text-[10px] text-brand-text-secondary pt-1">
+                            <ThumbsUp size={11} className="text-gray-400 cursor-pointer hover:text-brand-primary" />
+                            <span>Helpful</span>
                           </div>
                         </div>
-                        <p className="text-xs text-brand-text-secondary leading-relaxed pl-1">
-                          "{rev.comment}"
-                        </p>
-                        <div className="flex justify-end gap-1.5 items-center text-[10px] text-brand-text-secondary pt-1">
-                          <ThumbsUp size={11} className="text-gray-400 cursor-pointer hover:text-brand-primary" />
-                          <span>Helpful</span>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 bg-white rounded-2xl border border-dashed border-gray-200 text-center space-y-1.5">
+                        <p className="text-xs font-bold text-brand-text">No reviews yet</p>
+                        <p className="text-[11px] text-brand-text-secondary">Be the first to review this specialist after booking!</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
 

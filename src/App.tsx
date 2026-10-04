@@ -1198,6 +1198,7 @@ export default function App() {
   const [authContextTitle, setAuthContextTitle] = useState<string | undefined>(undefined);
   const [authContextSubtitle, setAuthContextSubtitle] = useState<string | undefined>(undefined);
   const [pendingBookingDetails, setPendingBookingDetails] = useState<any>(null);
+  const [pendingAuthAction, setPendingAuthAction] = useState<((user: CustomerProfileData) => void) | null>(null);
   const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
   const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
   const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
@@ -2346,7 +2347,34 @@ export default function App() {
     }
   };
 
+  // Centralized Single Customer Authentication Gate
+  const requireCustomerAuth = (
+    onSuccessCallback: (user: CustomerProfileData) => void,
+    title?: string,
+    subtitle?: string
+  ): boolean => {
+    if (currentUser) {
+      onSuccessCallback(currentUser);
+      return true;
+    }
+    setPendingAuthAction(() => onSuccessCallback);
+    setAuthModalTab('signin');
+    setAuthContextTitle(title || 'Sign in required');
+    setAuthContextSubtitle(subtitle || 'Please sign in or create an account to proceed with your reservation.');
+    setIsAuthModalOpen(true);
+    return false;
+  };
+
   const handleBookPlannerPackage = () => {
+    if (!currentUser) {
+      requireCustomerAuth(
+        () => handleBookPlannerPackage(),
+        'Sign in to book celebration plan',
+        'Your selected vendors and dates are preserved. Sign in or create an account to finalize your booking.'
+      );
+      return;
+    }
+
     const activeSlots: Vendor[] = [];
     if (plannerHall) activeSlots.push(plannerHall);
     if (plannerCatering) activeSlots.push(plannerCatering);
@@ -2613,6 +2641,15 @@ export default function App() {
   };
 
   const handleBookDirectPlan = (planName: string, totalCost: number, vendors: Vendor[]) => {
+    if (!currentUser) {
+      requireCustomerAuth(
+        () => handleBookDirectPlan(planName, totalCost, vendors),
+        'Sign in to book package',
+        'Your celebration plan is saved. Sign in or create an account to finalize your booking.'
+      );
+      return;
+    }
+
     // Check if any vendor is unavailable
     const unavailable = vendors.filter(v => !isVendorAvailable(v.id, planningDate, undefined, vendors));
     if (unavailable.length > 0) {
@@ -2679,6 +2716,15 @@ export default function App() {
   const handleConfirmBooking = (eventType: string) => {
     if (bundledItems.length === 0) return;
 
+    if (!currentUser) {
+      requireCustomerAuth(
+        () => handleConfirmBooking(eventType),
+        'Sign in to confirm booking',
+        'Your services are held. Sign in or register to complete your reservation.'
+      );
+      return;
+    }
+
     // Calculate bundle original & discount
     const originalTotal = bundledItems.reduce((acc, item) => acc + item.service.price, 0);
     let discountPercentage = 0;
@@ -2713,6 +2759,26 @@ export default function App() {
   // Centralized payment and booking reservation execution
   const executeBookingPayment = async (bookingDetails: any, activeUser?: any) => {
     const userToUse = activeUser || currentUser;
+
+    if (!userToUse) {
+      setPendingBookingDetails(bookingDetails);
+      try {
+        sessionStorage.setItem('parva_pending_booking_draft', JSON.stringify({
+          bookingDetails,
+          bundledItems,
+          planningStartDate,
+          planningEventType,
+          planningTimeSlot,
+          customDeliveryTime
+        }));
+      } catch (e) {}
+      setAuthModalTab('signin');
+      setAuthContextTitle('Sign in to complete booking');
+      setAuthContextSubtitle('Your selected event services and dates are saved. Sign in or create an account to finalize your reservation.');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
     const bookingFee = Math.round(servicesTotal * 0.05);
     const gst = Math.round(bookingFee * 0.18);
@@ -2776,16 +2842,68 @@ export default function App() {
     } catch (e) {}
     setIsAuthModalOpen(false);
 
-    if (pendingBookingDetails) {
-      const details = pendingBookingDetails;
+    // 1. If an action callback was pending, run it
+    if (pendingAuthAction) {
+      const action = pendingAuthAction;
+      setPendingAuthAction(null);
+      action(loggedUser);
+      return;
+    }
+
+    // 2. If a booking was pending in state or sessionStorage, resume it
+    let detailsToResume = pendingBookingDetails;
+    if (!detailsToResume) {
+      try {
+        const savedDraft = sessionStorage.getItem('parva_pending_booking_draft');
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          detailsToResume = parsed.bookingDetails;
+          sessionStorage.removeItem('parva_pending_booking_draft');
+        }
+      } catch (e) {}
+    }
+
+    if (detailsToResume) {
       setPendingBookingDetails(null);
       showNotification(`Welcome, ${loggedUser.name || 'valued customer'}! Resuming your booking reservation...`);
-      await executeBookingPayment(details, loggedUser);
+      await executeBookingPayment(detailsToResume, loggedUser);
     }
+  };
+
+  // Centralized Logout Handler
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+    } catch (e) {
+      console.error('Sign out error:', e);
+    }
+    setCurrentUser(null);
+    setIsAdmin(false);
+    setIsMasterAdmin(false);
+    setNotifications([]);
+    setActiveChatVendorId(null);
+    setActiveChatBookingId(null);
+    setPendingBookingDetails(null);
+    setPendingAuthAction(null);
+    try {
+      localStorage.removeItem('parva_user');
+      localStorage.removeItem('parva_token');
+      sessionStorage.removeItem('parva_checkout_draft');
+      sessionStorage.removeItem('parva_pending_booking_draft');
+    } catch (e) {}
+    showNotification('Logged out successfully.');
   };
 
   // Chat/Messaging Navigation Handler
   const handleOpenChatWithVendor = (vendorId?: string, bookingId?: string) => {
+    if (!currentUser) {
+      requireCustomerAuth(
+        () => handleOpenChatWithVendor(vendorId, bookingId),
+        'Sign in to message vendor',
+        'Sign in to chat directly with vendors and coordinators.'
+      );
+      return;
+    }
     if (vendorId) setActiveChatVendorId(vendorId);
     if (bookingId) setActiveChatBookingId(bookingId);
     setActiveTab('messages');
@@ -3087,6 +3205,23 @@ export default function App() {
     }
   };
 
+  // Canonical category normalizer for safe, exact taxonomy matching
+  const normalizeCategory = (cat: string): string => {
+    if (!cat) return '';
+    const c = cat.toLowerCase().trim();
+    if (c.includes('cater')) return 'catering';
+    if (c.includes('decor')) return 'decoration';
+    if (c.includes('photo') || c.includes('video')) return 'photography';
+    if (c.includes('dj') || c.includes('sound') || c.includes('music')) return 'dj';
+    if (c.includes('venue') || c.includes('hall') || c.includes('lawn') || c.includes('banquet') || c.includes('resort')) return 'venue';
+    if (c.includes('makeup') || c.includes('beauty') || c.includes('bridal makeup')) return 'makeup';
+    if (c.includes('pandit') || c.includes('priest')) return 'pandit';
+    if (c.includes('cake') || c.includes('bakery')) return 'cake';
+    if (c.includes('planner') || c.includes('organizer') || c.includes('event planner')) return 'planner';
+    if (c.includes('mehendi') || c.includes('mehndi')) return 'mehendi';
+    return c;
+  };
+
   // Filter & Search computation (Memoized for high FPS performance)
   const filteredVendors = useMemo(() => {
     return vendors.filter((vendor) => {
@@ -3108,12 +3243,14 @@ export default function App() {
       ? (vendor as any).categories.map((c: string) => c.toLowerCase().trim())
       : [];
 
+    const normSelectedCat = normalizeCategory(selectedCat);
+    const normVendorCat = normalizeCategory(vendorCat);
+
     const matchesCategory =
       selectedCat === 'all' ||
       vendorCat === selectedCat ||
-      vendorCat.startsWith(selectedCat.slice(0, 4)) ||
-      selectedCat.startsWith(vendorCat.slice(0, 4)) ||
-      vendorCats.some((c: string) => c === selectedCat || c.startsWith(selectedCat.slice(0, 4)) || selectedCat.startsWith(c.slice(0, 4)));
+      (normSelectedCat !== '' && normSelectedCat === normVendorCat) ||
+      vendorCats.some((c: string) => c === selectedCat || (normSelectedCat !== '' && normalizeCategory(c) === normSelectedCat));
 
     // 3. Search query match
     const sq = debouncedSearchQuery.toLowerCase().trim();
@@ -3499,20 +3636,19 @@ export default function App() {
             setAuthContextSubtitle(undefined);
             setIsAuthModalOpen(true);
           }}
-          onLogout={async () => {
-            await signOutUser();
-            setCurrentUser(null);
-            setIsAdmin(false);
-            setIsMasterAdmin(false);
-            setNotifications([]);
-            showNotification('Logged out successfully.');
-          }}
+          onLogout={handleLogout}
           onNavigateTab={(tab) => handleNavigateToTab(tab as any)}
           activeTab={activeTab}
           cartCount={bundledItems.length}
           onOpenCart={() => handleNavigateToTab('cart')}
           onOpenSupport={() => setIsSupportModalOpen(true)}
-          onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+          onOpenNotifications={() => {
+            if (!currentUser) {
+              requireCustomerAuth(() => setIsNotificationCenterOpen(true), 'Sign in for notifications', 'View booking confirmations and live updates.');
+              return;
+            }
+            setIsNotificationCenterOpen(true);
+          }}
           unreadCount={unreadNotificationsCount}
           wishlist={wishlist || []}
           onToggleWishlist={handleToggleWishlist}
@@ -3562,33 +3698,39 @@ export default function App() {
           </Helmet>
           
           {/* 1. TOP APP BAR */}
-          <header className="bg-white px-4 sm:px-6 py-3.5 border-b border-brand-border sticky top-0 z-30 flex items-center justify-between shadow-xs" id="top-app-bar">
-            {/* Greetings */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary font-black text-xs shadow-inner">
-                {getUserInitials(currentUser)}
-              </div>
-              <div>
-                <h1 className="text-xs text-brand-text-secondary font-medium flex items-center gap-1">
-                  <span>Namaste, {getFirstName(currentUser)}</span>
-                  <span>👋</span>
-                </h1>
-                {/* Location selector trigger */}
-                <button
-                  onClick={() => setIsLocationOpen(true)}
-                  className="flex items-center gap-1 text-brand-text font-bold text-xs hover:text-brand-primary transition mt-0.5"
-                  id="top-location-trigger"
-                >
-                  <MapPin size={13} className="text-brand-primary" />
-                  <span>{currentCity}</span>
-                  <ChevronRight size={13} className="text-brand-primary rotate-90" />
-                </button>
-              </div>
+          <header className="bg-white px-3 sm:px-5 py-2.5 sm:py-3 border-b border-brand-border sticky top-0 z-30 flex items-center justify-between shadow-xs h-14" id="top-app-bar">
+            {/* Left: Official Parva Logo & City Selector */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button 
+                type="button"
+                onClick={() => handleNavigateToTab('home')}
+                className="shrink-0 flex items-center focus:outline-none cursor-pointer"
+                aria-label="Parva Home"
+              >
+                <img 
+                  src="/parva-logo.png" 
+                  alt="Parva" 
+                  className="h-7 sm:h-8 w-auto object-contain" 
+                />
+              </button>
+
+              {/* Location selector trigger */}
+              <button
+                type="button"
+                onClick={() => setIsLocationOpen(true)}
+                className="flex items-center gap-1 bg-gray-50 hover:bg-gray-100 border border-gray-200/80 px-2 py-1 rounded-full text-[11px] font-bold text-gray-800 transition shrink-0 cursor-pointer"
+                id="top-location-trigger"
+                title="Select City"
+              >
+                <MapPin size={11} className="text-rose-600 shrink-0" />
+                <span className="max-w-[70px] sm:max-w-[90px] truncate">{currentCity}</span>
+                <ChevronDown size={11} className="text-gray-400 shrink-0" />
+              </button>
             </div>
 
-            {/* Action icons right side */}
-            <div className="flex items-center gap-1.5">
-              {!isUserLoggedIn && (
+            {/* Right side Action icons */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {!isUserLoggedIn ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -3597,38 +3739,53 @@ export default function App() {
                     setAuthContextSubtitle(undefined);
                     setIsAuthModalOpen(true);
                   }}
-                  className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full transition shadow-xs active:scale-95 mr-1 cursor-pointer"
+                  className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold text-xs px-3 py-1.5 rounded-full transition shadow-xs active:scale-95 cursor-pointer"
                 >
                   Log In
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleNavigateToTab('profile')}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-primary-light flex items-center justify-center text-brand-primary font-black text-xs shadow-inner cursor-pointer"
+                  title="Profile"
+                >
+                  {getUserInitials(currentUser)}
                 </button>
               )}
 
               {/* Help & Support */}
               <button
+                type="button"
                 onClick={() => setIsSupportModalOpen(true)}
-                className="p-2 hover:bg-gray-100 rounded-full text-brand-text transition relative"
+                className="p-1.5 hover:bg-gray-100 rounded-full text-brand-text transition relative cursor-pointer"
                 id="support-help-button"
                 aria-label="Help and Support"
                 title="Help and Support"
               >
-                <Headphones size={18} />
+                <Headphones size={17} />
               </button>
 
               {/* Notifications */}
               <button
+                type="button"
                 onClick={() => {
+                  if (!currentUser) {
+                    requireCustomerAuth(() => setIsNotificationCenterOpen(true), 'Sign in for notifications', 'View booking confirmations and live updates.');
+                    return;
+                  }
                   setIsNotificationCenterOpen(true);
                   if (permissionStatus === 'default') {
                     requestNotificationPermission();
                   }
                 }}
-                className="p-2 hover:bg-gray-100 rounded-full text-brand-text transition relative"
+                className="p-1.5 hover:bg-gray-100 rounded-full text-brand-text transition relative cursor-pointer"
                 id="notification-bell"
-                title="Open Notifications & Pop-up Alerts"
+                title="Open Notifications"
               >
-                <Bell size={18} />
+                <Bell size={17} />
                 {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-brand-primary text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-0.5 bg-brand-primary text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
                     {unreadNotificationsCount}
                   </span>
                 )}
@@ -3636,13 +3793,15 @@ export default function App() {
 
               {/* Cart showing bundle count */}
               <button
+                type="button"
                 onClick={() => {
-                  handleNavigateToTab('bookings');
+                  handleNavigateToTab('cart');
                 }}
-                className="p-2 bg-brand-primary-light text-brand-primary hover:bg-brand-primary hover:text-white rounded-full transition relative shadow-xs"
+                className="p-1.5 bg-brand-primary-light text-brand-primary hover:bg-brand-primary hover:text-white rounded-full transition relative shadow-xs cursor-pointer"
                 id="cart-trigger"
+                title="Cart"
               >
-                <ShoppingCart size={18} />
+                <ShoppingCart size={17} />
                 {bundledItems.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-primary-dark text-white text-[9px] font-extrabold flex items-center justify-center border-2 border-white">
                     {bundledItems.length}
@@ -3671,7 +3830,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 2. DYNAMIC MAIN VIEWPORT */}
-      <main className="flex-1 bg-brand-bg px-4 pt-3 pb-32 overflow-x-hidden">
+      <main className="flex-1 bg-brand-bg px-4 pt-3 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] overflow-x-hidden">
         
         {/* ==================== TAB: HOME ==================== */}
         {activeTab === 'home' && (
@@ -4451,57 +4610,36 @@ export default function App() {
 
                         <button
                           onClick={() => {
-                            let targetUser = currentUser;
-                            if (!targetUser) {
+                            const processCartBooking = (activeUser?: any) => {
+                              const user = activeUser || currentUser;
                               const nameEl = document.getElementById('cart-user-name') as HTMLInputElement;
                               const phoneEl = document.getElementById('cart-user-phone') as HTMLInputElement;
                               const emailEl = document.getElementById('cart-user-email') as HTMLInputElement;
 
-                              if (!nameEl?.value || !phoneEl?.value || !emailEl?.value) {
-                                showNotification('⚠️ Please enter all connection details to unlock direct contact! 📲');
-                                return;
-                              }
-
-                              const newUserObj = {
-                                name: nameEl.value,
-                                phone: phoneEl.value,
-                                email: emailEl.value,
-                                city: currentCity
+                              const bookingDetails = {
+                                clientName: user?.name || user?.displayName || nameEl?.value || 'Valued Customer',
+                                clientPhone: user?.phone || phoneEl?.value || '',
+                                clientEmail: user?.email || emailEl?.value || '',
+                                eventAddress: `${currentCity}, Maharashtra`,
+                                gpsCoords: null,
+                                styleSuggestions: `Mobile Cart Booking for ${planningEventType}`
                               };
-                              setCurrentUser(newUserObj);
-                              localStorage.setItem('parva_user', JSON.stringify(newUserObj));
-                              targetUser = newUserObj;
-                            }
 
-                            const discountVal = bundledItems.length >= 4 ? Math.round(servicesTotal * 0.22) : bundledItems.length === 3 ? Math.round(servicesTotal * 0.15) : bundledItems.length === 2 ? Math.round(servicesTotal * 0.08) : 0;
-                            const finalVal = servicesTotal - discountVal;
-
-                            const newBooking: Booking = {
-                              id: `b-new-${Date.now()}`,
-                              vendor: bundledItems[0].vendor,
-                              selectedServices: bundledItems.map(item => item.service),
-                              eventDate: planningStartDate,
-                              eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
-                              customTime: customDeliveryTime || '',
-                              eventType: planningEventType,
-                              status: 'Pending',
-                              totalPrice: servicesTotal,
-                              bundleDiscount: discountVal,
-                              finalPrice: finalVal,
-                              paymentStatus: 'Unpaid',
-                              bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`
+                              executeBookingPayment(bookingDetails, user);
                             };
 
+                            if (!currentUser) {
+                              requireCustomerAuth(
+                                (loggedUser) => processCartBooking(loggedUser),
+                                'Sign in to confirm booking',
+                                'Sign in or register to lock your date and confirm services with Parva Escrow Guarantee.'
+                              );
+                              return;
+                            }
 
-
-                            handlePayWithRazorpay({
-                              vendorId: newBooking.vendor.id,
-                              type: 'booking',
-                              amount: finalPayableTotal,
-                              bookingData: newBooking
-                            });
+                            processCartBooking(currentUser);
                           }}
-                          className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold px-5 py-3 rounded-xl text-xs shadow-md shadow-brand-primary/10 flex items-center gap-1.5 transition active:scale-95 shrink-0"
+                          className="bg-brand-primary hover:bg-brand-primary-dark text-white font-extrabold px-5 py-3 rounded-xl text-xs shadow-md shadow-brand-primary/10 flex items-center gap-1.5 transition active:scale-95 shrink-0 cursor-pointer"
                         >
                           <span>Pay Booking Fee & Confirm</span>
                           <ArrowRight size={13} />
@@ -4520,23 +4658,46 @@ export default function App() {
                   <h3 className="font-extrabold text-brand-text text-base">Your Active Bookings</h3>
                 </div>
 
-            {userBookings.length === 0 ? (
-              <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
-                <img loading="lazy" 
-                  src="/no-bookings.jpg" 
-                  alt="No active bookings" 
-                  className="w-full h-auto max-w-[280px] mx-auto mb-4 object-contain mix-blend-multiply"
-                />
-                <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
-                <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
-                <button
-                  onClick={() => handleNavigateToTab('explore')}
-                  className="bg-brand-primary text-white px-8 py-3 rounded-xl text-xs font-bold transition shadow-md shadow-brand-primary/15 active:scale-95"
-                >
-                  Explore Vendors
-                </button>
-              </div>
-            ) : (
+                {!currentUser ? (
+                  <div className="bg-white rounded-[24px] border border-brand-border p-8 text-center shadow-sm flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center text-rose-600">
+                      <CalendarDays size={26} />
+                    </div>
+                    <h4 className="font-black text-gray-900 text-base">Sign in to view bookings</h4>
+                    <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+                      Your reserved dates, vouchers and contracts are securely tied to your Parva account.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthModalTab('signin');
+                        setAuthContextTitle('Sign in to view bookings');
+                        setAuthContextSubtitle('Access your confirmed celebrations, vouchers and payments.');
+                        setIsAuthModalOpen(true);
+                      }}
+                      className="bg-brand-primary text-white font-black text-xs px-6 py-3 rounded-xl shadow-md transition active:scale-95 cursor-pointer"
+                    >
+                      Sign In Now
+                    </button>
+                  </div>
+                ) : userBookings.length === 0 ? (
+                  <div className="bg-white rounded-[24px] border border-brand-border p-10 text-center shadow-sm flex flex-col items-center">
+                    <img loading="lazy" 
+                      src="/no-bookings.jpg" 
+                      alt="No active bookings" 
+                      className="w-full h-auto max-w-[280px] mx-auto mb-4 object-contain mix-blend-multiply"
+                    />
+                    <p className="text-sm font-semibold text-brand-text mb-1">No active bookings yet</p>
+                    <p className="text-xs text-brand-text-secondary mb-6 max-w-[240px] mx-auto">Add services to your bundle and book to track them live!</p>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateToTab('explore')}
+                      className="bg-brand-primary text-white px-8 py-3 rounded-xl text-xs font-bold transition shadow-md shadow-brand-primary/15 active:scale-95 cursor-pointer"
+                    >
+                      Explore Vendors
+                    </button>
+                  </div>
+                ) : (
               <div className="space-y-4">
                 {userBookings.map((b) => {
                   const isCompleted = b.status === 'Completed';
@@ -5883,14 +6044,7 @@ export default function App() {
                     <div className="bg-gray-50 border border-gray-200 rounded-[20px] p-4 text-center">
                       <button
                         type="button"
-                        onClick={async () => {
-                          await signOutUser();
-                          setCurrentUser(null);
-                          setIsAdmin(false);
-                          setIsMasterAdmin(false);
-                          setNotifications([]);
-                          showNotification('Logged out successfully.');
-                        }}
+                        onClick={handleLogout}
                         className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline uppercase tracking-wider cursor-pointer"
                       >
                         Log Out of Account
@@ -5906,15 +6060,19 @@ export default function App() {
       </main>
 
       {/* 3. FLOATING BOTTOM NAVIGATION */}
-      <nav className="fixed bottom-4 inset-x-4 max-w-sm mx-auto glass-panel border border-brand-border rounded-[24px] shadow-lg py-2.5 px-4 z-40 flex items-center justify-between" id="bottom-floating-navigation">
+      <nav 
+        className="fixed bottom-3 sm:bottom-4 inset-x-3 sm:inset-x-4 max-w-md mx-auto glass-panel border border-brand-border rounded-[24px] shadow-xl py-2 px-3 z-40 flex items-center justify-around pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]" 
+        id="bottom-floating-navigation"
+      >
         {[
           { id: 'home', label: 'Home', icon: Home, badge: 0 },
+          { id: 'explore', label: 'Explore', icon: Compass, badge: 0 },
           { id: 'bookings', label: 'Bookings', icon: Calendar, badge: 0 },
           { id: 'chat', label: 'Chat', icon: MessageSquare, badge: 0 },
           { id: 'profile', label: 'Profile', icon: User, badge: 0 }
         ].map((item) => {
           const IconComponent = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = activeTab === item.id || (item.id === 'chat' && activeTab === 'messages');
 
           return (
             <button
@@ -5925,7 +6083,7 @@ export default function App() {
                   setActiveChatVendorId(null);
                 }
               }}
-              className="flex flex-col items-center justify-center relative py-1 px-3.5 rounded-xl transition-all duration-300"
+              className="flex flex-col items-center justify-center relative py-1 px-2.5 sm:px-3 rounded-xl transition-all duration-200"
               id={`nav-tab-${item.id}`}
             >
               {/* Highlight Backdrop */}
@@ -5938,12 +6096,12 @@ export default function App() {
               )}
 
               {/* Icon */}
-              <div className={`transition-transform duration-300 ${isActive ? 'scale-110 text-brand-primary' : 'text-brand-text-secondary hover:text-brand-text'}`}>
-                <IconComponent size={20} strokeWidth={isActive ? 3 : 2} />
+              <div className={`transition-transform duration-200 ${isActive ? 'scale-110 text-brand-primary' : 'text-brand-text-secondary hover:text-brand-text'}`}>
+                <IconComponent size={19} strokeWidth={isActive ? 2.5 : 1.8} />
               </div>
 
               {/* Label */}
-              <span className={`text-[9px] mt-1 font-bold transition-colors ${isActive ? 'text-brand-primary font-black' : 'text-brand-text-secondary'}`}>
+              <span className={`text-[10px] mt-0.5 font-bold transition-colors ${isActive ? 'text-brand-primary font-black' : 'text-brand-text-secondary'}`}>
                 {item.label}
               </span>
 
@@ -5951,7 +6109,7 @@ export default function App() {
               {isActive && (
                 <motion.div 
                   layoutId="nav-underline"
-                  className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-brand-primary"
+                  className="absolute -bottom-1 w-1 h-1 rounded-full bg-brand-primary"
                 />
               )}
 
@@ -5974,6 +6132,10 @@ export default function App() {
       <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
+        initialSort={activeSortOption}
+        initialMin={activeFilterMinPrice !== null ? String(activeFilterMinPrice) : ''}
+        initialMax={activeFilterMaxPrice !== null ? String(activeFilterMaxPrice) : ''}
+        initialTypes={activeFilterTypes}
         onApply={(filters) => {
           setActiveSortOption(filters.sort || 'Distance');
           setActiveFilterMinPrice(filters.min ? Number(filters.min) : null);
@@ -6481,6 +6643,7 @@ export default function App() {
         onClose={() => {
           setIsAuthModalOpen(false);
           setPendingBookingDetails(null);
+          setPendingAuthAction(null);
           setAuthContextTitle(undefined);
           setAuthContextSubtitle(undefined);
         }}

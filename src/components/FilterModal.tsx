@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 
 interface FilterModalProps {
@@ -10,13 +10,34 @@ interface FilterModalProps {
     max: string;
     types: string[];
   }) => void;
+  initialSort?: string;
+  initialMin?: string;
+  initialMax?: string;
+  initialTypes?: string[];
 }
 
-export default function FilterModal({ isOpen, onClose, onApply }: FilterModalProps) {
-  const [selectedSort, setSelectedSort] = useState("Distance");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+export default function FilterModal({ 
+  isOpen, 
+  onClose, 
+  onApply,
+  initialSort,
+  initialMin,
+  initialMax,
+  initialTypes
+}: FilterModalProps) {
+  const [selectedSort, setSelectedSort] = useState(initialSort || "Distance");
+  const [minPrice, setMinPrice] = useState(initialMin || "");
+  const [maxPrice, setMaxPrice] = useState(initialMax || "");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(initialTypes || []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedSort(initialSort || "Distance");
+      setMinPrice(initialMin || "");
+      setMaxPrice(initialMax || "");
+      setSelectedTypes(initialTypes || []);
+    }
+  }, [isOpen, initialSort, initialMin, initialMax, initialTypes]);
 
   if (!isOpen) return null;
 

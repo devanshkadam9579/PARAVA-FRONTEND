@@ -167,7 +167,9 @@ export function AirbnbVendorDetailView({
                 <Star size={14} className="fill-amber-400 text-amber-400" />
                 <span className="font-extrabold text-gray-900">{(vendor.rating || 4.9).toFixed(1)}</span>
                 <span className="text-gray-400">·</span>
-                <span className="underline font-bold text-gray-900">142 reviews</span>
+                <span className="underline font-bold text-gray-900">
+                  {(vendor.reviews?.length || vendor.reviewCount || 0)} {((vendor.reviews?.length || vendor.reviewCount || 0) === 1) ? 'review' : 'reviews'}
+                </span>
               </div>
               {vendor.verified !== false && (
                 <>
@@ -514,41 +516,53 @@ export function AirbnbVendorDetailView({
             <div className="flex items-center gap-3">
               <Star size={24} className="fill-amber-400 text-amber-400" />
               <h3 className="text-2xl font-black text-gray-900 font-display">
-                {(vendor.rating || 4.9).toFixed(1)} · 142 reviews
+                {(vendor.rating || 4.9).toFixed(1)} · {(vendor.reviews?.length || vendor.reviewCount || 0)} {((vendor.reviews?.length || vendor.reviewCount || 0) === 1) ? 'review' : 'reviews'}
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-              <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 font-black text-xs flex items-center justify-center">
-                    AK
+            {vendor.reviews && vendor.reviews.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                {vendor.reviews.map((rev) => (
+                  <div key={rev.id} className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {rev.userAvatar ? (
+                        <img
+                          src={rev.userAvatar}
+                          alt={rev.userName}
+                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 font-black text-xs flex items-center justify-center">
+                          {rev.userName ? rev.userName.slice(0, 2).toUpperCase() : 'CU'}
+                        </div>
+                      )}
+                      <div>
+                        <h5 className="font-extrabold text-xs text-gray-900">{rev.userName || 'Customer'}</h5>
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                          <span>{rev.date || 'Verified Customer'}</span>
+                          <span>·</span>
+                          <div className="flex items-center text-amber-500 font-bold">
+                            <Star size={11} className="fill-amber-400 text-amber-400 inline mr-0.5" />
+                            <span>{rev.rating || 5}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed font-normal">
+                      "{rev.comment}"
+                    </p>
                   </div>
-                  <div>
-                    <h5 className="font-extrabold text-xs text-gray-900">Ananya Kulkarni</h5>
-                    <p className="text-[11px] text-gray-400">Pune · 3 weeks ago</p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-700 leading-relaxed font-normal">
-                  "Absolutely stellar service! Setup was completed 2 hours ahead of time, and all guests were delighted."
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 bg-gray-50 rounded-3xl border border-dashed border-gray-200 text-center space-y-2">
+                <p className="text-sm font-extrabold text-gray-800">No reviews yet</p>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  Be the first to experience exceptional service with {vendor.name} and share your review!
                 </p>
               </div>
-
-              <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 font-black text-xs flex items-center justify-center">
-                    RS
-                  </div>
-                  <div>
-                    <h5 className="font-extrabold text-xs text-gray-900">Rohan Sharma</h5>
-                    <p className="text-[11px] text-gray-400">Kolhapur • 1 month ago</p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-700 leading-relaxed font-normal">
-                  "Seamless coordination and transparent pricing. Paying the 5% advance on Parva gave us complete peace of mind."
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* 8. Where you'll be - Map Section */}
