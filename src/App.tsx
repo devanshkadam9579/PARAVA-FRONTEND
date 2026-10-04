@@ -1067,6 +1067,57 @@ export default function App() {
         }, (err) => {
           console.debug('[Notifications Scoped Listener Info]:', err?.message);
         });
+        // Also subscribe to platform-wide Admin Broadcast Notifications
+        const bQuery = query(collection(db, 'broadcast_notifications'), limit(25));
+        const unsubBroadcast = onSnapshot(bQuery, (snapshot) => {
+          const broadcasts: (AppNotification & { _millis?: number })[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            let timeStr = 'Just now';
+            let millis = 0;
+            if (data.createdAt?.toDate) {
+              const d = data.createdAt.toDate();
+              timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              millis = d.getTime();
+            } else if (data.createdAt) {
+              try {
+                const d = new Date(data.createdAt);
+                timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                millis = d.getTime();
+              } catch (e) {}
+            }
+
+            broadcasts.push({
+              id: docSnap.id,
+              type: data.type === 'slot' ? 'slot' : data.type === 'offer' ? 'offer' : 'system',
+              title: data.title || 'Platform Announcement',
+              message: data.message || '',
+              timestamp: timeStr,
+              read: false,
+              actionText: data.actionText || 'Explore Now',
+              _millis: millis
+            });
+          });
+
+          if (broadcasts.length > 0) {
+            setNotifications(prev => {
+              const existingIds = new Set(prev.map(p => p.id));
+              const newBroadcasts = broadcasts.filter(b => !existingIds.has(b.id));
+              if (newBroadcasts.length === 0) return prev;
+              const combined = [...newBroadcasts, ...prev];
+              combined.sort((a, b) => ((b as any)._millis || 0) - ((a as any)._millis || 0));
+              return combined;
+            });
+          }
+        }, (bErr) => {
+          console.debug('[Broadcasts Listener Info]:', bErr?.message);
+        });
+
+        const origUnsub = unsubscribe;
+        unsubscribe = () => {
+          if (origUnsub) origUnsub();
+          unsubBroadcast();
+        };
       });
     } catch (e) {
       console.warn('Notifications listener init error:', e);
