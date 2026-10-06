@@ -69,13 +69,13 @@ export function AirbnbSearchCapsule({
         {/* 1. Location / Where */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === 'location' ? 'none' : 'location')}
-          className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'location' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
+          className={`w-full md:w-1/3 px-5 py-2.5 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'location' ? 'bg-white border-[#EC003F] shadow-[0_4px_14px_rgba(236,0,63,0.18)] ring-4 ring-[#FFF0F3]' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm bg-transparent'}`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-            <MapPin size={14} className="text-rose-600" />
-            <span>Where</span>
+          <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <MapPin size={14} className="text-[#EC003F]" />
+            <span>WHERE</span>
           </div>
-          <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
+          <div className="text-xs sm:text-sm font-black text-gray-900 truncate mt-0.5">
             {currentCity ? `${currentCity}, MH` : 'Search city or area'}
           </div>
         </div>
@@ -83,35 +83,35 @@ export function AirbnbSearchCapsule({
         {/* 2. When / Date */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === 'date' ? 'none' : 'date')}
-          className={`w-full md:w-1/3 px-6 py-3 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'date' ? 'bg-white border-rose-500 shadow-[0_4px_12px_rgba(225,29,72,0.15)] ring-4 ring-rose-50' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md bg-transparent'}`}
+          className={`w-full md:w-1/3 px-5 py-2.5 rounded-full transition-all duration-200 cursor-pointer select-none text-left border-2 ${activeDropdown === 'date' ? 'bg-white border-[#EC003F] shadow-[0_4px_14px_rgba(236,0,63,0.18)] ring-4 ring-[#FFF0F3]' : 'border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm bg-transparent'}`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-            <CalendarIcon size={14} className="text-rose-600" />
-            <span>When</span>
+          <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <CalendarIcon size={14} className="text-[#EC003F]" />
+            <span>WHEN</span>
           </div>
-          <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
-            {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Add event date'}
+          <div className="text-xs sm:text-sm font-black text-gray-900 truncate mt-0.5">
+            {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
           </div>
         </div>
 
         {/* 3. Who / Guests & Search Button */}
         <div 
           onClick={() => setActiveDropdown(activeDropdown === 'guests' ? 'none' : 'guests')}
-          className={`w-full md:w-1/3 px-6 py-2.5 rounded-full transition cursor-pointer select-none text-left flex items-center justify-between ${
-            activeDropdown === 'guests' ? 'bg-rose-50/60 ring-2 ring-rose-500/20' : 'hover:bg-gray-50'
+          className={`w-full md:w-1/3 px-5 py-2 rounded-full transition cursor-pointer select-none text-left flex items-center justify-between ${
+            activeDropdown === 'guests' ? 'bg-[#FFF0F3] ring-2 ring-[#EC003F]/20' : 'hover:bg-gray-50'
           }`}
         >
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-              <Users size={14} className="text-rose-600" />
-              <span>Who</span>
+            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+              <Users size={14} className="text-[#EC003F]" />
+              <span>WHO</span>
             </div>
-            <div className="text-sm font-extrabold text-gray-900 truncate mt-0.5">
-              {guestCount || 100} Guests
+            <div className="text-xs sm:text-sm font-black text-gray-900 truncate mt-0.5">
+              {guestCount ? `${guestCount} Guests` : 'Select Guests'}
             </div>
           </div>
 
-          {/* Search CTA Button */}
+          {/* Search CTA Button matching Explore pill */}
           <button
             type="button"
             onClick={(e) => {
@@ -119,11 +119,12 @@ export function AirbnbSearchCapsule({
               setActiveDropdown('none');
               onSearch();
             }}
-            className="w-12 h-12 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="bg-[#EC003F] hover:bg-[#D40038] text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-full flex items-center justify-center gap-2 font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer shrink-0 ml-2"
             aria-label="Search celebration vendors"
-            title="Search"
+            title="Explore"
           >
-            <Search size={18} className="stroke-[2.5]" />
+            <Search size={15} className="stroke-[2.5]" />
+            <span>Explore</span>
           </button>
         </div>
       </div>

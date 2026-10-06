@@ -42,6 +42,7 @@ export function AirbnbCategoryRail({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const allCategories: CategoryItem[] = [
     { id: 'all', name: 'All Services' },
@@ -126,19 +127,20 @@ export function AirbnbCategoryRail({
                 {/* Category Icon / Admin Image */}
                 <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden flex items-center justify-center transition-all duration-200 border-2 ${
                   isSelected 
-                    ? 'border-rose-600 shadow-md bg-rose-50/70 ring-2 ring-rose-500/20' 
+                    ? 'border-[#EC003F] shadow-md bg-[#FFF0F3] ring-2 ring-[#EC003F]/20' 
                     : 'border-gray-200 group-hover:border-gray-400 shadow-xs hover:shadow-sm bg-white'
                 }`}>
-                  {cat.image ? (
+                  {cat.image && !failedImages[cat.id] ? (
                     <img
                       src={cat.image}
                       alt={cat.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      onError={() => setFailedImages(prev => ({ ...prev, [cat.id]: true }))}
                     />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center ${
-                      isSelected ? 'bg-rose-50 text-rose-600' : 'bg-gray-50 text-gray-600 group-hover:bg-gray-100 group-hover:text-gray-900'
+                      isSelected ? 'bg-[#FFF0F3] text-[#EC003F]' : 'bg-gray-50 text-gray-600 group-hover:bg-gray-100 group-hover:text-gray-900'
                     }`}>
                       <IconComponent size={26} className="stroke-[2]" />
                     </div>
@@ -147,16 +149,16 @@ export function AirbnbCategoryRail({
 
                 {/* Category Name Label */}
                 <span className={`text-xs sm:text-sm whitespace-nowrap tracking-tight ${
-                  isSelected ? 'text-gray-900 font-black' : 'text-gray-600 font-semibold group-hover:text-gray-900'
+                  isSelected ? 'text-[#EC003F] font-black' : 'text-gray-600 font-semibold group-hover:text-gray-900'
                 }`}>
                   {cat.name}
                 </span>
 
                 {/* Active Indicator Underline */}
                 {isSelected ? (
-                  <span className="w-8 h-[2.5px] bg-rose-600 rounded-full animate-in fade-in duration-200" />
+                  <span className="w-8 h-[3px] bg-[#EC003F] rounded-full animate-in fade-in duration-200" />
                 ) : (
-                  <span className="w-8 h-[2.5px] bg-transparent group-hover:bg-gray-200 rounded-full transition-all" />
+                  <span className="w-8 h-[3px] bg-transparent group-hover:bg-gray-200 rounded-full transition-all" />
                 )}
               </button>
             );

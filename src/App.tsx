@@ -3616,12 +3616,19 @@ export default function App() {
         <AirbnbDesktopMarketplace
           promos={promosList}
           vendors={vendors}
-          categories={categoriesList.map(c => ({ 
-            id: c.name, 
-            name: c.name, 
-            image: c.image || (c as any).imageUrl,
-            description: (c as any).description 
-          }))}
+          categories={categoriesList.map(c => {
+            const fallback = QUICK_CATEGORIES.find(qc => 
+              qc.name.toLowerCase() === c.name.toLowerCase() ||
+              c.name.toLowerCase().includes(qc.name.toLowerCase()) ||
+              qc.name.toLowerCase().includes(c.name.toLowerCase())
+            );
+            return { 
+              id: c.name, 
+              name: c.name, 
+              image: c.image || (c as any).imageUrl || fallback?.image,
+              description: (c as any).description 
+            };
+          })}
           currentCity={currentCity}
           onSelectCity={(c) => setCurrentCity(c)}
           cities={citiesList}
