@@ -134,7 +134,8 @@ export default function VendorDetailSheet({
   onStartInAppChat,
   bookingFeePercentage = 5,
   handlePayWithRazorpay,
-  onNavigateToBookings
+  onNavigateToBookings,
+  onNavigateToMessages
 }: VendorDetailSheetProps) {
   
   // Handle native back button to close sheet instead of exiting app

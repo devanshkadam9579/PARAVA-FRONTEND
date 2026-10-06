@@ -17,7 +17,7 @@ import { Vendor, VendorServiceItem, Booking } from '../../types';
 import { 
   ChevronRight, ChevronLeft, Sparkles, ShieldCheck, Headphones, Star, 
   User as UserIcon, Heart, LogOut, ArrowRight, Shield, Award, Clock,
-  Search, Filter, X, SlidersHorizontal, MapPin, ShoppingCart
+  Search, Filter, X, SlidersHorizontal, MapPin, ShoppingCart, Calendar
 } from 'lucide-react';
 import { FooterSection } from '../ui/footer-section';
 import { BendingMarquee } from '../ui/bending-marquee';
@@ -38,7 +38,7 @@ export interface AirbnbDesktopMarketplaceProps {
   planningGuestSize: number;
   onGuestCountChange: (guests: number) => void;
   currentUser: any;
-  onOpenLogin: (tab?: 'signin' | 'signup') => void;
+  onOpenLogin: (tab?: 'signin' | 'signup' | 'forgot') => void;
   onLogout: () => void;
   onNavigateTab: (tab: 'home' | 'explore' | 'bookings' | 'chat' | 'messages' | 'profile') => void;
   activeTab: string;

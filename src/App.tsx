@@ -8,7 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getAuthInstance, getDb, handleFirestoreError, OperationType } from './lib/firebase';
 import { authenticatedFetch } from './lib/apiClient';
-import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs, query, where, addDoc, updateDoc } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import { Helmet } from 'react-helmet-async';
 import { 
@@ -16,7 +16,7 @@ import {
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
-  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server
+  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server, Clock
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -37,6 +37,7 @@ import VendorCard from './components/VendorCard';
 import VendorDetailSheet from './components/VendorDetailSheet';
 import CartFloatingBar from './components/CartFloatingBar';
 import ShareBookingModal from './components/ShareBookingModal';
+import SharedPlanView from './components/SharedPlanView';
 import SlidablePromoBanner from './components/SlidablePromoBanner';
 import { AirbnbDesktopMarketplace } from './components/airbnb/AirbnbDesktopMarketplace';
 import AuthModal from './components/AuthModal';
@@ -3508,6 +3509,7 @@ export default function App() {
 
   const handleCancelBooking = async (bookingId: string, reason: string) => {
     try {
+      const db = getDb();
       if (db) {
         await updateDoc(doc(db, 'bookings', bookingId), {
           status: 'CANCELLED',
@@ -3575,6 +3577,7 @@ export default function App() {
 
   const handleSubmitReview = async (bookingId: string, vendorId: string, rating: number, comment: string) => {
     try {
+      const db = getDb();
       if (db) {
         await addDoc(collection(db, 'reviews'), {
           bookingId,
