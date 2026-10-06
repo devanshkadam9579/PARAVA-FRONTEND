@@ -61,6 +61,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Default 90% zoom on desktop / laptop screens for balanced spacing & proportion */
+@media screen and (min-width: 768px) {
+  body {
+    zoom: 0.9;
+  }
+}
+
 /* Unified Responsive Content Width System (1440px max-width, 24px-48px padding) */
 .parva-container {
   width: 100%;
