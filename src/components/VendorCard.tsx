@@ -101,17 +101,17 @@ const VendorCard = memo(function VendorCard({
           Math.sin(dLon / 2) *
           Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return `${(R * c).toFixed(1)} km`;
+      const dist = R * c;
+      return dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`;
     }
-    if (vendor.distance) {
+    if (vendor.distance && !vendor.distance.includes('pseudo')) {
       return vendor.distance.replace('away', '').trim();
     }
-    const pseudoDist = ((vendor.id.charCodeAt(vendor.id.length - 1) % 40) / 10 + 1.2).toFixed(1);
-    return `${pseudoDist} km`;
+    return vendor.location || '';
   };
 
   const hasVideo = vendor.videos && vendor.videos.length > 0 && vendor.videos[0];
-  const rankNumber = (rankIndex !== undefined ? rankIndex + 1 : (Number((vendor as any).regionRank || (vendor as any).rank) || 1));
+  const isVerified = vendor.verified !== false;
 
   return (
     <div className={isHorizontal ? 'w-[280px] shrink-0' : 'w-full'}>
@@ -165,11 +165,17 @@ const VendorCard = memo(function VendorCard({
             />
           )}
 
-          {/* Rank Badge */}
-          <div className="absolute top-2.5 left-2.5 z-10 bg-slate-950/80 backdrop-blur-md text-amber-300 text-[9px] font-black px-2.5 py-1 rounded-lg border border-amber-300/30 flex items-center gap-1 shadow-md">
-            <span>🏆</span>
-            <span>#{rankNumber} in {vendor.location || 'City'}</span>
-          </div>
+          {/* Clean Verified Specialist Badge matching desktop */}
+          {isVerified && (
+            <div className="absolute top-2.5 left-2.5 z-10 bg-white/95 backdrop-blur-md pl-2 pr-2.5 py-1 rounded-full text-[11px] font-black text-gray-900 border border-gray-200/80 shadow-xs flex items-center gap-1.5 select-none">
+              <img 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                className="w-3.5 h-3.5 object-contain shrink-0" 
+              />
+              <span>Verified Specialist</span>
+            </div>
+          )}
 
           {/* Video Preview Button Badge */}
           {hasVideo && !isPlayingVideo && (
@@ -269,10 +275,12 @@ const VendorCard = memo(function VendorCard({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200/60 hidden sm:flex items-center gap-1">
-                <MapPin size={10} className="text-gray-400" />
-                <span>{getDistanceDisplay()}</span>
-              </span>
+              {getDistanceDisplay() ? (
+                <span className="text-xs font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200/60 flex items-center gap-1">
+                  <MapPin size={10} className="text-gray-400" />
+                  <span>{getDistanceDisplay()}</span>
+                </span>
+              ) : null}
 
               <button
                 type="button"

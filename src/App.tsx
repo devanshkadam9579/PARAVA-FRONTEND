@@ -16,7 +16,8 @@ import {
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
-  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server, Clock
+  ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server, Clock,
+  SlidersHorizontal, Tag
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -1203,6 +1204,7 @@ export default function App() {
   const [activeFilterMinPrice, setActiveFilterMinPrice] = useState<number | null>(null);
   const [activeFilterMaxPrice, setActiveFilterMaxPrice] = useState<number | null>(null);
   const [activeFilterTypes, setActiveFilterTypes] = useState<string[]>([]);
+  const [activeFilterMinRating, setActiveFilterMinRating] = useState<number>(0);
   const [activeSortOption, setActiveSortOption] = useState<string>('Distance');
 
   const [selectedExploreCategory, setSelectedExploreCategory] = useState<string>('all');
@@ -2525,12 +2527,12 @@ export default function App() {
       discountAmt = Math.min(discountAmt, calculatedBookingFee);
       
       setCouponDiscount(discountAmt);
-      setCouponMessage(`🎟️ Coupon "${validCoupon.code}" applied! ₹${discountAmt.toLocaleString('en-IN')} off booking advance.`);
-      showNotification('🎟️ Coupon applied successfully!');
+      setCouponMessage(`Coupon "${validCoupon.code}" applied! ₹${discountAmt.toLocaleString('en-IN')} off booking advance.`);
+      showNotification('Coupon applied successfully!');
     } else {
       setCouponApplied(false);
       setCouponDiscount(0);
-      setCouponMessage('❌ Invalid or expired coupon code.');
+      setCouponMessage('Invalid or expired coupon code.');
     }
   };
 
@@ -3210,151 +3212,207 @@ export default function App() {
   const normalizeCategory = (cat: string): string => {
     if (!cat) return '';
     const c = cat.toLowerCase().trim();
-    if (c.includes('cater')) return 'catering';
-    if (c.includes('decor')) return 'decoration';
-    if (c.includes('photo') || c.includes('video')) return 'photography';
-    if (c.includes('dj') || c.includes('sound') || c.includes('music')) return 'dj';
-    if (c.includes('venue') || c.includes('hall') || c.includes('lawn') || c.includes('banquet') || c.includes('resort')) return 'venue';
-    if (c.includes('makeup') || c.includes('beauty') || c.includes('bridal makeup')) return 'makeup';
-    if (c.includes('pandit') || c.includes('priest')) return 'pandit';
-    if (c.includes('cake') || c.includes('bakery')) return 'cake';
-    if (c.includes('planner') || c.includes('organizer') || c.includes('event planner')) return 'planner';
+    if (c.includes('cater') || c.includes('food') || c.includes('dining')) return 'catering';
+    if (c.includes('decor') || c.includes('mandap') || c.includes('flower')) return 'decorator';
+    if (c.includes('photo') || c.includes('video') || c.includes('camera') || c.includes('cinematography')) return 'photographer';
+    if (c.includes('dj') || c.includes('sound') || c.includes('music') || c.includes('band')) return 'dj';
+    if (c.includes('venue') || c.includes('hall') || c.includes('lawn') || c.includes('banquet') || c.includes('resort')) return 'banquet-hall';
+    if (c.includes('makeup') || c.includes('beauty') || c.includes('bridal makeup') || c.includes('salon')) return 'makeup-artist';
+    if (c.includes('pandit') || c.includes('priest') || c.includes('puja')) return 'pandit';
+    if (c.includes('cake') || c.includes('bakery') || c.includes('dessert')) return 'cake-desserts';
+    if (c.includes('planner') || c.includes('organizer') || c.includes('event planner')) return 'event-planner';
     if (c.includes('mehendi') || c.includes('mehndi')) return 'mehendi';
     return c;
+  };
+
+  const isCategoryMatch = (vendor: Vendor, targetCategory: string): boolean => {
+    if (!targetCategory || targetCategory === 'all' || targetCategory.toLowerCase() === 'all services') return true;
+    const target = targetCategory.toLowerCase().trim();
+    const vCat = (vendor.category || '').toLowerCase().trim();
+    if (vCat === target) return true;
+
+    const normTarget = normalizeCategory(target);
+    const normVendor = normalizeCategory(vCat);
+    if (normTarget && normTarget === normVendor) return true;
+
+    const vendorCats = Array.isArray((vendor as any).categories)
+      ? (vendor as any).categories.map((c: string) => c.toLowerCase().trim())
+      : [];
+
+    if (vendorCats.some((c: string) => c === target || (normTarget && normalizeCategory(c) === normTarget))) {
+      return true;
+    }
+
+    if (vCat.includes(target) || target.includes(vCat)) return true;
+    return false;
+  };
+
+  const getVendorLowestPrice = (vendor: Vendor): number => {
+    const servicePrices = (vendor.services || [])
+      .map((s: any) => (typeof s.price === 'number' ? s.price : Number(s.price || 0)))
+      .filter((p: number) => p > 0);
+    return servicePrices.length > 0
+      ? Math.min(...servicePrices)
+      : (vendor.basePrice || vendor.minBudget || 0);
   };
 
   // Filter & Search computation (Memoized for high FPS performance)
   const filteredVendors = useMemo(() => {
     return vendors.filter((vendor) => {
-    // 1. City / Location match (case-insensitive & fallback)
-    const targetCity = (currentCity || '').toLowerCase().trim();
-    const vendorLoc = (vendor.location || '').toLowerCase().trim();
-    const vendorReg = ((vendor as any).region || '').toLowerCase().trim();
-    const vendorCity = ((vendor as any).city || '').toLowerCase().trim();
-    const matchesCity = !targetCity || targetCity === 'all' || 
-      vendorLoc.includes(targetCity) || 
-      vendorReg.includes(targetCity) || 
-      vendorCity.includes(targetCity) ||
-      targetCity.includes(vendorLoc);
+      // 1. City / Location match (case-insensitive & fallback)
+      const targetCity = (currentCity || '').toLowerCase().trim();
+      const vendorLoc = (vendor.location || '').toLowerCase().trim();
+      const vendorReg = ((vendor as any).region || '').toLowerCase().trim();
+      const vendorCity = ((vendor as any).city || '').toLowerCase().trim();
+      const matchesCity = !targetCity || targetCity === 'all' || 
+        vendorLoc.includes(targetCity) || 
+        vendorReg.includes(targetCity) || 
+        vendorCity.includes(targetCity) ||
+        targetCity.includes(vendorLoc);
 
-    // 2. Category match (singular/plural flexible & multi-category array check)
-    const selectedCat = (selectedExploreCategory || 'all').toLowerCase().trim();
-    const vendorCat = (vendor.category || '').toLowerCase().trim();
-    const vendorCats = Array.isArray((vendor as any).categories)
-      ? (vendor as any).categories.map((c: string) => c.toLowerCase().trim())
-      : [];
+      // 2. Canonical Category matching (exact match, aliases, synonyms, and category arrays)
+      const matchesCategory = isCategoryMatch(vendor, selectedExploreCategory || 'all');
 
-    const normSelectedCat = normalizeCategory(selectedCat);
-    const normVendorCat = normalizeCategory(vendorCat);
+      // 3. Search query match
+      const sq = debouncedSearchQuery.toLowerCase().trim();
+      const vendorCats = Array.isArray((vendor as any).categories)
+        ? (vendor as any).categories.map((c: string) => c.toLowerCase().trim())
+        : [];
+      const matchesSearch = !sq ||
+        (vendor.name || '').toLowerCase().includes(sq) ||
+        (vendor.category || '').toLowerCase().includes(sq) ||
+        (vendor.tagline || '').toLowerCase().includes(sq) ||
+        (vendor.description || '').toLowerCase().includes(sq) ||
+        vendorCats.some((c: string) => c.includes(sq));
 
-    const matchesCategory =
-      selectedCat === 'all' ||
-      vendorCat === selectedCat ||
-      (normSelectedCat !== '' && normSelectedCat === normVendorCat) ||
-      vendorCats.some((c: string) => c === selectedCat || (normSelectedCat !== '' && normalizeCategory(c) === normSelectedCat));
+      // 4. Price & custom filters (applied only when customized by user)
+      const lowestP = getVendorLowestPrice(vendor);
+      const matchesPrice = !priceRange || priceRange >= 250000 || lowestP <= priceRange;
+      const matchesMinPrice = activeFilterMinPrice === null || lowestP >= activeFilterMinPrice;
+      const matchesMaxPrice = activeFilterMaxPrice === null || lowestP <= activeFilterMaxPrice;
+      const matchesRating = !activeFilterMinRating || (vendor.rating || 0) >= activeFilterMinRating;
+      const matchesOccasion = !exploreOccasion || exploreOccasion.toLowerCase() === 'all' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
 
-    // 3. Search query match
-    const sq = debouncedSearchQuery.toLowerCase().trim();
-    const matchesSearch = !sq ||
-      (vendor.name || '').toLowerCase().includes(sq) ||
-      (vendor.category || '').toLowerCase().includes(sq) ||
-      (vendor.tagline || '').toLowerCase().includes(sq) ||
-      (vendor.description || '').toLowerCase().includes(sq) ||
-      vendorCats.some((c: string) => c.includes(sq));
+      const checkVendorMatchesType = (v: any, t: string) => {
+        const typeLower = t.toLowerCase().trim();
+        const features = (v.features || []).map((f: string) => f.toLowerCase());
+        const cat = (v.category || '').toLowerCase();
+        const services = (v.services || []).map((s: any) => `${s.name || ''} ${s.category || ''}`.toLowerCase());
+        const desc = (v.description || '').toLowerCase();
+        const tagline = (v.tagline || '').toLowerCase();
 
-    // 4. Price & custom filters (applied only when customized by user)
-    const matchesPrice = !priceRange || priceRange >= 250000 || (vendor.basePrice || 0) <= priceRange;
-    const matchesMinPrice = activeFilterMinPrice === null || (vendor.basePrice || 0) >= activeFilterMinPrice;
-    const matchesMaxPrice = activeFilterMaxPrice === null || (vendor.basePrice || 0) <= activeFilterMaxPrice;
-    const matchesOccasion = exploreOccasion === 'All' || (Array.isArray(vendor.occasion) && vendor.occasion.some(o => o.toLowerCase() === exploreOccasion.toLowerCase()));
+        if (typeLower === 'ac hall') {
+          return features.some((f: string) => f.includes('ac') || f.includes('hall')) || cat.includes('hall') || desc.includes('ac');
+        }
+        if (typeLower === 'lawn') {
+          return features.some((f: string) => f.includes('lawn')) || cat.includes('lawn') || desc.includes('lawn');
+        }
+        if (typeLower === 'veg only') {
+          return features.some((f: string) => f.includes('veg') && !f.includes('non-veg')) || desc.includes('veg only') || desc.includes('pure veg');
+        }
+        if (typeLower === 'non-veg allowed') {
+          return features.some((f: string) => f.includes('non-veg') || f.includes('non veg')) || desc.includes('non-veg');
+        }
+        if (typeLower === 'photography') {
+          return cat.includes('photo') || services.some((s: string) => s.includes('photo')) || tagline.includes('photo');
+        }
+        if (typeLower === 'decoration') {
+          return cat.includes('decor') || services.some((s: string) => s.includes('decor')) || tagline.includes('decor');
+        }
+        if (typeLower === 'catering') {
+          return cat.includes('cater') || services.some((s: string) => s.includes('cater')) || tagline.includes('cater');
+        }
+        if (typeLower === 'dj & sound') {
+          return cat.includes('dj') || cat.includes('sound') || services.some((s: string) => s.includes('dj') || s.includes('sound')) || tagline.includes('dj');
+        }
+        if (typeLower === 'bridal makeup') {
+          return cat.includes('makeup') || cat.includes('bridal') || services.some((s: string) => s.includes('makeup'));
+        }
+        if (typeLower === 'rooms available') {
+          return features.some((f: string) => f.includes('room')) || desc.includes('room');
+        }
+        return (
+          features.some((f: string) => f.includes(typeLower)) ||
+          cat.includes(typeLower) ||
+          tagline.includes(typeLower) ||
+          desc.includes(typeLower) ||
+          services.some((s: string) => s.includes(typeLower))
+        );
+      };
 
-    const checkVendorMatchesType = (v: any, t: string) => {
-      const typeLower = t.toLowerCase().trim();
-      const features = (v.features || []).map((f: string) => f.toLowerCase());
-      const cat = (v.category || '').toLowerCase();
-      const services = (v.services || []).map((s: any) => `${s.name || ''} ${s.category || ''}`.toLowerCase());
-      const desc = (v.description || '').toLowerCase();
-      const tagline = (v.tagline || '').toLowerCase();
+      const matchesTypes = activeFilterTypes.length === 0 || activeFilterTypes.every(t => checkVendorMatchesType(vendor, t));
 
-      if (typeLower === 'ac hall') {
-        return features.some((f: string) => f.includes('ac') || f.includes('hall')) || cat.includes('hall') || desc.includes('ac');
-      }
-      if (typeLower === 'lawn') {
-        return features.some((f: string) => f.includes('lawn')) || cat.includes('lawn') || desc.includes('lawn');
-      }
-      if (typeLower === 'veg only') {
-        return features.some((f: string) => f.includes('veg') && !f.includes('non-veg')) || desc.includes('veg only') || desc.includes('pure veg');
-      }
-      if (typeLower === 'non-veg allowed') {
-        return features.some((f: string) => f.includes('non-veg') || f.includes('non veg')) || desc.includes('non-veg');
-      }
-      if (typeLower === 'photography') {
-        return cat.includes('photo') || services.some((s: string) => s.includes('photo')) || tagline.includes('photo');
-      }
-      if (typeLower === 'decoration') {
-        return cat.includes('decor') || services.some((s: string) => s.includes('decor')) || tagline.includes('decor');
-      }
-      if (typeLower === 'catering') {
-        return cat.includes('cater') || services.some((s: string) => s.includes('cater')) || tagline.includes('cater');
-      }
-      if (typeLower === 'dj & sound') {
-        return cat.includes('dj') || cat.includes('sound') || services.some((s: string) => s.includes('dj') || s.includes('sound')) || tagline.includes('dj');
-      }
-      if (typeLower === 'bridal makeup') {
-        return cat.includes('makeup') || cat.includes('bridal') || services.some((s: string) => s.includes('makeup'));
-      }
-      if (typeLower === 'rooms available') {
-        return features.some((f: string) => f.includes('room')) || desc.includes('room');
-      }
-      return (
-        features.some((f: string) => f.includes(typeLower)) ||
-        cat.includes(typeLower) ||
-        tagline.includes(typeLower) ||
-        desc.includes(typeLower) ||
-        services.some((s: string) => s.includes(typeLower))
-      );
-    };
-
-    const matchesTypes = activeFilterTypes.length === 0 || activeFilterTypes.every(t => checkVendorMatchesType(vendor, t));
-
-    return matchesCity && matchesCategory && matchesSearch && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesTypes && matchesOccasion && vendor.approved !== false;
+      return matchesCity && matchesCategory && matchesSearch && matchesPrice && matchesMinPrice && matchesMaxPrice && matchesRating && matchesTypes && matchesOccasion && vendor.approved !== false;
     }).sort((a, b) => {
-    // 1. If amenities/types filter is active, rank vendors with highest match score first
-    if (activeFilterTypes.length > 0) {
-      const scoreA = activeFilterTypes.filter(t => (
-        (a.features || []).some((f: string) => f.toLowerCase().includes(t.toLowerCase())) ||
-        (a.category || '').toLowerCase().includes(t.toLowerCase()) ||
-        (a.tagline || '').toLowerCase().includes(t.toLowerCase())
-      )).length;
-      const scoreB = activeFilterTypes.filter(t => (
-        (b.features || []).some((f: string) => f.toLowerCase().includes(t.toLowerCase())) ||
-        (b.category || '').toLowerCase().includes(t.toLowerCase()) ||
-        (b.tagline || '').toLowerCase().includes(t.toLowerCase())
-      )).length;
-      if (scoreB !== scoreA) return scoreB - scoreA;
-    }
+      // 1. If amenities/types filter is active, rank vendors with highest match score first
+      if (activeFilterTypes.length > 0) {
+        const scoreA = activeFilterTypes.filter(t => (
+          (a.features || []).some((f: string) => f.toLowerCase().includes(t.toLowerCase())) ||
+          (a.category || '').toLowerCase().includes(t.toLowerCase()) ||
+          (a.tagline || '').toLowerCase().includes(t.toLowerCase())
+        )).length;
+        const scoreB = activeFilterTypes.filter(t => (
+          (b.features || []).some((f: string) => f.toLowerCase().includes(t.toLowerCase())) ||
+          (b.category || '').toLowerCase().includes(t.toLowerCase()) ||
+          (b.tagline || '').toLowerCase().includes(t.toLowerCase())
+        )).length;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+      }
 
-    if (activeSortOption === 'Rating - High to Low' || sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-    if (activeSortOption === 'Price - Low to High' || sortBy === 'priceAsc') return (a.basePrice || 0) - (b.basePrice || 0);
-    if (activeSortOption === 'Price - High to Low' || sortBy === 'priceDesc') return (b.basePrice || 0) - (a.basePrice || 0);
-    if (activeSortOption === 'Most Booked' || sortBy === 'trust') return (b.bookingsCount || b.trustScore || 0) - (a.bookingsCount || a.trustScore || 0);
-    
-    // Default: Sort strictly by Rank & Trust Score & Rating
-    const rankA = Number((a as any).rank || (a as any).regionRank || a.rating || 0);
-    const rankB = Number((b as any).rank || (b as any).regionRank || b.rating || 0);
-    if (rankB !== rankA) return rankB - rankA;
+      // 2. Strict Distance Sorting using activeOriginCoords
+      if (activeSortOption === 'Distance') {
+        const getDistanceKm = (v: Vendor): number => {
+          if (activeOriginCoords && typeof v.latitude === 'number' && typeof v.longitude === 'number') {
+            return calculateHaversineDistance(activeOriginCoords.lat, activeOriginCoords.lng, v.latitude, v.longitude);
+          }
+          if (activeOriginCoords && v.location && CITY_COORDINATES[v.location]) {
+            const cCoords = CITY_COORDINATES[v.location];
+            return calculateHaversineDistance(activeOriginCoords.lat, activeOriginCoords.lng, cCoords.lat, cCoords.lng);
+          }
+          if (v.distance && !v.distance.includes('pseudo')) {
+            const parsed = parseFloat(v.distance);
+            if (!isNaN(parsed)) return parsed;
+          }
+          return 999999;
+        };
+        const distA = getDistanceKm(a);
+        const distB = getDistanceKm(b);
+        if (distA !== distB) return distA - distB;
+        return (b.rating || 0) - (a.rating || 0);
+      }
 
-    let distA = parseFloat(a.distance) || 0;
-    let distB = parseFloat(b.distance) || 0;
-    if (userCoords && a.latitude && a.longitude) {
-      distA = calculateHaversineDistance(userCoords.lat, userCoords.lng, a.latitude, a.longitude);
-    }
-    if (userCoords && b.latitude && b.longitude) {
-      distB = calculateHaversineDistance(userCoords.lat, userCoords.lng, b.latitude, b.longitude);
-    }
-    return distA - distB;
+      // 3. Most Popular / Bookings Count
+      if (activeSortOption === 'Popularity' || activeSortOption === 'Most Booked' || sortBy === 'trust') {
+        const popA = Number(a.bookingsCount || a.reviewCount || (a.reviews?.length) || 0);
+        const popB = Number(b.bookingsCount || b.reviewCount || (b.reviews?.length) || 0);
+        if (popB !== popA) return popB - popA;
+        return (b.rating || 0) - (a.rating || 0);
+      }
+
+      // 4. Rating High to Low
+      if (activeSortOption === 'Rating - High to Low' || sortBy === 'rating') {
+        const diff = (b.rating || 0) - (a.rating || 0);
+        if (diff !== 0) return diff;
+        return (b.reviewCount || 0) - (a.reviewCount || 0);
+      }
+
+      // 5. Price Low to High
+      if (activeSortOption === 'Price - Low to High' || sortBy === 'priceAsc') {
+        return getVendorLowestPrice(a) - getVendorLowestPrice(b);
+      }
+
+      // 6. Price High to Low
+      if (activeSortOption === 'Price - High to Low' || sortBy === 'priceDesc') {
+        return getVendorLowestPrice(b) - getVendorLowestPrice(a);
+      }
+
+      // Default: Verified partners first, then highest rating
+      const verifiedA = a.verified !== false ? 1 : 0;
+      const verifiedB = b.verified !== false ? 1 : 0;
+      if (verifiedB !== verifiedA) return verifiedB - verifiedA;
+      return (b.rating || 0) - (a.rating || 0);
     });
-  }, [vendors, currentCity, selectedExploreCategory, debouncedSearchQuery, priceRange, activeFilterMinPrice, activeFilterMaxPrice, activeFilterTypes, exploreOccasion, sortBy, activeSortOption, userCoords]);
+  }, [vendors, currentCity, selectedExploreCategory, debouncedSearchQuery, priceRange, activeFilterMinPrice, activeFilterMaxPrice, activeFilterTypes, activeFilterMinRating, exploreOccasion, sortBy, activeSortOption, activeOriginCoords]);
 
 
   const safeHeroIndex = heroIndex >= promosList.length ? 0 : heroIndex;
@@ -3991,25 +4049,44 @@ export default function App() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2">
                 <div>
                   <h3 className="font-extrabold text-base text-gray-900 font-display">
-                    {filteredVendors.length} Verified {filteredVendors.length === 1 ? 'Partner' : 'Partners'} in {currentCity}
+                    {selectedExploreCategory === 'all' 
+                      ? `${filteredVendors.length} Verified ${filteredVendors.length === 1 ? 'Partner' : 'Partners'} in ${currentCity}`
+                      : `${selectedExploreCategory} Specialists in ${currentCity}`}
                   </h3>
                   <p className="text-xs text-gray-500 font-medium">
-                    {selectedExploreCategory === 'all' ? 'Showing all categories' : `Filtered by: ${selectedExploreCategory}`}
+                    {selectedExploreCategory === 'all' 
+                      ? 'Showing all categories' 
+                      : `${filteredVendors.length} verified ${selectedExploreCategory.toLowerCase()} ${filteredVendors.length === 1 ? 'specialist' : 'specialists'} in ${currentCity}`}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-auto">
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
                   <select
                     value={activeSortOption}
                     onChange={(e) => setActiveSortOption(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 outline-none cursor-pointer"
+                    className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 outline-none cursor-pointer transition"
                   >
-                    <option value="Distance">📍 Nearest Distance</option>
-                    <option value="Popularity">🏆 Most Popular</option>
-                    <option value="Rating - High to Low">⭐ Top Rated</option>
-                    <option value="Price - Low to High">₹ Price: Low to High</option>
-                    <option value="Price - High to Low">₹ Price: High to Low</option>
+                    <option value="Distance">Nearest Distance</option>
+                    <option value="Popularity">Most Popular</option>
+                    <option value="Rating - High to Low">Top Rated</option>
+                    <option value="Price - Low to High">Price: Low to High</option>
+                    <option value="Price - High to Low">Price: High to Low</option>
                   </select>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-800 flex items-center gap-1 cursor-pointer transition"
+                    title="Filters & Sort"
+                  >
+                    <SlidersHorizontal size={12} className="text-brand-primary" />
+                    <span>Filters</span>
+                    {((activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeFilterMinRating > 0 ? 1 : 0)) > 0 && (
+                      <span className="bg-brand-primary text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                        {(activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeFilterMinRating > 0 ? 1 : 0)}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4">
@@ -4137,113 +4214,34 @@ export default function App() {
             </div>
 
 
-            {/* Interactive Filters (Collapsible to reduce UI complexity) */}
-            <div className="bg-white rounded-2xl border border-brand-border p-4">
-              <button 
-                onClick={() => setShowFilters(!showFilters)}
-                className="w-full flex justify-between items-center text-sm font-bold text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-brand-primary" />
-                  Apply Filters & Sorting
-                </div>
-                {showFilters ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-              </button>
-              
-              {showFilters && (
-                <div className="pt-4 mt-4 border-t border-dashed border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                  
-                  {/* Event Period */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-brand-primary">
-                      <Calendar size={16} />
-                      <h4 className="text-[10px] font-black uppercase tracking-widest">Select Event Period</h4>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
-                      <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Starts</p>
-                      <input 
-                        type="date"
-                        value={planningStartDate}
-                        onChange={(e) => setPlanningStartDate(e.target.value)}
-                        className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer min-w-0"
-                      />
-                    </div>
-                    <div className="bg-gray-50/50 border border-brand-border rounded-xl p-2.5">
-                      <p className="text-[8px] text-brand-text-secondary font-black uppercase tracking-wider mb-1">Ends</p>
-                      <input 
-                        type="date"
-                        value={planningEndDate}
-                        onChange={(e) => setPlanningEndDate(e.target.value)}
-                        className="w-full bg-transparent border-none outline-none text-[11px] font-extrabold text-brand-text cursor-pointer min-w-0"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Estimated Guest Size */}
-                  <div className="pt-2 border-t border-dashed border-gray-100">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[11px] font-semibold text-brand-text-secondary uppercase tracking-wider">Guest Size</span>
-                      <span className="font-bold text-brand-primary">{planningGuestSize} Guests</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="10" 
-                      max="2000" 
-                      step="10"
-                      value={planningGuestSize}
-                      onChange={(e) => setPlanningGuestSize(Number(e.target.value))}
-                      className="w-full accent-brand-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  
-                  <div className="w-full h-px border-t border-dashed border-gray-100 my-2"></div>
-                  
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-brand-text-secondary uppercase tracking-wider">Starting Price Cap</span>
-                    <span className="font-bold text-brand-primary">₹{priceRange >= 100000 ? `${(priceRange / 100000).toFixed(1)} Lakh` : priceRange.toLocaleString('en-IN')}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1000"
-                    max="250000"
-                    step="5000"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(Number(e.target.value))}
-                    className="w-full accent-brand-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                  />
-
-                  <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100">
-                    <span className="text-[11px] font-semibold text-brand-text-secondary uppercase tracking-wider">Sort by</span>
-                    <div className="flex gap-1.5 flex-wrap justify-end">
-                      {(['trust', 'rating', 'priceAsc'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => { setSortBy(mode); setShowFilters(false); }}
-                          className={`text-[10px] font-bold py-1 px-2.5 rounded-lg border transition ${
-                            sortBy === mode
-                              ? 'bg-brand-primary-light border-brand-primary/20 text-brand-primary-dark'
-                              : 'bg-white border-brand-border text-brand-text-secondary hover:text-brand-text'
-                          }`}
-                        >
-                          {mode === 'trust' ? 'Trust Score' : mode === 'rating' ? 'Rating' : 'Price: Low-High'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Search Results count & listings */}
+            {/* Search Results Header & Filters & Sort Control */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
-                <span className="text-xs font-semibold text-brand-text-secondary uppercase tracking-wider">
-                  {isLoadingVendors ? 'Searching...' : `Available Matches (${filteredVendors.length})`}
-                </span>
-                <span className="text-[10px] text-brand-text-secondary">Location: {currentCity}</span>
+                <div>
+                  <h3 className="font-extrabold text-sm text-gray-900 font-display">
+                    {selectedExploreCategory === 'all'
+                      ? `Specialists in ${currentCity}`
+                      : `${selectedExploreCategory} in ${currentCity}`}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    {isLoadingVendors ? 'Searching...' : `${filteredVendors.length} ${filteredVendors.length === 1 ? 'partner' : 'partners'} available`}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFilterModalOpen(true)}
+                  className="bg-white hover:bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-800 flex items-center gap-1.5 shadow-2xs transition active:scale-95 cursor-pointer"
+                  id="explore-filters-sort-btn"
+                >
+                  <SlidersHorizontal size={13} className="text-brand-primary" />
+                  <span>Filters & Sort</span>
+                  {((activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeFilterMinRating > 0 ? 1 : 0) + (activeSortOption !== 'Distance' ? 1 : 0)) > 0 && (
+                    <span className="bg-brand-primary text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                      {(activeFilterMinPrice !== null ? 1 : 0) + (activeFilterMaxPrice !== null ? 1 : 0) + activeFilterTypes.length + (activeFilterMinRating > 0 ? 1 : 0) + (activeSortOption !== 'Distance' ? 1 : 0)}
+                    </span>
+                  )}
+                </button>
               </div>
 
               {isLoadingVendors ? (
@@ -4498,7 +4496,7 @@ export default function App() {
                     if (unavailableVendors.length > 0) {
                       return (
                         <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-xs text-rose-800 font-bold flex items-center gap-2">
-                          <span>⚠️</span>
+                          <AlertCircle size={14} className="text-rose-600 shrink-0" />
                           <span>{unavailableVendors[0].vendor.name} is not available on {planningStartDate} ({formatTimeSlot(planningTimeSlot)}). Please choose another date/slot.</span>
                         </div>
                       );
@@ -4526,8 +4524,9 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-3 space-y-2">
-                      <p className="text-[10px] text-amber-800 font-semibold leading-normal">
-                        ⚠️ Please provide your connection details. This info is automatically shared with the vendor to connect you on WhatsApp!
+                      <p className="text-[10px] text-amber-800 font-semibold leading-normal flex items-start gap-1">
+                        <Info size={12} className="text-amber-700 shrink-0 mt-0.5" />
+                        <span>Please provide your connection details. This info is automatically shared with the vendor to connect you on WhatsApp.</span>
                       </p>
                       <div className="grid grid-cols-1 gap-2">
                         <input
@@ -4557,7 +4556,10 @@ export default function App() {
 
                 {/* Coupon Code Integration */}
                 <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-2">
-                  <h5 className="text-[10px] font-black uppercase tracking-wider text-brand-text">🎟️ Have a Coupon?</h5>
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-brand-text flex items-center gap-1.5">
+                    <Tag size={12} className="text-brand-primary" />
+                    <span>Have a Coupon Code?</span>
+                  </h5>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -6146,11 +6148,13 @@ export default function App() {
         initialMin={activeFilterMinPrice !== null ? String(activeFilterMinPrice) : ''}
         initialMax={activeFilterMaxPrice !== null ? String(activeFilterMaxPrice) : ''}
         initialTypes={activeFilterTypes}
+        initialRating={activeFilterMinRating}
         onApply={(filters) => {
           setActiveSortOption(filters.sort || 'Distance');
           setActiveFilterMinPrice(filters.min ? Number(filters.min) : null);
           setActiveFilterMaxPrice(filters.max ? Number(filters.max) : null);
           setActiveFilterTypes(filters.types || []);
+          setActiveFilterMinRating(filters.rating || 0);
           handleNavigateToTab('explore');
           trackFilterApplied({
             category: selectedExploreCategory,
@@ -6162,7 +6166,6 @@ export default function App() {
           });
           showNotification('Filters applied successfully');
         }}
-
       />
 
       <NotificationCenterModal
