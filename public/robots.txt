@@ -1,5 +1,37 @@
-﻿# robots.txt for PARVA Celebrations Event Marketplace
+# robots.txt for Parva Events (https://myparva.com)
 User-agent: *
 Allow: /
+Allow: /vendor/
+Allow: /event-vendors-kolhapur
+Allow: /wedding-venues-kolhapur
+Allow: /event-catering-kolhapur
+Allow: /wedding-photographers-kolhapur
+Allow: /event-decorators-kolhapur
+Allow: /dj-sound-services-kolhapur
+Allow: /makeup-artists-kolhapur
+Allow: /event-planners-kolhapur
+Allow: /cake-desserts-kolhapur
 
-Sitemap: https://parava-frontend.onrender.com/sitemap.xml
+# Allow assets and fonts
+Allow: /assets/
+Allow: /hero/
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.svg$
+Allow: /*.woff$
+Allow: /*.woff2$
+
+# Disallow private user flows, checkout, payments, and admin dashboards
+Disallow: /admin/
+Disallow: /admin
+Disallow: /checkout
+Disallow: /payment/
+Disallow: /cart
+Disallow: /messages
+Disallow: /chat
+Disallow: /profile
+Disallow: /bookings
+
+Sitemap: https://myparva.com/sitemap.xml
