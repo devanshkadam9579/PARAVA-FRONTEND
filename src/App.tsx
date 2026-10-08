@@ -52,10 +52,6 @@ import { AdminChatLogsModal } from './components/admin/AdminChatLogsModal';
 import { PaymentProcessingModal } from './components/PaymentProcessingModal';
 import { PaymentSuccessCelebrationModal } from './components/PaymentSuccessCelebrationModal';
 import { PaymentReturnView } from './components/PaymentReturnView';
-import { SeoLandingPage } from './components/seo/SeoLandingPage';
-import { VendorSeoPage } from './components/seo/VendorSeoPage';
-import { NotFoundView } from './components/seo/NotFoundView';
-import { SEO_KOLHAPUR_ROUTES, findVendorBySlug, generateVendorSlug } from './utils/seo';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -714,14 +710,10 @@ export default function App() {
 
     // Listen for Vendors collection
     const unsubscribeVendors = onSnapshot(collection(db, 'vendors'), (snapshot) => {
-      const remoteData = snapshot.docs.map(doc => ({ 
+      const vendorsData = snapshot.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data() 
       } as Vendor));
-      const mergedMap = new Map<string, Vendor>();
-      VENDORS.forEach(v => mergedMap.set(v.id, v));
-      remoteData.forEach(v => mergedMap.set(v.id, v));
-      const vendorsData = Array.from(mergedMap.values());
       setVendors(vendorsData);
       setIsLoadingVendors(false);
       localStorage.setItem('parva_vendors_list', JSON.stringify(vendorsData));
@@ -1346,10 +1338,23 @@ export default function App() {
         const normalizedKey = vendorKey.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         if (vendors.length > 0) {
-          const found = findVendorBySlug(vendorKey, vendors);
+          const found = vendors.find((v) => {
+            if (!v) return false;
+            if (v.id && v.id.toLowerCase() === vendorKey.toLowerCase()) return true;
+            if (v.name && v.name.toLowerCase() === vendorKey.toLowerCase()) return true;
+            const vNameNorm = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (vNameNorm && vNameNorm === normalizedKey) return true;
+            const vIdNorm = (v.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (vIdNorm && vIdNorm === normalizedKey) return true;
+            return false;
+          });
+
           if (found) {
             if (selectedVendor?.id !== found.id) {
               setSelectedVendor(found);
+            }
+            if (queryVendor && location.pathname !== `/vendor/${found.id}`) {
+              navigate(`/vendor/${found.id}`, { replace: true });
             }
             return;
           }
@@ -1932,7 +1937,7 @@ export default function App() {
 
   const handleVendorSelect = async (v: Vendor) => {
     setSelectedVendor(v);
-    const targetPath = `/vendor/${generateVendorSlug(v)}`;
+    const targetPath = `/vendor/${v.id}`;
     if (location.pathname !== targetPath) {
       navigate(targetPath);
     }
@@ -3694,115 +3699,8 @@ export default function App() {
     );
   }
 
-  // --- PARVA SEO DEDICATED ROUTES & GOOGLE INDEXABLE PAGES ---
-  const rawPathname = (location.pathname || '/').toLowerCase();
-  const cleanPath = rawPathname.replace(/\/+$/, '') || '/';
-
-  // 1. Core Kolhapur Category SEO Pages
-  const categorySeoConfig = SEO_KOLHAPUR_ROUTES[cleanPath];
-  if (categorySeoConfig) {
-    return (
-      <SeoLandingPage
-        config={categorySeoConfig}
-        vendors={vendors}
-        onSelectVendor={(v) => {
-          setSelectedVendor(v);
-          navigate(`/vendor/${generateVendorSlug(v)}`);
-        }}
-        onOpenLogin={() => {
-          setAuthModalTab('signin');
-          setIsAuthModalOpen(true);
-        }}
-        currentUser={currentUser}
-      />
-    );
-  }
-
-  // 2. Vendor SEO Profile Route (/vendor/:slug or /vendors/:slug)
-  const isVendorSeoRoute = cleanPath.startsWith('/vendor/') || cleanPath.startsWith('/vendors/');
-  if (isVendorSeoRoute) {
-    const rawSlug = cleanPath.replace(/^\/vendors?\//i, '').split('/')[0].split('?')[0];
-    const slug = decodeURIComponent(rawSlug).trim();
-    const matchedVendor = findVendorBySlug(slug, vendors);
-
-    if (matchedVendor) {
-      return (
-        <VendorSeoPage
-          vendor={matchedVendor}
-          allVendors={vendors}
-          onBookService={(service) => {
-            handleAddServiceToBundle(matchedVendor, service);
-            navigate('/cart');
-            setActiveTab('cart');
-          }}
-          onOpenChat={(vId) => {
-            setActiveChatVendorId(vId);
-            setActiveTab('messages');
-            navigate(`/messages?vendorId=${encodeURIComponent(vId)}`);
-          }}
-          onSelectVendor={(v) => {
-            setSelectedVendor(v);
-            navigate(`/vendor/${generateVendorSlug(v)}`);
-          }}
-          currentUser={currentUser}
-        />
-      );
-    }
-
-    // If vendors list is loaded and vendor not found, render truthful 404
-    if (vendors.length > 0) {
-      return <NotFoundView />;
-    }
-
-    // Still loading vendors list from Firestore
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-[#EC003F] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-600">Loading vendor details...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Truthful 404 for unrecognized routes
-  const KNOWN_STATIC_ROUTES = new Set([
-    '/',
-    '/home',
-    '/explore',
-    '/cart',
-    '/checkout',
-    '/bookings',
-    '/reservations',
-    '/messages',
-    '/chat',
-    '/profile',
-    '/account',
-    '/admin',
-    '/admin/kyc',
-    '/admin/health',
-    '/admin/database',
-    '/admin/chats',
-    '/admin/logs',
-    '/login',
-    '/signin',
-    '/signup',
-    '/register',
-    '/shared-plan',
-  ]);
-
-  if (!KNOWN_STATIC_ROUTES.has(cleanPath) && !cleanPath.startsWith('/payment/')) {
-    return <NotFoundView />;
-  }
-
   return (
     <>
-      <Helmet>
-        <title>Parva | Book Event Vendors & Services in Kolhapur</title>
-        <meta name="description" content="Discover and book verified event vendors in Kolhapur on Parva. Compare banquet halls, caterers, photographers, decorators, DJs, and makeup artists with transparent pricing." />
-        <link rel="canonical" href="https://myparva.com/" />
-        <meta name="robots" content="index, follow" />
-      </Helmet>
       {/* ========================================================================= */}
       {/* AIRBNB-INSPIRED DESKTOP & WEB MARKETPLACE (Visible ONLY on Desktop >= lg) */}
       {/* ========================================================================= */}
