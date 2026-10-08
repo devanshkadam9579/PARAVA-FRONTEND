@@ -51,6 +51,7 @@ import { AdminChatLogsViewer } from './components/admin/AdminChatLogsViewer';
 import { AdminChatLogsModal } from './components/admin/AdminChatLogsModal';
 import { PaymentProcessingModal } from './components/PaymentProcessingModal';
 import { PaymentSuccessCelebrationModal } from './components/PaymentSuccessCelebrationModal';
+import { PaymentReturnView } from './components/PaymentReturnView';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -2116,29 +2117,37 @@ export default function App() {
         mode: environment === 'PRODUCTION' ? 'production' : 'sandbox'
       });
 
-      console.log(`[Cashfree Checkout] Opening checkout modal for order: ${orderId}`);
+      const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 1024 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+      console.log(`[Cashfree Checkout] Opening checkout for order: ${orderId} (isMobile: ${isMobileDevice})`);
 
-      // 3. Launch Cashfree Native Responsive Modal
+      // 3. Launch Cashfree Native Checkout (Mobile uses _self redirect for reliable UPI deep-linking, desktop uses modal)
       cashfree.checkout({
         paymentSessionId: paymentSessionId,
-        redirectTarget: '_modal'
+        redirectTarget: isMobileDevice ? '_self' : '_modal'
       }).then(async (result: any) => {
         setIsPaymentProcessing(false);
         setIsPaymentProcessingModalOpen(false);
         console.log(`[Cashfree Result]:`, result);
 
-        if (result.error) {
+        if (result?.error) {
           showNotification(`⚠️ Payment cancelled or failed: ${result.error.message || 'Dismissed'}`);
           trackPaymentFailed(orderId, result.error.message || 'dismissed');
           return;
         }
 
-        // 4. Verify Payment Server-side Upon Successful Payment
+        if (result?.redirect) {
+          // Cashfree SDK is performing full page navigation to configured return_url. Do not treat as failure.
+          console.log('[Cashfree Checkout] Redirecting to return_url for authoritative verification...');
+          return;
+        }
+
+        // 4. Verify Payment Server-side Upon Successful In-Modal Payment
         showNotification('⏳ Verifying payment with Cashfree...');
         try {
+          const authoritativePaymentId = result?.paymentDetails?.paymentId || null;
           const success = await performVerification(
             orderId,
-            result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+            authoritativePaymentId,
             amount,
             vendorName,
             serviceName,
@@ -2147,7 +2156,7 @@ export default function App() {
           if (!success) {
             setPendingVerificationOrder({
               orderId,
-              paymentId: result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+              paymentId: authoritativePaymentId || '',
               amount,
               vendorName,
               serviceName,
@@ -2160,7 +2169,7 @@ export default function App() {
           // Offer idempotent status verification retry
           setPendingVerificationOrder({
             orderId,
-            paymentId: result?.paymentDetails?.paymentId || `cf_pay_${Date.now()}`,
+            paymentId: result?.paymentDetails?.paymentId || '',
             amount,
             vendorName,
             serviceName,
@@ -3664,6 +3673,31 @@ export default function App() {
       (v.category || '').toLowerCase() === cat.name.toLowerCase()
     )
   );
+
+  const isPaymentReturnRoute = location.pathname.startsWith('/payment/return') || 
+    (typeof window !== 'undefined' && new URLSearchParams(location.search).has('order_id'));
+
+  if (isPaymentReturnRoute) {
+    return (
+      <PaymentReturnView
+        onGoHome={() => {
+          try {
+            window.history.replaceState({}, '', '/');
+          } catch (e) {}
+          navigate('/', { replace: true });
+          setActiveTab('home');
+        }}
+        onViewBookings={() => {
+          try {
+            window.history.replaceState({}, '', '/bookings');
+          } catch (e) {}
+          navigate('/bookings', { replace: true });
+          setActiveTab('bookings');
+        }}
+        apiUrl={BACKEND_API_URL}
+      />
+    );
+  }
 
   return (
     <>
@@ -6391,50 +6425,21 @@ export default function App() {
           onNavigateToBookings={() => handleNavigateToTab('bookings')}
           onNavigateToMessages={(vid) => { handleSelectThread(vid); handleNavigateToTab('messages'); }}
           handlePayWithRazorpay={(params: any) => {
-            setRazorpayAmount(params.totalAmountDue);
-            setRazorpayPurpose('connection');
-            setPendingCheckoutBooking(params);
-            setIsRazorpayOpen(true);
+            if (!currentUser) {
+              setPendingBookingDetails(params);
+              setAuthModalTab('signin');
+              setAuthContextTitle('Sign in to complete booking');
+              setAuthContextSubtitle('Your selected event services and dates are saved. Sign in or create an account to finalize your reservation.');
+              setIsAuthModalOpen(true);
+              return;
+            }
+            handlePayWithCashfree({
+              type: 'booking',
+              amount: params.totalAmountDue,
+              bookingData: params
+            });
           }}
         />
-        </div>
-      )}
-
-      {/* 6. CASHFREE SECURE CHECKOUT TRIGGER OVERLAY */}
-      {isRazorpayOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-[24px] overflow-hidden shadow-2xl border border-gray-100 flex flex-col p-6 space-y-4">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mx-auto text-xl font-black">
-                💳
-              </div>
-              <h4 className="font-black text-sm text-gray-900">Secure Cashfree Checkout</h4>
-              <p className="text-xs text-gray-500 font-medium">
-                Amount payable: <span className="font-black text-brand-primary">₹{razorpayAmount.toLocaleString('en-IN')}.00</span>
-              </p>
-            </div>
-            
-            <button
-              onClick={() => {
-                setIsRazorpayOpen(false);
-                handlePayWithCashfree({
-                  type: razorpayPurpose === 'premium' ? 'connection' : 'booking',
-                  amount: razorpayAmount,
-                  bookingData: pendingCheckoutBooking
-                });
-              }}
-              className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-md shadow-brand-primary/20"
-            >
-              Launch Cashfree Payment Window ⚡
-            </button>
-
-            <button
-              onClick={() => setIsRazorpayOpen(false)}
-              className="text-[11px] font-bold text-gray-400 hover:text-gray-600 text-center"
-            >
-              Cancel and return
-            </button>
-          </div>
         </div>
       )}
 

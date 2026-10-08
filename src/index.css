@@ -9,31 +9,31 @@
   --font-display: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "Courier New", monospace;
   
-  --color-brand-primary: #9e0142;
-  --color-brand-primary-dark: #7a0e3a;
-  --color-brand-primary-light: #fff0f5;
+  --color-brand-primary: #EC003F;
+  --color-brand-primary-dark: #D40038;
+  --color-brand-primary-light: #FFF0F3;
   --color-brand-accent: #ffc300;
   --color-brand-bg: #FFFFFF;
   --color-brand-card: #FFFFFF;
-  --color-brand-border: #f2e4ec;
+  --color-brand-border: #FFE5EB;
   --color-brand-text: #1a0812;
   --color-brand-text-secondary: #5c4753;
 }
 
 :root {
-  --parva-primary: #9e0142;
-  --parva-primary-dark: #7a0e3a;
-  --parva-primary-light: #fff0f5;
+  --parva-primary: #EC003F;
+  --parva-primary-dark: #D40038;
+  --parva-primary-light: #FFF0F3;
   --parva-accent: #ffc300;
   --parva-text: #1a0812;
   --parva-muted: #5c4753;
   --parva-background: #ffffff;
   --parva-surface: #ffffff;
-  --parva-border: #f2e4ec;
+  --parva-border: #FFE5EB;
   --parva-success: #16a34a;
   --parva-danger: #dc2626;
   --parva-radius: 1.25rem;
-  --parva-shadow: 0 4px 20px -2px rgba(158, 1, 66, 0.08);
+  --parva-shadow: 0 4px 20px -2px rgba(236, 0, 63, 0.08);
 }
 
 /* Base Document Geometry */

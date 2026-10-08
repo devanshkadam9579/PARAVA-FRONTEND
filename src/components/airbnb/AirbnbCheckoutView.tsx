@@ -374,7 +374,7 @@ export function AirbnbCheckoutView({
             <button
               type="button"
               onClick={handleProceedPay}
-              className="w-full sm:w-auto px-10 bg-rose-600 hover:bg-rose-700 text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-xl transition active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto px-10 bg-[#EC003F] hover:bg-[#D40038] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-xl transition active:scale-95 cursor-pointer"
             >
               {!currentUser ? 'Log in & Confirm Booking' : `Confirm and pay ₹${finalDue.toLocaleString('en-IN')}`}
             </button>
@@ -387,25 +387,37 @@ export function AirbnbCheckoutView({
             {/* Rare find tag */}
             <div className="bg-rose-50 text-rose-700 text-sm font-bold px-3.5 py-2.5 rounded-2xl flex items-center gap-2 border border-rose-200">
               <Gem size={16} />
-              <span>Rare find! Specialist is in high demand</span>
+              <span>Rare find! Specialists are in high demand</span>
             </div>
 
-            {/* Vendor Snippet */}
-            <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
-              <img
-                src={primaryItem.vendor.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=200'}
-                alt={primaryItem.vendor.name}
-                className="w-18 h-18 rounded-2xl object-cover border border-gray-200 shrink-0"
-              />
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-sm sm:text-base text-gray-900 truncate">{primaryItem.vendor.name}</h4>
-                <p className="text-xs sm:text-sm text-gray-500 font-medium">{primaryItem.service.name}</p>
-                <div className="flex items-center gap-1 text-xs text-gray-700 font-bold mt-1">
-                  <Star size={13} className="fill-amber-400 text-amber-400" />
-                  <span>{(primaryItem.vendor.rating || 4.9).toFixed(1)}</span>
-                  <span className="text-gray-400 font-normal">({primaryItem.vendor.reviewCount || 142} reviews)</span>
-                </div>
+            {/* Vendor List Snippet */}
+            <div className="space-y-3 pb-5 border-b border-gray-100 max-h-80 overflow-y-auto">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                <span>Selected Vendors ({bundledItems.length})</span>
+                <span>Services Included</span>
               </div>
+              {bundledItems.map((item, idx) => (
+                <div key={item.vendor?.id || `${item.vendor?.name}-${idx}`} className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-200/80">
+                  <img
+                    src={item.vendor?.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=200'}
+                    alt={item.vendor?.name || 'Vendor'}
+                    className="w-14 h-14 rounded-xl object-cover border border-gray-200 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-extrabold text-sm text-gray-900 truncate">{item.vendor?.name || 'Vendor'}</h4>
+                    <p className="text-xs text-gray-600 font-medium truncate">
+                      {item.service?.name || 'Service'} • <span className="font-bold text-gray-900">₹{(item.service?.price || 0).toLocaleString('en-IN')}</span>
+                    </p>
+                    <div className="flex items-center gap-1 text-[11px] text-gray-700 font-bold mt-0.5">
+                      <Star size={11} className="fill-amber-400 text-amber-400" />
+                      <span>{(item.vendor?.rating || 4.9).toFixed(1)}</span>
+                      <span className="text-gray-400 font-normal">({item.vendor?.reviewCount || 142})</span>
+                      <span className="text-gray-300 mx-1">•</span>
+                      <span className="text-gray-500 font-medium truncate">{item.vendor?.category || 'Specialist'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Dates & Guests */}
@@ -442,7 +454,7 @@ export function AirbnbCheckoutView({
                 <button
                   type="button"
                   onClick={onApplyCoupon}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition cursor-pointer"
+                  className="bg-[#EC003F] hover:bg-[#D40038] text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition cursor-pointer"
                 >
                   Apply
                 </button>
@@ -472,7 +484,7 @@ export function AirbnbCheckoutView({
               )}
               <div className="flex justify-between font-black text-gray-900 pt-3 border-t border-gray-100 text-base">
                 <span>Advance Payable Now:</span>
-                <span className="text-rose-600 text-lg font-black">₹{finalDue.toLocaleString('en-IN')}</span>
+                <span className="text-[#EC003F] text-lg font-black">₹{finalDue.toLocaleString('en-IN')}</span>
               </div>
               <div className="text-xs text-gray-400 text-right font-medium">
                 Remaining balance payable directly to vendor on event day
