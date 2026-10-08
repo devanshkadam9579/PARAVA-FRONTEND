@@ -186,11 +186,21 @@ export function AirbnbDesktopMarketplace({
     return false;
   };
 
+  // City matching helper
+  const isVendorInCurrentCity = (v: Vendor) => {
+    const targetCity = (currentCity || '').toLowerCase().trim();
+    if (!targetCity || targetCity === 'all') return true;
+    const loc = (v.location || '').toLowerCase().trim();
+    const reg = ((v as any).region || '').toLowerCase().trim();
+    const city = ((v as any).city || '').toLowerCase().trim();
+    return loc.includes(targetCity) || reg.includes(targetCity) || city.includes(targetCity) || targetCity.includes(loc);
+  };
+
   // Filter & Sort vendors
   const filteredVendors = vendors
     .filter((v) => {
       const matchesCategory = isCategoryMatch(v, selectedCategory);
-      const matchesCity = !currentCity || currentCity.toLowerCase() === 'all' || (v.location || '').toLowerCase().includes(currentCity.toLowerCase());
+      const matchesCity = isVendorInCurrentCity(v);
       
       const sq = activeSearchQuery.toLowerCase().trim();
       const matchesSearch = !sq || 
@@ -216,13 +226,14 @@ export function AirbnbDesktopMarketplace({
       return (b.rating || 0) - (a.rating || 0);
     });
 
-  // Categorized vendor rails
+  // Categorized vendor rails filtered strictly by currentCity
+  const cityVendors = vendors.filter(isVendorInCurrentCity);
   const popularVendors = filteredVendors.slice(0, 10);
-  const banquetHalls = vendors.filter(v => (v.category || '').toLowerCase().includes('hall') || (v.category || '').toLowerCase().includes('venue'));
-  const caterers = vendors.filter(v => (v.category || '').toLowerCase().includes('cater'));
-  const decorators = vendors.filter(v => (v.category || '').toLowerCase().includes('decor'));
-  const photographers = vendors.filter(v => (v.category || '').toLowerCase().includes('photo'));
-  const djs = vendors.filter(v => (v.category || '').toLowerCase().includes('dj'));
+  const banquetHalls = cityVendors.filter(v => isCategoryMatch(v, 'Banquet Hall') || (v.category || '').toLowerCase().includes('hall') || (v.category || '').toLowerCase().includes('venue'));
+  const caterers = cityVendors.filter(v => isCategoryMatch(v, 'Catering') || (v.category || '').toLowerCase().includes('cater'));
+  const decorators = cityVendors.filter(v => isCategoryMatch(v, 'Decorator') || (v.category || '').toLowerCase().includes('decor'));
+  const photographers = cityVendors.filter(v => isCategoryMatch(v, 'Photographer') || (v.category || '').toLowerCase().includes('photo'));
+  const djs = cityVendors.filter(v => isCategoryMatch(v, 'DJ') || (v.category || '').toLowerCase().includes('dj'));
 
   // Common Header
   const renderNavbar = () => (
