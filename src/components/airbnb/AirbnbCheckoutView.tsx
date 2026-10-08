@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Star, ShieldCheck, Gem, Tag, MapPin, Navigation, User, Phone, Mail, Calendar, Palette, Sparkles, AlertCircle, LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, Star, ShieldCheck, Gem, Tag, MapPin, Navigation, User, Phone, Mail, Calendar, Palette, Sparkles, AlertCircle, LogIn, UserPlus, Trash2 } from 'lucide-react';
 
 export interface BookingFormDetails {
   clientName: string;
@@ -25,6 +25,7 @@ export interface AirbnbCheckoutViewProps {
   setCouponCode: (c: string) => void;
   onApplyCoupon: () => void;
   couponMessage: string;
+  onRemoveServiceFromBundle?: (vendorId: string, serviceName: string) => void;
 }
 
 export function AirbnbCheckoutView({
@@ -40,7 +41,8 @@ export function AirbnbCheckoutView({
   couponCode,
   setCouponCode,
   onApplyCoupon,
-  couponMessage
+  couponMessage,
+  onRemoveServiceFromBundle
 }: AirbnbCheckoutViewProps) {
   // Restore saved draft if available
   const getInitialDraft = () => {
@@ -391,13 +393,16 @@ export function AirbnbCheckoutView({
             </div>
 
             {/* Vendor List Snippet */}
-            <div className="space-y-3 pb-5 border-b border-gray-100 max-h-80 overflow-y-auto">
+            <div className="space-y-3 pb-5 border-b border-gray-100 max-h-80 overflow-y-auto pr-1">
               <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                 <span>Selected Vendors ({bundledItems.length})</span>
                 <span>Services Included</span>
               </div>
               {bundledItems.map((item, idx) => (
-                <div key={item.vendor?.id || `${item.vendor?.name}-${idx}`} className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-200/80">
+                <div 
+                  key={`${item.vendor?.id || item.vendor?.name}-${item.service?.name || idx}-${idx}`} 
+                  className="flex items-center gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-200/80 hover:border-gray-300 transition-colors"
+                >
                   <img
                     src={item.vendor?.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=200'}
                     alt={item.vendor?.name || 'Vendor'}
@@ -416,6 +421,18 @@ export function AirbnbCheckoutView({
                       <span className="text-gray-500 font-medium truncate">{item.vendor?.category || 'Specialist'}</span>
                     </div>
                   </div>
+
+                  {onRemoveServiceFromBundle && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveServiceFromBundle(item.vendor?.id, item.service?.name)}
+                      className="p-2 text-gray-400 hover:text-[#EC003F] hover:bg-rose-50 rounded-xl transition cursor-pointer active:scale-90 shrink-0"
+                      title="Remove service from booking"
+                      aria-label={`Remove ${item.service?.name || item.vendor?.name}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

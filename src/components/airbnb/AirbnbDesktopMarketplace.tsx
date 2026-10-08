@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AirbnbNavbar } from './AirbnbNavbar';
 import { HeroSection } from './HeroSection';
 import { AirbnbVendorCard } from './AirbnbVendorCard';
@@ -53,6 +53,7 @@ export interface AirbnbDesktopMarketplaceProps {
   selectedVendor: Vendor | null;
   onCloseVendorDetail: () => void;
   onAddServiceToBundle: (service: VendorServiceItem) => void;
+  onRemoveServiceFromBundle?: (vendorId: string, serviceName: string) => void;
   bundledItems: { vendor: any; service: any }[];
   onPay: (bookingDetails?: any) => void;
   couponDiscount: number;
@@ -116,6 +117,7 @@ export function AirbnbDesktopMarketplace({
   selectedVendor,
   onCloseVendorDetail,
   onAddServiceToBundle,
+  onRemoveServiceFromBundle,
   bundledItems,
   onPay,
   couponDiscount,
@@ -150,6 +152,12 @@ export function AirbnbDesktopMarketplace({
     if (onSearchQueryChange) onSearchQueryChange(val);
     setInternalSearchQuery(val);
   };
+
+  useEffect(() => {
+    if (bundledItems.length === 0 && isCheckoutOpen) {
+      setIsCheckoutOpen(false);
+    }
+  }, [bundledItems.length, isCheckoutOpen]);
 
   // Flexible category matching helper
   const isCategoryMatch = (vendor: Vendor, targetCategory: string) => {
@@ -275,6 +283,7 @@ export function AirbnbDesktopMarketplace({
           setCouponCode={setCouponCode}
           onApplyCoupon={onApplyCoupon}
           couponMessage={couponMessage}
+          onRemoveServiceFromBundle={onRemoveServiceFromBundle}
         />
         <FooterSection 
           onNavigateTab={(tab) => {

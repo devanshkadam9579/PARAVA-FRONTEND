@@ -3758,6 +3758,7 @@ export default function App() {
           selectedVendor={selectedVendor}
           onCloseVendorDetail={() => handleCloseVendor()}
           onAddServiceToBundle={(service) => handleAddServiceToBundle(selectedVendor || vendors[0], service)}
+          onRemoveServiceFromBundle={handleRemoveServiceFromBundle}
           bundledItems={bundledItems}
           onPay={async (bookingDetails) => {
             if (!currentUser) {
