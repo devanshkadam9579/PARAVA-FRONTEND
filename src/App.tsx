@@ -52,6 +52,7 @@ import { AdminChatLogsModal } from './components/admin/AdminChatLogsModal';
 import { PaymentProcessingModal } from './components/PaymentProcessingModal';
 import { PaymentSuccessCelebrationModal } from './components/PaymentSuccessCelebrationModal';
 import { PaymentReturnView } from './components/PaymentReturnView';
+import { updateDocumentSeo, SEO_KOLHAPUR_ROUTES, BASE_PRODUCTION_URL } from './utils/seo';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -710,10 +711,14 @@ export default function App() {
 
     // Listen for Vendors collection
     const unsubscribeVendors = onSnapshot(collection(db, 'vendors'), (snapshot) => {
-      const vendorsData = snapshot.docs.map(doc => ({ 
+      const remoteData = snapshot.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data() 
       } as Vendor));
+      const mergedMap = new Map<string, Vendor>();
+      VENDORS.forEach(v => mergedMap.set(v.id, v));
+      remoteData.forEach(v => mergedMap.set(v.id, v));
+      const vendorsData = Array.from(mergedMap.values());
       setVendors(vendorsData);
       setIsLoadingVendors(false);
       localStorage.setItem('parva_vendors_list', JSON.stringify(vendorsData));
@@ -1327,7 +1332,27 @@ export default function App() {
     const rawPath = location.pathname.toLowerCase();
     const path = rawPath.replace(/\/+$/, '') || '/';
 
-    // 1. Vendor profile deep links: /vendor/:vendorKey or /vendors/:vendorKey or ?vendor=:vendorKey
+    // 1. Core Kolhapur Category SEO Landing Routes
+    if (SEO_KOLHAPUR_ROUTES[path]) {
+      const seoConfig = SEO_KOLHAPUR_ROUTES[path];
+      if (currentCity !== seoConfig.city && seoConfig.city) {
+        setCurrentCity(seoConfig.city);
+      }
+      if (selectedExploreCategory !== seoConfig.category && seoConfig.category) {
+        setSelectedExploreCategory(seoConfig.category);
+      }
+      if (activeTab !== 'home' && activeTab !== 'explore') {
+        setActiveTab('home');
+      }
+      updateDocumentSeo({
+        title: seoConfig.title,
+        description: seoConfig.description,
+        canonicalUrl: seoConfig.canonical
+      });
+      return;
+    }
+
+    // 2. Vendor profile deep links: /vendor/:vendorKey or /vendors/:vendorKey or ?vendor=:vendorKey
     const searchParams = new URLSearchParams(location.search);
     const queryVendor = searchParams.get('vendor') || searchParams.get('v');
     const isVendorRoute = path.startsWith('/vendor/') || path.startsWith('/vendors/') || Boolean(queryVendor);
@@ -1337,17 +1362,17 @@ export default function App() {
       if (vendorKey) {
         const normalizedKey = vendorKey.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        if (vendors.length > 0) {
-          const found = vendors.find((v) => {
-            if (!v) return false;
-            if (v.id && v.id.toLowerCase() === vendorKey.toLowerCase()) return true;
-            if (v.name && v.name.toLowerCase() === vendorKey.toLowerCase()) return true;
-            const vNameNorm = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (vNameNorm && vNameNorm === normalizedKey) return true;
-            const vIdNorm = (v.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (vIdNorm && vIdNorm === normalizedKey) return true;
-            return false;
-          });
+        const vendorPool = vendors.length > 0 ? vendors : VENDORS;
+        const found = vendorPool.find((v) => {
+          if (!v) return false;
+          if (v.id && v.id.toLowerCase() === vendorKey.toLowerCase()) return true;
+          if (v.name && v.name.toLowerCase() === vendorKey.toLowerCase()) return true;
+          const vNameNorm = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (vNameNorm && vNameNorm === normalizedKey) return true;
+          const vIdNorm = (v.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (vIdNorm && vIdNorm === normalizedKey) return true;
+          return false;
+        });
 
           if (found) {
             if (selectedVendor?.id !== found.id) {
@@ -1356,9 +1381,14 @@ export default function App() {
             if (queryVendor && location.pathname !== `/vendor/${found.id}`) {
               navigate(`/vendor/${found.id}`, { replace: true });
             }
+            updateDocumentSeo({
+              title: `${found.name} - ${found.category} in ${found.location} | MyParva`,
+              description: `Book ${found.name} (${found.category}) in ${found.location}. Transparent pricing starting from ₹${found.basePrice || 0}. 5% escrow advance protection.`,
+              canonicalUrl: `${BASE_PRODUCTION_URL}/vendor/${found.id}`,
+              ogImage: found.images?.[0] || `${BASE_PRODUCTION_URL}/parva-logo.png`
+            });
             return;
           }
-        }
 
         // Direct fetch from Firestore if vendors list not ready yet or specific doc needed
         try {
@@ -1370,6 +1400,12 @@ export default function App() {
               if (snap.exists()) {
                 const vData = { id: snap.id, ...snap.data() } as Vendor;
                 setSelectedVendor(vData);
+                updateDocumentSeo({
+                  title: `${vData.name} - ${vData.category} in ${vData.location} | MyParva`,
+                  description: `Book ${vData.name} (${vData.category}) in ${vData.location}. Transparent pricing starting from ₹${vData.basePrice || 0}. 5% escrow advance protection.`,
+                  canonicalUrl: `${BASE_PRODUCTION_URL}/vendor/${vData.id}`,
+                  ogImage: vData.images?.[0] || `${BASE_PRODUCTION_URL}/parva-logo.png`
+                });
                 return;
               }
             } catch (e) {}
@@ -1382,6 +1418,12 @@ export default function App() {
                 const docSnap = nameSnap.docs[0];
                 const vData = { id: docSnap.id, ...docSnap.data() } as Vendor;
                 setSelectedVendor(vData);
+                updateDocumentSeo({
+                  title: `${vData.name} - ${vData.category} in ${vData.location} | MyParva`,
+                  description: `Book ${vData.name} (${vData.category}) in ${vData.location}. Transparent pricing starting from ₹${vData.basePrice || 0}. 5% escrow advance protection.`,
+                  canonicalUrl: `${BASE_PRODUCTION_URL}/vendor/${vData.id}`,
+                  ogImage: vData.images?.[0] || `${BASE_PRODUCTION_URL}/parva-logo.png`
+                });
                 return;
               }
             } catch (e) {}
@@ -1393,7 +1435,14 @@ export default function App() {
                 const data = docSnap.data();
                 const dNameNorm = (data.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 if (dNameNorm && dNameNorm === normalizedKey) {
-                  setSelectedVendor({ id: docSnap.id, ...data } as Vendor);
+                  const vData = { id: docSnap.id, ...data } as Vendor;
+                  setSelectedVendor(vData);
+                  updateDocumentSeo({
+                    title: `${vData.name} - ${vData.category} in ${vData.location} | MyParva`,
+                    description: `Book ${vData.name} (${vData.category}) in ${vData.location}. Transparent pricing starting from ₹${vData.basePrice || 0}. 5% escrow advance protection.`,
+                    canonicalUrl: `${BASE_PRODUCTION_URL}/vendor/${vData.id}`,
+                    ogImage: vData.images?.[0] || `${BASE_PRODUCTION_URL}/parva-logo.png`
+                  });
                   return;
                 }
               }
@@ -1440,12 +1489,32 @@ export default function App() {
 
     if (path === '/' || path === '/home') {
       if (activeTab !== 'home') setActiveTab('home');
+      updateDocumentSeo({
+        title: 'MyParva - Event & Wedding Booking Platform | Kolhapur & Maharashtra',
+        description: 'Discover and book top verified wedding venues, caterers, photographers, decorators, and DJs in Kolhapur & Maharashtra on MyParva with secure 5% escrow advance protection.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/`
+      });
     } else if (path === '/explore') {
       if (activeTab !== 'explore') setActiveTab('explore');
+      updateDocumentSeo({
+        title: 'Explore Event Vendors & Celebration Specialists | MyParva',
+        description: 'Browse verified wedding and party specialists by category, price, and customer rating on MyParva.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/explore`
+      });
     } else if (path === '/cart') {
       if (activeTab !== 'cart') setActiveTab('cart');
+      updateDocumentSeo({
+        title: 'Your Celebration Cart | MyParva',
+        description: 'Review your selected vendor services and complete booking with 5% escrow advance.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/cart`
+      });
     } else if (path === '/bookings' || path === '/reservations') {
       if (activeTab !== 'bookings') setActiveTab('bookings');
+      updateDocumentSeo({
+        title: 'My Bookings & Reservations | MyParva',
+        description: 'View and manage your active event bookings and celebration reservations.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/bookings`
+      });
     } else if (path === '/messages' || path === '/chat') {
       if (activeTab !== 'messages') setActiveTab('messages');
       const params = new URLSearchParams(window.location.search);
@@ -1453,8 +1522,18 @@ export default function App() {
       const vId = params.get('vendorId');
       if (bId) setActiveChatBookingId(bId);
       if (vId) setActiveChatVendorId(vId);
+      updateDocumentSeo({
+        title: 'Messages & Vendor Chat | MyParva',
+        description: 'Chat directly with your booked event vendors and celebration coordinators.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/messages`
+      });
     } else if (path === '/profile' || path === '/account' || path === '/admin') {
       if (activeTab !== 'profile') setActiveTab('profile');
+      updateDocumentSeo({
+        title: 'Customer Profile & Wishlist | MyParva',
+        description: 'Manage your profile details, wishlisted celebration specialists, and booking history.',
+        canonicalUrl: `${BASE_PRODUCTION_URL}/profile`
+      });
     }
   }, [location.pathname, location.search, vendors]);
 
@@ -3794,11 +3873,6 @@ export default function App() {
       {/* ========================================================================= */}
       <div className="block lg:hidden min-h-screen bg-brand-bg">
         <div className="min-h-screen bg-brand-bg flex flex-col w-full relative pb-24" id="parva-app-container">
-
-          <Helmet>
-            <title>{!selectedExploreCategory || selectedExploreCategory === 'all' ? 'Explore Vendors | Parva Events' : `${(selectedExploreCategory || '').charAt(0).toUpperCase() + (selectedExploreCategory || '').slice(1)} Vendors | Parva Events`}</title>
-            <meta name="description" content={`Find and book the best ${!selectedExploreCategory || selectedExploreCategory === 'all' ? 'event' : selectedExploreCategory} vendors on Parva Events.`} />
-          </Helmet>
           
           {/* 1. TOP APP BAR */}
           <header className="bg-white px-3 sm:px-5 py-2.5 sm:py-3 border-b border-brand-border sticky top-0 z-30 flex items-center justify-between shadow-xs h-14" id="top-app-bar">
@@ -6338,12 +6412,6 @@ export default function App() {
       )}
 
       {/* 5. IMMERSIVE VENDOR DETAIL SHEET */}
-      {selectedVendor && (
-        <Helmet>
-          <title>{selectedVendor.name} | Parva Events</title>
-          <meta name="description" content={selectedVendor.description} />
-        </Helmet>
-      )}
       {selectedVendor && (
         <div className="block lg:hidden">
           <VendorDetailSheet
