@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Star, MapPin, ShieldCheck, Heart, Share2, Calendar as CalendarIcon, Clock, 
-  CheckCircle, ArrowLeft, Users, ChevronRight, Phone, MessageSquare, 
+  CheckCircle, ArrowLeft, Users, ChevronRight, ChevronDown, Phone, MessageSquare, 
   Grid, Check, Sparkles, AlertCircle, Info, HelpCircle
 } from 'lucide-react';
 import { Vendor, VendorServiceItem } from '../../types';
@@ -610,52 +610,113 @@ export function AirbnbVendorDetailView({
               </div>
             </div>
 
-            {/* Inputs Box */}
-            <div className="border border-gray-300 rounded-2xl overflow-hidden divide-y divide-gray-300">
+            {/* Inputs Box - Interactive Date, Time Slot, and Guest Count with enlarged fonts */}
+            <div className="border border-gray-300 rounded-2xl overflow-hidden divide-y divide-gray-300 shadow-2xs">
               {/* Date & Time Slot */}
               <div className="grid grid-cols-2 divide-x divide-gray-300">
-                <div 
-                  onClick={() => setIsCalendarModalOpen(true)}
-                  className="p-3 bg-white hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <label className="block text-[10px] font-black uppercase text-gray-500">Event Date</label>
-                  <div className="text-xs font-extrabold text-gray-900 mt-0.5 truncate">
-                    {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                {/* Event Date Box */}
+                <div className="relative p-3.5 bg-white hover:bg-gray-50/80 transition cursor-pointer group">
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    Event Date
+                  </label>
+                  <div className="text-sm sm:text-base font-black text-gray-900 mt-1 flex items-center justify-between">
+                    <span className="truncate">
+                      {eventDate ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                    </span>
+                    <CalendarIcon size={17} className="text-gray-400 group-hover:text-rose-600 transition-colors shrink-0 ml-1" />
                   </div>
+                  {/* Native interactive date picker overlay */}
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={eventDate ? (eventDate.includes('T') ? eventDate.split('T')[0] : eventDate) : ''}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        onDateChange(e.target.value);
+                      }
+                    }}
+                    onClick={(e) => {
+                      try {
+                        (e.currentTarget as any).showPicker?.();
+                      } catch (_) {}
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    aria-label="Modify event date"
+                  />
                 </div>
 
-                <div className="p-3 bg-white">
-                  <label className="block text-[10px] font-black uppercase text-gray-500">Time Slot</label>
-                  <select
-                    value={timeSlot}
-                    onChange={(e) => setTimeSlot(e.target.value as any)}
-                    className="w-full text-xs font-extrabold text-gray-900 outline-none mt-0.5 bg-transparent cursor-pointer"
-                  >
-                    <option value="evening">Evening (5 PM - 11 PM)</option>
-                    <option value="morning">Morning (9 AM - 2 PM)</option>
-                    <option value="fullday">Full Day (9 AM - 11 PM)</option>
-                  </select>
+                {/* Time Slot Box */}
+                <div className="relative p-3.5 bg-white hover:bg-gray-50/80 transition">
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    Time Slot
+                  </label>
+                  <div className="relative mt-1">
+                    <select
+                      value={timeSlot}
+                      onChange={(e) => setTimeSlot(e.target.value as any)}
+                      className="w-full text-sm sm:text-base font-black text-gray-900 outline-none bg-transparent cursor-pointer appearance-none pr-5"
+                      aria-label="Select time slot"
+                    >
+                      <option value="evening">Evening (5 PM - 11 PM)</option>
+                      <option value="morning">Morning (9 AM - 2 PM)</option>
+                      <option value="fullday">Full Day (9 AM - 11 PM)</option>
+                    </select>
+                    <ChevronDown size={17} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
-              {/* Guest Count */}
-              <div className="p-3 bg-white flex items-center justify-between">
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-gray-500">Attendees / Guests</label>
-                  <span className="text-xs font-extrabold text-gray-900">{guestCount || 100} Attendees</span>
+              {/* Guest Count Box */}
+              <div className="p-3.5 bg-white flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    Attendees / Guests
+                  </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      value={guestCount || 100}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1) {
+                          onGuestCountChange(val);
+                        } else if (e.target.value === '') {
+                          onGuestCountChange(1);
+                        }
+                      }}
+                      className="w-20 text-base sm:text-lg font-black text-gray-900 bg-gray-50 hover:bg-gray-100/80 focus:bg-white border border-gray-300 rounded-lg px-2 py-0.5 outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition text-center"
+                      aria-label="Directly enter attendee count"
+                    />
+                    <span className="text-base sm:text-lg font-black text-gray-900">
+                      Attendees
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => onGuestCountChange(Math.max(10, (guestCount || 100) - 25))}
-                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900 cursor-pointer"
+                    onClick={() => {
+                      const current = guestCount || 100;
+                      const step = current > 50 ? 25 : (current > 10 ? 5 : 1);
+                      onGuestCountChange(Math.max(1, current - step));
+                    }}
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-900 flex items-center justify-center font-black text-gray-800 hover:text-gray-950 text-lg transition active:scale-95 cursor-pointer shadow-xs bg-white"
+                    aria-label="Decrease attendees"
                   >
                     -
                   </button>
                   <button
                     type="button"
-                    onClick={() => onGuestCountChange((guestCount || 100) + 25)}
-                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:border-gray-900 cursor-pointer"
+                    onClick={() => {
+                      const current = guestCount || 100;
+                      const step = current >= 50 ? 25 : 5;
+                      onGuestCountChange(current + step);
+                    }}
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-900 flex items-center justify-center font-black text-gray-800 hover:text-gray-950 text-lg transition active:scale-95 cursor-pointer shadow-xs bg-white"
+                    aria-label="Increase attendees"
                   >
                     +
                   </button>

@@ -2,66 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Search, Sparkles, ShieldCheck, HeartHandshake, Award, Headphones, Star, ChevronLeft, ChevronRight, Tag, ArrowRight } from 'lucide-react';
 
 export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
-  const promoScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const checkPromoScroll = () => {
-    if (promoScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
-      setCanScrollLeft(scrollLeft > 10);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    checkPromoScroll();
-    window.addEventListener('resize', checkPromoScroll);
-    return () => window.removeEventListener('resize', checkPromoScroll);
-  }, [promos]);
-
-  // Automatic Smooth Continuous Loop for Promo Cards
-  useEffect(() => {
-    if (isPaused) return;
-
-    const interval = setInterval(() => {
-      if (promoScrollRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
-        // If at the end, smoothly loop back to start
-        if (scrollLeft + clientWidth >= scrollWidth - 20) {
-          promoScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          // Advance by one card width (approx 360-500px depending on screen)
-          const cardWidth = window.innerWidth < 640 ? 350 : 500;
-          promoScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
-        }
-      }
-    }, 3500);
-
-    return () => clearInterval(interval);
-  }, [isPaused, promos]);
-
-  const scrollPromos = (direction: 'left' | 'right') => {
-    if (promoScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = promoScrollRef.current;
-      const cardWidth = window.innerWidth < 640 ? 350 : 500;
-      if (direction === 'right') {
-        if (scrollLeft + clientWidth >= scrollWidth - 20) {
-          promoScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          promoScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
-        }
-      } else {
-        if (scrollLeft <= 10) {
-          promoScrollRef.current.scrollTo({ left: scrollWidth, behavior: 'smooth' });
-        } else {
-          promoScrollRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
-        }
-      }
-    }
-  };
-
   const steps = [
     {
       step: '01',
@@ -125,9 +65,32 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
   ];
 
   const displayPromos = promos && promos.length > 0 ? promos : defaultPromos;
+  // Seamless 3x replica for smooth infinite loop without seams
+  const marqueePromos = [...displayPromos, ...displayPromos, ...displayPromos];
 
   return (
     <div className="space-y-16">
+      <style>{`
+        @keyframes parvaContinuousScroll {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          100% {
+            transform: translate3d(-33.333333%, 0, 0);
+          }
+        }
+        .animate-parva-continuous {
+          display: flex;
+          width: max-content;
+          animation: parvaContinuousScroll 35s linear infinite;
+          will-change: transform;
+        }
+        .animate-parva-continuous:hover,
+        .animate-parva-continuous:active {
+          animation-play-state: paused;
+        }
+      `}</style>
+
       {/* How Parva Works */}
       <section className="space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -167,7 +130,7 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
         </div>
       </section>
 
-      {/* Promotional Banners — Clean, Clear, Unfiltered & Spacious */}
+      {/* Promotional Banners — Continuous Infinite Rotating Marquee */}
       <section className="bg-gradient-to-b from-rose-50/70 via-white to-gray-50/60 border border-rose-100 rounded-3xl sm:rounded-4xl p-6 sm:p-10 shadow-sm relative overflow-hidden space-y-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -184,94 +147,79 @@ export function HowItWorksSection({ promos = [] }: { promos?: any[] }) {
             </p>
           </div>
 
-          {/* Navigation Scroll Buttons */}
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => scrollPromos('left')}
-              className="w-10 h-10 rounded-full bg-white border border-gray-200 hover:border-gray-900 flex items-center justify-center text-gray-800 shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
-              aria-label="Previous offers"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollPromos('right')}
-              className="w-10 h-10 rounded-full bg-white border border-gray-200 hover:border-gray-900 flex items-center justify-center text-gray-800 shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
-              aria-label="Next offers"
-            >
-              <ChevronRight size={18} />
-            </button>
+          {/* Continuous Loop Indicator Pill */}
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-600 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-gray-200 shadow-2xs w-fit">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span>Continuous Loop • Hover to pause</span>
           </div>
         </div>
 
-        {/* Large Unfiltered Promotional Rails */}
-        <div 
-          ref={promoScrollRef}
-          onScroll={checkPromoScroll}
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          onTouchStart={() => setIsPaused(true)}
-          onTouchEnd={() => setIsPaused(false)}
-          className="flex gap-6 overflow-x-auto scrollbar-none py-2 px-1 scroll-smooth snap-x snap-mandatory"
-        >
-          {displayPromos.map((promo, idx) => (
-            <div
-              key={promo.id || idx}
-              className="w-[340px] sm:w-[480px] md:w-[560px] shrink-0 bg-white rounded-3xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group snap-start cursor-pointer"
-            >
-              {/* Promo Banner Image Container — 100% natural, crisp, zero filters */}
-              <div className="relative w-full h-48 sm:h-64 bg-gray-100 overflow-hidden">
-                {promo.image ? (
-                  <img
-                    src={promo.image}
-                    alt={promo.title || 'Promotional Offer'}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-rose-500 via-rose-600 to-pink-600 flex items-center justify-center text-white">
-                    <Sparkles size={48} className="text-white/80" />
-                  </div>
-                )}
+        {/* Continuous Looping Track Container with gradient fade edges */}
+        <div className="relative w-full overflow-hidden py-2">
+          {/* Subtle gradient edges for smooth fading entry/exit */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-r from-rose-50/90 via-rose-50/40 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-l from-gray-50/90 via-gray-50/40 to-transparent z-10 pointer-events-none" />
 
-                {/* Top Badge Overlay */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className="bg-rose-600 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
-                    <Tag size={12} />
-                    <span>{promo.badge || 'Featured Offer'}</span>
-                  </span>
-                  {promo.discount && (
-                    <span className="bg-amber-400 text-gray-950 text-xs font-extrabold px-2.5 py-1 rounded-full shadow-md">
-                      {promo.discount}
-                    </span>
+          {/* Continuous Infinite Track */}
+          <div className="animate-parva-continuous flex gap-6">
+            {marqueePromos.map((promo, idx) => (
+              <div
+                key={`${promo.id || 'promo'}-${idx}`}
+                className="w-[320px] sm:w-[440px] md:w-[500px] shrink-0 bg-white rounded-3xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
+              >
+                {/* Promo Banner Image Container */}
+                <div className="relative w-full h-44 sm:h-56 md:h-60 bg-gray-100 overflow-hidden">
+                  {promo.image ? (
+                    <img
+                      src={promo.image}
+                      alt={promo.title || 'Promotional Offer'}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-rose-500 via-rose-600 to-pink-600 flex items-center justify-center text-white">
+                      <Sparkles size={48} className="text-white/80" />
+                    </div>
                   )}
+
+                  {/* Top Badge Overlay */}
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <span className="bg-rose-600 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
+                      <Tag size={12} />
+                      <span>{promo.badge || 'Featured Offer'}</span>
+                    </span>
+                    {promo.discount && (
+                      <span className="bg-amber-400 text-gray-950 text-xs font-extrabold px-2.5 py-1 rounded-full shadow-md">
+                        {promo.discount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Promo Information Footer */}
+                <div className="p-5 sm:p-6 flex flex-col justify-between flex-1 gap-3 bg-white">
+                  <div className="space-y-1.5">
+                    <h3 className="text-base sm:text-lg font-black text-gray-900 font-display leading-snug group-hover:text-rose-600 transition-colors">
+                      {promo.title || 'Special Celebration Offer'}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed line-clamp-2">
+                      {promo.subtitle || 'Book now to lock in this exclusive deal with our verified partners.'}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+                    <span className="text-xs font-extrabold text-rose-600 flex items-center gap-1">
+                      <span>5% Escrow Advance Protection</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-black text-gray-900 group-hover:text-rose-600 group-hover:translate-x-1 transition-all">
+                      <span>Claim Offer</span>
+                      <ArrowRight size={14} />
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              {/* Promo Information Footer — High contrast, large and clearly readable */}
-              <div className="p-5 sm:p-6 flex flex-col justify-between flex-1 gap-3 bg-white">
-                <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-xl font-black text-gray-900 font-display leading-snug group-hover:text-rose-600 transition-colors">
-                    {promo.title || 'Special Celebration Offer'}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed line-clamp-2">
-                    {promo.subtitle || 'Book now to lock in this exclusive deal with our verified partners.'}
-                  </p>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between border-t border-gray-100">
-                  <span className="text-xs font-extrabold text-rose-600 flex items-center gap-1">
-                    <span>5% Escrow Advance Protection</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-black text-gray-900 group-hover:text-rose-600 group-hover:translate-x-1 transition-all">
-                    <span>Claim Offer</span>
-                    <ArrowRight size={14} />
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
     </div>
