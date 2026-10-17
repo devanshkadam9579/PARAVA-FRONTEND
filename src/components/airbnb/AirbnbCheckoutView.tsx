@@ -121,10 +121,12 @@ export function AirbnbCheckoutView({
     );
   };
 
-  const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
-  const bookingFee = Math.round(servicesTotal * 0.05);
+  const servicesTotal = bundledItems.reduce((sum, item) => sum + (Number(item.service?.price) || 0), 0);
+  const discountedSubtotal = Math.max(0, servicesTotal - couponDiscount);
+  const bookingFee = Math.round(discountedSubtotal * 0.05);
   const gst = Math.round(bookingFee * 0.18);
-  const finalDue = Math.max(0, bookingFee + gst - couponDiscount);
+  const finalDue = bookingFee + gst;
+  const remainingBalance = Math.max(0, discountedSubtotal - bookingFee);
 
   const primaryItem = bundledItems[0] || {
     vendor: { name: 'Verified Vendor', category: 'Services', rating: 5.0, reviewCount: 20 },
@@ -485,25 +487,35 @@ export function AirbnbCheckoutView({
                 <span>Services Total:</span>
                 <span className="font-bold text-gray-900">₹{servicesTotal.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
-                <span>5% Escrow Advance Fee:</span>
-                <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>GST (18% on fee):</span>
-                <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
-              </div>
               {couponDiscount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-bold">
                   <span>Coupon Discount:</span>
                   <span>-₹{couponDiscount.toLocaleString('en-IN')}</span>
                 </div>
               )}
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Discounted Event Value:</span>
+                  <span className="font-bold text-gray-900">₹{discountedSubtotal.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-gray-600">
+                <span>5% Escrow Advance Fee:</span>
+                <span className="font-bold text-gray-900">₹{bookingFee.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>GST (18% on advance fee):</span>
+                <span className="font-bold text-gray-900">₹{gst.toLocaleString('en-IN')}</span>
+              </div>
               <div className="flex justify-between font-black text-gray-900 pt-3 border-t border-gray-100 text-base">
                 <span>Advance Payable Now:</span>
                 <span className="text-[#EC003F] text-lg font-black">₹{finalDue.toLocaleString('en-IN')}</span>
               </div>
-              <div className="text-xs text-gray-400 text-right font-medium">
+              <div className="flex justify-between text-xs text-gray-500 pt-1">
+                <span>Remaining at Event:</span>
+                <span className="font-bold text-gray-700">₹{remainingBalance.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="text-[11px] text-gray-400 text-right font-medium">
                 Remaining balance payable directly to vendor on event day
               </div>
             </div>

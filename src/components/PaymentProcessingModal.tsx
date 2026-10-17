@@ -50,9 +50,9 @@ export function PaymentProcessingModal({
       return;
     }
 
-    const t1 = setTimeout(() => setCurrentStep(2), 700);
-    const t2 = setTimeout(() => setCurrentStep(3), 1800);
-    const t3 = setTimeout(() => setCurrentStep(4), 2800);
+    const t1 = setTimeout(() => setCurrentStep(2), 150);
+    const t2 = setTimeout(() => setCurrentStep(3), 350);
+    const t3 = setTimeout(() => setCurrentStep(4), 600);
 
     return () => {
       clearTimeout(t1);

@@ -827,7 +827,17 @@ export function AirbnbVendorDetailView({
                 if (!hasSelectedItems) {
                   return;
                 }
-                selectedServices.forEach(s => onAddServiceToBundle(s));
+                const currentGuestCount = guestCount || 100;
+                selectedServices.forEach(s => {
+                  const baseRate = Number(s.price) || 0;
+                  const itemToAdd: VendorServiceItem = {
+                    ...s,
+                    basePlatePrice: isCatering ? baseRate : undefined,
+                    price: isCatering ? baseRate * currentGuestCount : baseRate,
+                    unit: isCatering ? `₹${baseRate}/plate × ${currentGuestCount} Guests` : s.unit
+                  } as any;
+                  onAddServiceToBundle(itemToAdd);
+                });
                 selectedAddons.forEach(a => onAddServiceToBundle({
                   name: `[Add-on] ${a.name}`,
                   price: a.price,

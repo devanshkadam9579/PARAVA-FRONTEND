@@ -10,6 +10,7 @@ import {
   createUserWithEmailAndPassword, 
   sendEmailVerification 
 } from 'firebase/auth';
+import { validateEmail, validateIndianPhone } from '../utils/validators';
 
 interface VendorAuthModalProps {
   isOpen: boolean;
@@ -150,6 +151,20 @@ export default function VendorAuthModal({
       if (!wizardName || wizardCategories.length === 0 || !wizardEmail || !wizardPassword) {
         setLoginError('Please fill all required fields.');
         return;
+      }
+
+      const emailRes = validateEmail(wizardEmail);
+      if (!emailRes.isValid) {
+        setLoginError(emailRes.error || 'Please enter a valid business email address.');
+        return;
+      }
+
+      if (wizardPhone) {
+        const phoneRes = validateIndianPhone(wizardPhone);
+        if (!phoneRes.isValid) {
+          setLoginError(phoneRes.error || 'Please enter a valid 10-digit Indian phone number.');
+          return;
+        }
       }
 
       const auth = getAuthInstance();

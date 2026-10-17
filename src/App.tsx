@@ -12,12 +12,12 @@ import { doc, getDoc, collection, onSnapshot, setDoc, deleteDoc, getDocs, query,
 import { jsPDF } from 'jspdf';
 import { Helmet } from 'react-helmet-async';
 import { 
-  Home, Compass, Calendar, MessageSquare, User, MapPin, Bell, 
+  Home, Compass, Calendar, MessageSquare, MessageCircle, User, MapPin, Bell, 
   ShoppingCart, Mic, Sparkles, Filter, ArrowRight, ChevronRight, ChevronLeft,
   Star, Check, CheckCircle2, Trash2, Send, X, Heart, ShieldCheck, 
   Info, DollarSign, Gift, ExternalLink, CalendarDays, Users, Smartphone, Download, FileText,
   ChevronUp, ChevronDown, Camera, Headphones, Phone, Mail, Database, Activity, Server, Clock,
-  SlidersHorizontal, Tag
+  SlidersHorizontal, Tag, Copy, Loader2, AlertTriangle, XCircle, AlertCircle
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -53,6 +53,7 @@ import { PaymentProcessingModal } from './components/PaymentProcessingModal';
 import { PaymentSuccessCelebrationModal } from './components/PaymentSuccessCelebrationModal';
 import { PaymentReturnView } from './components/PaymentReturnView';
 import { updateDocumentSeo, SEO_KOLHAPUR_ROUTES, BASE_PRODUCTION_URL } from './utils/seo';
+import { useBranding } from './hooks/useBranding';
 
 import { Share2 } from 'lucide-react';
 import {
@@ -474,6 +475,7 @@ const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhos
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logoUrl: brandingLogoUrl, logoAltText: brandingAltText } = useBranding();
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'bookings' | 'messages' | 'profile' | 'cart'>(() => {
@@ -623,10 +625,9 @@ export default function App() {
       const cached = localStorage.getItem('parva_vendors_list') || localStorage.getItem('parva_cached_vendors');
       if (cached) return JSON.parse(cached);
     } catch (e) {}
-    return VENDORS;
+    return [];
   });
-  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
-  const [appLogo, setAppLogo] = useState('https://i.postimg.cc/mgk6dNNd/parva-logo.png');
+  const [appLogo, setAppLogo] = useState('https://res.cloudinary.com/k03rmhkg/image/upload/v1792254596/parva_branding/myparva_official_logo.png');
   const [paymentsEnabled, setPaymentsEnabled] = useState<boolean>(true);
 
   const [categoriesList, setCategoriesList] = useState<QuickCategory[]>(() => {
@@ -648,13 +649,7 @@ export default function App() {
     try {
       if (cached) return JSON.parse(cached);
     } catch (e) {}
-    // Seed initial leads so the CSV file and analytics charts look amazing!
-    const initialLeads = [
-      { id: 'lead-1', name: 'Rohan Malhotra', phone: '9812345678', email: 'rohan.m@gmail.com', city: 'Mumbai', vendorName: 'Royal Grand Pavilion', budget: 180000, timestamp: '2026-07-07 14:32:10' },
-      { id: 'lead-2', name: 'Ananya Goel', phone: '9922334455', email: 'ananya@yahoo.com', city: 'Delhi NCR', vendorName: 'Saffron & Spice Gourmet Catering', budget: 95000, timestamp: '2026-07-08 10:15:45' }
-    ];
-    localStorage.setItem('parva_leads_list', JSON.stringify(initialLeads));
-    return initialLeads;
+    return [];
   });
 
   // App metrics
@@ -672,29 +667,9 @@ export default function App() {
     const seedDatabase = async () => {
       if (!isMasterAdmin) return;
       try {
-        const { getDocs, setDoc, getDoc, doc } = await import('firebase/firestore');
+        const { getDocs, setDoc, doc } = await import('firebase/firestore');
         
-        // Seed default admins list if empty or outdated
-        const masterAdminRef = doc(db, 'admins', 'master_admin');
-        const masterAdminDoc = await getDoc(masterAdminRef);
-        if (!masterAdminDoc.exists() || masterAdminDoc.data()?.username !== 'devansh@parva.com') {
-          await setDoc(masterAdminRef, {
-            username: 'devansh@parva.com',
-            password: 'devansh@9579',
-            isMaster: true
-          });
-        }
-        
-        // Seed default vendors if empty
-        const vendorsSnap = await getDocs(collection(db, 'vendors'));
-        if (vendorsSnap.empty) {
-          for (const vendor of VENDORS) {
-            await setDoc(doc(db, 'vendors', vendor.id), {
-              ...vendor,
-              busyDates: vendor.busyDates || []
-            });
-          }
-        }
+        // Master admin accounts are managed securely via Firebase Auth and server-side roles
         
         // Seed default promos if empty
         const promosSnap = await getDocs(collection(db, 'promos'));
@@ -715,13 +690,11 @@ export default function App() {
         id: doc.id, 
         ...doc.data() 
       } as Vendor));
-      const mergedMap = new Map<string, Vendor>();
-      VENDORS.forEach(v => mergedMap.set(v.id, v));
-      remoteData.forEach(v => mergedMap.set(v.id, v));
-      const vendorsData = Array.from(mergedMap.values());
-      setVendors(vendorsData);
+      setVendors(remoteData);
       setIsLoadingVendors(false);
-      localStorage.setItem('parva_vendors_list', JSON.stringify(vendorsData));
+      try {
+        localStorage.setItem('parva_vendors_list', JSON.stringify(remoteData));
+      } catch (e) {}
     }, (error) => {
       console.debug("Vendors sync info (offline fallback active):", error?.message);
       setIsLoadingVendors(false);
@@ -786,6 +759,9 @@ export default function App() {
         const data = docSnap.data();
         const enabled = data.paymentsEnabled ?? data.paymentEnabled ?? true;
         setPaymentsEnabled(enabled);
+        if (data.logoUrl) {
+          setAppLogo(data.logoUrl);
+        }
         if (data.bookingFeePercentage !== undefined) {
           setBookingFeePercentage(Number(data.bookingFeePercentage));
         }
@@ -1235,6 +1211,35 @@ export default function App() {
   const [planningGuestSize, setPlanningGuestSize] = useState<number>(() => {
     return Number(localStorage.getItem('parva_planning_guest_size') || '100');
   });
+
+  const handleGuestCountChange = (newCount: number) => {
+    const validCount = Math.max(1, newCount);
+    setPlanningGuestSize(validCount);
+    try {
+      localStorage.setItem('parva_planning_guest_size', String(validCount));
+    } catch (e) {}
+
+    // Instantly update any catering services in the active bundle with the new guest count
+    setBundledItems((prev) =>
+      prev.map((item) => {
+        const isCatering = (item.vendor?.category || '').trim().toLowerCase() === 'catering';
+        if (!isCatering) return item;
+
+        const baseRate = (item.service as any).basePlatePrice ||
+          (item.service.price > 2500 ? Math.round(item.service.price / (planningGuestSize || 100)) : item.service.price);
+
+        return {
+          ...item,
+          service: {
+            ...item.service,
+            basePlatePrice: baseRate,
+            price: baseRate * validCount,
+            unit: `₹${baseRate}/plate × ${validCount} Guests`
+          } as any
+        };
+      })
+    );
+  };
 
   const [planningBudget, setPlanningBudget] = useState<number>(() => {
     return Number(localStorage.getItem('parva_planning_budget') || '500000');
@@ -1798,6 +1803,8 @@ export default function App() {
   const [adminPromoDiscount, setAdminPromoDiscount] = useState('15% Off');
   const [adminPromoImage, setAdminPromoImage] = useState('');
   const [adminAppLogo, setAdminAppLogo] = useState('');
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
+  const [copiedBookingId, setCopiedBookingId] = useState<string | null>(null);
 
   // Admin Occasions Categories (CRUD) state
   const [adminCategoryName, setAdminCategoryName] = useState('');
@@ -2164,7 +2171,10 @@ export default function App() {
           vendorId: params.vendorId || params.bookingData?.vendor?.id || 'system',
           type: params.type,
           amount: params.amount || 0,
+          servicesTotal: params.bookingData?.totalPrice || params.bookingData?.finalPrice || 0,
           selectedServices: params.bookingData?.selectedServices || [],
+          bundledItems: params.bookingData?.bundledItems || bundledItems || [],
+          items: params.bookingData?.bundledItems || bundledItems || [],
           planningGuestSize: planningGuestSize || 100,
           couponCode: couponApplied ? couponCode : undefined,
           customerName: params.bookingData?.customerName || currentUser?.name || 'Parva Customer',
@@ -2200,12 +2210,12 @@ export default function App() {
       console.log(`[Cashfree Checkout] Opening checkout for order: ${orderId} (isMobile: ${isMobileDevice})`);
 
       // 3. Launch Cashfree Native Checkout (Mobile uses _self redirect for reliable UPI deep-linking, desktop uses modal)
+      setIsPaymentProcessingModalOpen(false);
       cashfree.checkout({
         paymentSessionId: paymentSessionId,
         redirectTarget: isMobileDevice ? '_self' : '_modal'
       }).then(async (result: any) => {
         setIsPaymentProcessing(false);
-        setIsPaymentProcessingModalOpen(false);
         console.log(`[Cashfree Result]:`, result);
 
         if (result?.error) {
@@ -2626,23 +2636,44 @@ export default function App() {
 
   // Bundling Actions
   const handleAddServiceToBundle = (vendor: Vendor, service: VendorServiceItem) => {
-    const alreadyAdded = bundledItems.some(
-      (item) => item.vendor.id === vendor.id && item.service.name === service.name
-    );
-    if (alreadyAdded) return;
-
-    // If service is from catering and not yet multiplied with guest count:
-    const isCatering = vendor.category === 'Catering';
+    const isCatering = (vendor.category || '').trim().toLowerCase() === 'catering';
     const guestCount = planningGuestSize || 100;
-    const finalService = (isCatering && !service.unit?.includes('Guests'))
-      ? {
-          ...service,
-          price: service.price * guestCount,
-          unit: `₹${service.price}/plate × ${guestCount} Guests`
-        }
-      : service;
+    
+    // Check if service unit indicates it is already multiplied with guests
+    const isAlreadyMultiplied = (
+      service.unit?.toLowerCase().includes('guest') || service.unit?.toLowerCase().includes('attendee')
+    );
 
-    setBundledItems((prev) => [...prev, { vendor, service: finalService }]);
+    const basePlateRate = (service as any).basePlatePrice || 
+      (isCatering && !isAlreadyMultiplied ? service.price : (service.price > 2500 ? Math.round(service.price / (guestCount || 1)) : service.price));
+
+    const finalPrice = isCatering
+      ? (isAlreadyMultiplied ? service.price : basePlateRate * guestCount)
+      : service.price;
+
+    const finalUnit = isCatering
+      ? (isAlreadyMultiplied ? service.unit : `₹${basePlateRate}/plate × ${guestCount} Guests`)
+      : service.unit;
+
+    const finalService: VendorServiceItem = {
+      ...service,
+      price: finalPrice,
+      unit: finalUnit,
+      basePlatePrice: isCatering ? basePlateRate : undefined
+    } as any;
+
+    setBundledItems((prev) => {
+      const existingIdx = prev.findIndex(
+        (item) => item.vendor.id === vendor.id && item.service.name === service.name
+      );
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { vendor, service: finalService };
+        return updated;
+      }
+      return [...prev, { vendor, service: finalService }];
+    });
+
     trackServiceSelected(vendor.id, {
       name: finalService.name,
       price: finalService.price,
@@ -2870,10 +2901,11 @@ export default function App() {
       return;
     }
 
-    const servicesTotal = bundledItems.reduce((sum, item) => sum + item.service.price, 0);
-    const bookingFee = Math.round(servicesTotal * 0.05);
+    const servicesTotal = bundledItems.reduce((sum, item) => sum + (Number(item.service?.price) || 0), 0);
+    const discountedSubtotal = Math.max(0, servicesTotal - couponDiscount);
+    const bookingFee = Math.round(discountedSubtotal * 0.05);
     const gst = Math.round(bookingFee * 0.18);
-    const finalPayableTotal = Math.max(0, bookingFee + gst - couponDiscount);
+    const finalPayableTotal = bookingFee + gst;
 
     const custName = bookingDetails?.clientName || userToUse?.name || userToUse?.displayName || 'Valued Client';
     const custPhone = bookingDetails?.clientPhone || userToUse?.phone || '';
@@ -2889,7 +2921,17 @@ export default function App() {
       vendor: primaryVendor,
       vendorId: primaryVendor?.id,
       serviceName: bundledItems[0]?.service?.name || primaryVendor?.category || 'Celebration Service',
-      selectedServices: bundledItems.map(item => item.service),
+      selectedServices: bundledItems.map(item => ({
+        ...item.service,
+        vendorId: item.vendor?.id,
+        vendorName: item.vendor?.name,
+        vendorCategory: item.vendor?.category
+      })),
+      bundledItems: bundledItems.map(item => ({
+        vendorId: item.vendor?.id,
+        vendorName: item.vendor?.name,
+        service: item.service
+      })),
       eventDate: planningStartDate,
       eventTimeSlot: customDeliveryTime || planningTimeSlot || 'evening',
       customTime: customDeliveryTime || '',
@@ -2897,7 +2939,9 @@ export default function App() {
       status: 'Pending',
       totalPrice: servicesTotal,
       bundleDiscount: couponDiscount,
-      finalPrice: servicesTotal - couponDiscount,
+      finalPrice: discountedSubtotal,
+      advancePaid: finalPayableTotal,
+      remainingAmount: Math.max(0, discountedSubtotal - bookingFee),
       paymentStatus: 'Unpaid',
       bookingIdString: `PRV-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
       customerName: custName,
@@ -3093,7 +3137,32 @@ export default function App() {
     return true;
   };
 
-  const handleDownloadReceiptPDF = (booking: Booking) => {
+  const handleDownloadReceiptPDF = async (booking: Booking) => {
+    // 1. Try authoritative server-side PDF invoice
+    try {
+      const token = user ? await user.getIdToken().catch(() => null) : null;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const url = `${API_URL}/api/bookings/${encodeURIComponent(booking.id)}/receipt${booking.orderId ? `?orderId=${encodeURIComponent(booking.orderId)}` : ''}`;
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `Parva_Receipt_${booking.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+        trackReceiptDownloaded(booking.id || 'booking');
+        showNotification('📥 Official transaction receipt PDF downloaded successfully!');
+        return;
+      }
+    } catch (serverErr) {
+      console.warn('[Receipt] Server download fallback to client jsPDF:', serverErr);
+    }
+
     try {
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -3101,8 +3170,8 @@ export default function App() {
         format: 'a4'
       });
 
-      // Colors
-      const primaryColor = [79, 70, 229]; // #4f46e5 (Indigo)
+      // Colors — Canonical Parva Red #EC003F
+      const primaryColor = [236, 0, 63]; // #EC003F
       const textColor = [17, 24, 39]; // Gray 900
       const secondaryTextColor = [107, 114, 128]; // Gray 500
       const lightBg = [249, 250, 251]; // Gray 50
@@ -3116,7 +3185,7 @@ export default function App() {
       doc.rect(12, 12, 186, 32, 'F');
 
       // Parva App Brand Header Logo Circle
-      doc.setFillColor(79, 70, 229);
+      doc.setFillColor(236, 0, 63);
       doc.circle(28, 28, 9, 'F');
       
       // "P" inside circle
@@ -3126,7 +3195,7 @@ export default function App() {
       doc.text('P', 25.5, 31);
 
       // App Title
-      doc.setTextColor(79, 70, 229);
+      doc.setTextColor(236, 0, 63);
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(22);
       doc.text('PARVA', 42, 27);
@@ -3808,7 +3877,7 @@ export default function App() {
           planningStartDate={planningStartDate}
           onDateChange={(d) => setPlanningStartDate(d)}
           planningGuestSize={planningGuestSize}
-          onGuestCountChange={(g) => setPlanningGuestSize(g)}
+          onGuestCountChange={handleGuestCountChange}
           currentUser={currentUser}
           onOpenLogin={(tab) => {
             const safeTab = tab === 'signup' ? 'signup' : tab === 'forgot' ? 'forgot' : 'signin';
@@ -3885,9 +3954,10 @@ export default function App() {
                 aria-label="Parva Home"
               >
                 <img 
-                  src="/parva-logo.png" 
-                  alt="Parva" 
+                  src={brandingLogoUrl || "/parva-logo.png"} 
+                  alt={brandingAltText || "Parva"} 
                   className="h-7 sm:h-8 w-auto object-contain" 
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/parva-logo.png'; }}
                 />
               </button>
 
@@ -4821,161 +4891,282 @@ export default function App() {
                 ) : (
               <div className="space-y-4">
                 {userBookings.map((b) => {
-                  const isCompleted = b.status === 'Completed';
-                  const isPending = b.status === 'Pending';
-                  
+                  const bookingIdDisplay = b.bookingIdString || b.id;
+                  const isCompleted = b.status === 'Completed' || (b.status as string) === 'COMPLETED';
+                  const isConfirmed = b.status === 'Confirmed' || (b.status as string) === 'CONFIRMED' || (b.status as string) === 'Confirmed & Paid';
+                  const isPending = b.status === 'Pending' || (b.status as string) === 'VENDOR_PENDING' || (b.status as string) === 'PAYMENT_SUCCESS';
+                  const isCancelled = b.status === 'Cancelled' || (b.status as string) === 'CANCELLED' || (b.status as string) === 'REFUNDED' || (b.status as string) === 'Refunded';
+                  const isRejected = b.status === 'Rejected' || (b.status as string) === 'REJECTED' || (b.status as string) === 'VENDOR_REJECTED';
+                  const isTerminal = isCancelled || isRejected;
+
+                  // Milestone logic
+                  // Milestone 1: Request Placed & Advance Paid
+                  const step1Done = true;
+                  // Milestone 2: Vendor Match & Schedule Locked
+                  const step2Done = !isPending && !isTerminal;
+                  const step2Active = isPending && !isTerminal;
+                  // Milestone 3: Celebration Day
+                  const step3Done = isCompleted && !isTerminal;
+                  const step3Active = isConfirmed && !isTerminal;
+
+                  const isCancellingThis = cancellingBookingId === b.id;
+                  const isCopiedThis = copiedBookingId === b.id;
+
+                  // Authoritative pricing
+                  const invoiceTotal = b.finalPrice || b.pricing?.totalPayableINR || b.totalPrice || 0;
+                  const savings = b.bundleDiscount || b.pricing?.couponDiscountINR || 0;
+
                   return (
                     <div
                       key={b.id}
-                      className="bg-white rounded-[24px] border border-brand-border p-5 shadow-sm overflow-hidden relative"
+                      className="bg-white rounded-3xl border border-gray-200/90 p-5 shadow-sm hover:shadow-md transition-all overflow-hidden relative"
                       id={`booking-card-${b.id}`}
                     >
-                      {/* Top row */}
-                      <div className="flex justify-between items-start border-b border-gray-100 pb-3 mb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-primary-light text-brand-primary-dark">
-                              {b.eventType}
-                            </span>
-                            <span className="text-[11px] font-mono text-brand-text-secondary">
-                              ID: {b.bookingIdString}
-                            </span>
-                          </div>
-                          <h4 className="font-bold text-brand-text text-sm mt-1">
-                            {b.vendor.name}
-                          </h4>
+                      {/* Top row: Category tag, Single-line Booking ID with copy, and Status Badge */}
+                      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 mb-3.5 border-b border-gray-100">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-[#EC003F] border border-rose-100 shrink-0">
+                            {b.eventType || 'Celebration'}
+                          </span>
+
+                          {/* Monospace Single-line Booking ID with Copy */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(bookingIdDisplay);
+                              setCopiedBookingId(b.id);
+                              showNotification(`Copied Booking ID #${bookingIdDisplay} to clipboard!`);
+                              setTimeout(() => setCopiedBookingId(null), 2500);
+                            }}
+                            title="Click to copy full Booking Reference"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-mono text-xs font-semibold border border-gray-200/80 transition active:scale-95 cursor-pointer max-w-[200px] sm:max-w-none truncate"
+                            aria-label={`Booking reference ${bookingIdDisplay}. Click to copy.`}
+                          >
+                            <span className="truncate">ID: {bookingIdDisplay}</span>
+                            {isCopiedThis ? (
+                              <Check size={12} className="text-emerald-600 shrink-0" />
+                            ) : (
+                              <Copy size={12} className="text-gray-400 hover:text-gray-700 shrink-0" />
+                            )}
+                          </button>
                         </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                          isCompleted
-                            ? 'bg-brand-success/10 text-brand-success'
-                            : isPending
-                            ? 'bg-brand-warning/10 text-brand-warning animate-pulse'
-                            : 'bg-brand-primary-light text-brand-primary-dark'
-                        }`}>
-                          {b.status === 'Pending' ? 'Awaiting Confirmation' : b.status}
-                        </span>
-                        <div className="flex justify-end w-full">
-                          <button onClick={() => handleNavigateToTab('chat')} className="bg-brand-primary hover:bg-brand-primary-dark text-white font-bold mt-2 py-1.5 px-3 rounded-xl text-xs flex items-center gap-1 transition shadow-sm">💬 Message Vendor</button>
+
+                        {/* Status Badge */}
+                        <div className="shrink-0">
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 size={13} className="text-emerald-600" />
+                              <span>Completed</span>
+                            </span>
+                          ) : isCancelled ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                              <XCircle size={13} className="text-rose-600" />
+                              <span>Cancelled</span>
+                            </span>
+                          ) : isRejected ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                              <AlertCircle size={13} className="text-amber-600" />
+                              <span>Declined</span>
+                            </span>
+                          ) : isPending ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                              <Clock size={13} className="text-amber-600" />
+                              <span>Awaiting Confirmation</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-rose-50 text-[#EC003F] border border-rose-200">
+                              <ShieldCheck size={13} className="text-[#EC003F]" />
+                              <span>{b.status}</span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      {/* Event Schedule & Exact Time */}
-                      <div className="bg-brand-primary-light/10 border border-brand-primary/15 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="text-[9px] font-bold text-gray-500 uppercase block">Event / Delivery Schedule</span>
-                          <span className="font-extrabold text-brand-primary-dark">
-                            {b.eventDate} • {formatTimeSlot(b.eventTimeSlot, (b as any).customTime)}
-                          </span>
+                      {/* Vendor Information Header */}
+                      <div className="mb-3">
+                        <h4 className="font-extrabold text-gray-900 text-base leading-snug truncate">
+                          {b.vendor?.name || 'Event Partner'}
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {b.vendor?.category || 'Celebration Service'} {b.vendor?.city || b.vendor?.location ? `• ${b.vendor?.city || b.vendor?.location}` : ''}
+                        </p>
+                      </div>
+
+                      {/* Event Schedule Banner */}
+                      <div className="bg-gray-50/90 border border-gray-200/80 rounded-2xl p-3 mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays size={15} className="text-[#EC003F] shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Event Schedule</span>
+                            <span className="font-extrabold text-gray-800">
+                              {b.eventDate} • {formatTimeSlot(b.eventTimeSlot, (b as any).customTime)}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[10px] font-bold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                          {b.eventType || 'Celebration'}
-                        </span>
+                        {b.guestCount && (
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-white px-2.5 py-1 rounded-lg border border-gray-200">
+                            <Users size={12} className="text-gray-500" />
+                            <span>{b.guestCount} Guests</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Detailed list of services booked */}
-                      <div className="space-y-2 mb-4">
-
-                        <span className="text-[10px] font-semibold text-brand-text-secondary uppercase tracking-wider block">
+                      <div className="space-y-1.5 mb-4 bg-gray-50/40 rounded-xl p-3 border border-gray-100">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
                           Booked Services
                         </span>
-                        {(b.selectedServices || []).map((svc) => (
-                          <div key={svc.name} className="flex justify-between items-center text-xs">
-                            <span className="text-brand-text font-medium">{svc.name}</span>
-                            <span className="font-bold text-brand-text">₹{svc.price.toLocaleString('en-IN')}</span>
+                        {(b.selectedServices && b.selectedServices.length > 0 ? b.selectedServices : [{ name: (b as any).serviceName || 'Standard Package', price: b.finalPrice }]).map((svc, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs">
+                            <span className="text-gray-800 font-medium truncate max-w-[70%]">{svc.name}</span>
+                            <span className="font-bold text-gray-900 font-mono">₹{Number(svc.price || 0).toLocaleString('en-IN')}</span>
                           </div>
                         ))}
                       </div>
 
-                      {/* Timeline status bar */}
-                      <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 mb-4">
-                        <span className="text-[9px] font-semibold text-brand-text-secondary uppercase tracking-wider block mb-2.5">
-                          Booking Progress Tracker
-                        </span>
-
-                        <div className="relative flex justify-between items-center px-1">
-                          {/* Horizontal backing line */}
-                          <div className="absolute top-1/2 left-3 right-3 h-0.5 bg-gray-200 -translate-y-1/2 z-0" />
-                          <div
-                            className="absolute top-1/2 left-3 h-0.5 bg-brand-success -translate-y-1/2 z-0 transition-all duration-500"
-                            style={{
-                              width: isCompleted ? '100%' : isPending ? '0%' : '50%'
-                            }}
-                          />
-
-                          {/* Phase Steps */}
-                          {[
-                            { name: 'Request', active: true, done: !isPending },
-                            { name: 'Vendor Match', active: !isPending, done: isCompleted },
-                            { name: 'Celebration', active: isCompleted, done: isCompleted }
-                          ].map((step, idx) => (
-                            <div key={idx} className="relative z-10 flex flex-col items-center">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                                step.done 
-                                  ? 'bg-brand-success text-white' 
-                                  : step.active 
-                                  ? 'bg-brand-primary text-white border-2 border-white' 
-                                  : 'bg-white border-2 border-gray-300 text-gray-400'
-                              }`}>
-                                {step.done ? '✓' : idx + 1}
-                              </div>
-                              <span className="text-[9px] font-medium text-brand-text-secondary mt-1">
-                                {step.name}
-                              </span>
-                            </div>
-                          ))}
+                      {/* Timeline / Booking Progress Tracker */}
+                      {isTerminal ? (
+                        <div className="rounded-2xl p-3.5 mb-4 border flex items-start gap-2.5 text-xs bg-rose-50/80 border-rose-200 text-rose-800">
+                          <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <p className="font-bold">
+                              {isCancelled ? 'Booking Cancelled' : 'Vendor Booking Declined'}
+                            </p>
+                            <p className="text-[11px] text-rose-700 leading-relaxed">
+                              {isCancelled 
+                                ? 'This reservation has been cancelled. Any eligible refund is processed back to the original payment method per policy.' 
+                                : 'The service provider could not lock this slot. Your advance payment is queued for full automatic refund.'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-
-                      {/* Price and Action details */}
-                      <div className="flex items-center justify-between border-t border-dashed border-gray-100 pt-3 text-xs">
-                        <div>
-                          <p className="text-[10px] text-brand-text-secondary">Invoice Total</p>
-                          <div className="flex items-baseline gap-1 mt-0.5">
-                            <span className="font-extrabold text-brand-primary-dark text-base">
-                              ₹{b.finalPrice.toLocaleString('en-IN')}
+                      ) : (
+                        <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100 mb-4" aria-label="Booking Progress Tracker">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                              Booking Progress
                             </span>
-                            {b.bundleDiscount > 0 && (
-                              <span className="text-[9px] text-brand-success font-medium">
-                                (Saved ₹{b.bundleDiscount.toLocaleString('en-IN')})
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                              {isCompleted ? 'Step 3 of 3: Completed' : isConfirmed ? 'Step 2 of 3: Confirmed' : 'Step 1 of 3: Awaiting Vendor'}
+                            </span>
+                          </div>
+
+                          <div className="relative flex justify-between items-center px-2">
+                            {/* Connector Line 1 to 2 */}
+                            <div className="absolute top-[14px] left-[18%] right-[52%] h-1 bg-gray-200 z-0">
+                              <div
+                                className={`h-full transition-all duration-500 ${step2Done ? 'bg-emerald-500 w-full' : step2Active ? 'bg-rose-400 w-1/2' : 'w-0'}`}
+                              />
+                            </div>
+
+                            {/* Connector Line 2 to 3 */}
+                            <div className="absolute top-[14px] left-[52%] right-[18%] h-1 bg-gray-200 z-0">
+                              <div
+                                className={`h-full transition-all duration-500 ${step3Done ? 'bg-emerald-500 w-full' : step3Active ? 'bg-rose-400 w-1/2' : 'w-0'}`}
+                              />
+                            </div>
+
+                            {/* Milestone Steps */}
+                            {[
+                              { label: 'Request Placed', done: step1Done, active: false, number: 1 },
+                              { label: step2Done ? 'Vendor Matched' : 'Vendor Match', done: step2Done, active: step2Active, number: 2 },
+                              { label: step3Done ? 'Celebrated' : 'Celebration', done: step3Done, active: step3Active, number: 3 }
+                            ].map((step, idx) => (
+                              <div key={idx} className="relative z-10 flex flex-col items-center text-center max-w-[90px]">
+                                <div
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                                    step.done
+                                      ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-100'
+                                      : step.active
+                                      ? 'bg-[#EC003F] text-white ring-4 ring-rose-100 shadow-md animate-pulse'
+                                      : 'bg-white border-2 border-gray-300 text-gray-400'
+                                  }`}
+                                  aria-current={step.active ? 'step' : undefined}
+                                >
+                                  {step.done ? <Check size={14} className="stroke-[3]" /> : step.number}
+                                </div>
+                                <span className={`text-[10px] mt-1.5 leading-tight ${
+                                  step.done
+                                    ? 'font-bold text-emerald-800'
+                                    : step.active
+                                    ? 'font-bold text-[#EC003F]'
+                                    : 'font-medium text-gray-400'
+                                }`}>
+                                  {step.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Price and Action Controls */}
+                      <div className="pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Authoritative Total</p>
+                          <div className="flex items-baseline gap-1.5 mt-0.5">
+                            <span className="font-black text-gray-900 text-lg font-mono">
+                              ₹{invoiceTotal.toLocaleString('en-IN')}
+                            </span>
+                            {savings > 0 && (
+                              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                                Saved ₹{savings.toLocaleString('en-IN')}
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex gap-1.5 flex-wrap">
+                        {/* Action Buttons with Lucide Icons */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Primary Action: Chat with Vendor */}
                           <button
+                            type="button"
                             onClick={() => handleOpenChatWithVendor(b.vendor?.id, b.id)}
-                            className="bg-brand-primary/10 border border-brand-primary/20 hover:bg-brand-primary/20 text-brand-primary font-bold py-1.5 px-3 rounded-xl transition text-xs flex items-center gap-1.5"
+                            className="bg-[#EC003F] hover:bg-[#D40038] text-white font-bold py-2.5 px-4 rounded-xl shadow-sm text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#EC003F]"
                             id={`contact-vendor-booking-${b.id}`}
+                            aria-label={`Chat with ${b.vendor?.name || 'Vendor'}`}
                           >
-                            <MessageSquare size={12} className="text-brand-primary" />
+                            <MessageCircle size={14} />
                             <span>Chat with Vendor</span>
                           </button>
+
+                          {/* Secondary Action: Download Official Receipt */}
                           <button
+                            type="button"
+                            onClick={() => handleDownloadReceiptPDF(b)}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-3 rounded-xl transition text-xs flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-gray-400"
+                            id={`view-receipt-booking-${b.id}`}
+                            aria-label="Download Official Receipt PDF"
+                          >
+                            <Download size={13} />
+                            <span className="hidden xs:inline">Receipt</span>
+                            <span className="xs:hidden">PDF</span>
+                          </button>
+
+                          {/* Secondary Action: Share Plan */}
+                          <button
+                            type="button"
                             onClick={() => {
                               setSharingBooking(b);
                               setIsShareOpen(true);
                             }}
-                            className="bg-emerald-55 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-semibold py-1.5 px-2.5 rounded-lg transition text-xs flex items-center gap-1"
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-3 rounded-xl transition text-xs flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-gray-400"
                             id={`share-booking-btn-${b.id}`}
+                            aria-label="Share Booking Plan"
                           >
-                            <Share2 size={11} />
+                            <Share2 size={13} />
                             <span>Share</span>
                           </button>
-                          <button
-                            onClick={() => handleDownloadReceiptPDF(b)}
-                            className="bg-brand-primary hover:bg-brand-primary-dark text-white font-semibold py-1.5 px-2.5 rounded-lg transition text-xs flex items-center gap-1.5"
-                            id={`view-receipt-booking-${b.id}`}
-                          >
-                            <Download size={11} />
-                            <span>Download Receipt</span>
-                          </button>
-                          {b.status !== 'Cancelled' && b.status !== 'Completed' && (
+
+                          {/* Secondary Action: Cancel Booking */}
+                          {!isTerminal && !isCompleted && (
                             <button
+                              type="button"
+                              disabled={isCancellingThis}
                               onClick={async () => {
-                                if (window.confirm('Are you sure you want to cancel this booking request?')) {
+                                if (window.confirm('Are you sure you want to cancel this booking? This will initiate the refund review process per policy.')) {
                                   try {
-                                    showNotification('⏳ Processing cancellation request...');
+                                    setCancellingBookingId(b.id);
+                                    showNotification('Processing cancellation request...');
                                     const cRes = await authenticatedFetch(`${BACKEND_API_URL}/api/bookings/${b.id}/cancel`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
@@ -4987,22 +5178,29 @@ export default function App() {
                                     });
                                     const cData = await cRes.json();
                                     if (cData.success) {
-                                      showNotification('✓ Booking Cancelled successfully. Email notice dispatched.');
+                                      showNotification('Booking cancelled successfully. Notice dispatched.');
                                       trackBookingCancelled(b.id, 'Customer requested cancellation');
                                       setBookings(prev => prev.map(item => item.id === b.id ? { ...item, status: 'Cancelled' } : item));
                                     } else {
-
-                                      showNotification('❌ Cancellation error: ' + (cData.error || 'Server rejected'));
+                                      showNotification('Cancellation rejected: ' + (cData.error || 'Server rejected'));
                                     }
-                                  } catch (e) {
-                                    showNotification('❌ Could not process cancellation.');
+                                  } catch (e: any) {
+                                    showNotification('Could not process cancellation: ' + (e?.message || 'Network error'));
+                                  } finally {
+                                    setCancellingBookingId(null);
                                   }
                                 }
                               }}
-                              className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-1.5 px-2.5 rounded-lg transition text-xs"
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-semibold py-2.5 px-3 rounded-xl transition text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                               id={`cancel-booking-btn-${b.id}`}
+                              aria-label="Cancel Booking"
                             >
-                              Cancel
+                              {isCancellingThis ? (
+                                <Loader2 size={13} className="animate-spin text-rose-600" />
+                              ) : (
+                                <XCircle size={13} className="text-rose-600" />
+                              )}
+                              <span>{isCancellingThis ? 'Cancelling...' : 'Cancel'}</span>
                             </button>
                           )}
                         </div>

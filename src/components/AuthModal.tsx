@@ -14,7 +14,9 @@ import {
   AlertCircle, 
   Eye, 
   EyeOff, 
-  Loader2 
+  Loader2,
+  KeyRound,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   signInWithEmail, 
@@ -25,6 +27,10 @@ import {
   CustomerProfileData 
 } from '../services/authService';
 import { getAuthErrorMessage } from '../auth/authErrors';
+import { validateEmail, validateIndianPhone } from '../utils/validators';
+import { useBranding } from '../hooks/useBranding';
+
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://parava-backend-1.onrender.com');
 
 export interface AuthModalProps {
   isOpen: boolean;
@@ -45,13 +51,14 @@ export default function AuthModal({
   contextTitle,
   contextSubtitle
 }: AuthModalProps) {
+  const { logoUrl: brandingLogoUrl, logoAltText: brandingAltText } = useBranding();
   const sanitizeTab = (t: any): 'signin' | 'signup' | 'forgot' => {
     if (t === 'signup') return 'signup';
     if (t === 'forgot') return 'forgot';
     return 'signin';
   };
 
-  const [tab, setTab] = useState<'signin' | 'signup' | 'forgot' | 'complete_profile'>(() => sanitizeTab(initialTab));
+  const [tab, setTab] = useState<'signin' | 'signup' | 'forgot' | 'complete_profile' | 'verify_otp'>(() => sanitizeTab(initialTab));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +71,26 @@ export default function AuthModal({
   const [resetSent, setResetSent] = useState(false);
   const [temporaryProfile, setTemporaryProfile] = useState<CustomerProfileData | null>(null);
 
+  // OTP Verification States
+  const [otp, setOtp] = useState('');
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpNotice, setOtpNotice] = useState<string | null>(null);
+  const [validatedCredentials, setValidatedCredentials] = useState<{ email: string; phone: string; name: string } | null>(null);
+
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // OTP Countdown Timer
+  useEffect(() => {
+    let interval: any = null;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpTimer]);
 
   useEffect(() => {
     if (isOpen) {
@@ -162,14 +188,25 @@ export default function AuthModal({
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
 
-    if (!trimmedName) {
-      setError('Please enter your full name.');
+    if (!trimmedName || trimmedName.length < 2) {
+      setError('Please enter your full name (minimum 2 characters).');
       return;
     }
-    if (!trimmedEmail) {
-      setError('Please enter your email address.');
+
+    // Strict Email Validation
+    const emailValidation = validateEmail(trimmedEmail);
+    if (!emailValidation.isValid) {
+      setError(emailValidation.error || 'Please enter a valid email address.');
       return;
     }
+
+    // Strict Indian Phone Validation
+    const phoneValidation = validateIndianPhone(trimmedPhone);
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.error || 'Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
     if (!password) {
       setError('Please create a password.');
       return;
@@ -181,21 +218,117 @@ export default function AuthModal({
 
     setLoading(true);
     setError(null);
+    setOtpNotice(null);
+
     try {
-      const profile = await signUpWithEmail(trimmedEmail, password, {
-        name: trimmedName,
-        phone: trimmedPhone,
+      // 1. Dispatch authoritative verification OTP
+      const res = await fetch(`${BACKEND_API_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailValidation.cleanedValue,
+          phone: phoneValidation.cleanedValue,
+          name: trimmedName,
+          purpose: 'Customer Registration'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to dispatch verification OTP. Please try again.');
+      }
+
+      setValidatedCredentials({
+        email: emailValidation.cleanedValue!,
+        phone: phoneValidation.cleanedValue!,
+        name: trimmedName
+      });
+      setOtp('');
+      setOtpTimer(60);
+      setOtpNotice(data.message || `Verification OTP sent to ${emailValidation.cleanedValue}.`);
+      setTab('verify_otp');
+    } catch (err: any) {
+      console.error('Send OTP error:', err);
+      setError(err.message || 'Could not send verification OTP. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtpAndSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading || !validatedCredentials) return;
+
+    const cleanOtp = otp.trim();
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      setError('Please enter the complete 6-digit OTP code.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Authoritative OTP verification
+      const verifyRes = await fetch(`${BACKEND_API_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: validatedCredentials.email,
+          phone: validatedCredentials.phone,
+          otp: cleanOtp
+        })
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.success) {
+        throw new Error(verifyData.error || 'Invalid OTP. Please check the code and try again.');
+      }
+
+      // 2. Create authoritative Firebase account after successful OTP verification
+      const profile = await signUpWithEmail(validatedCredentials.email, password, {
+        name: validatedCredentials.name,
+        phone: validatedCredentials.phone,
         city: city.trim() || 'Kolhapur',
         address: address.trim()
       });
+
       onSuccess(profile);
       if (onShowNotification) {
-        onShowNotification(`Welcome to Parva, ${profile.name}! Account created successfully.`);
+        onShowNotification(`🎉 Welcome to Parva, ${profile.name}! Account verified and created successfully.`);
       }
       onClose();
     } catch (err: any) {
-      console.error('Email sign-up error:', err);
-      setError(getAuthErrorMessage(err));
+      console.error('OTP Verification / Signup error:', err);
+      setError(err.message || getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (loading || otpTimer > 0 || !validatedCredentials) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${BACKEND_API_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: validatedCredentials.email,
+          phone: validatedCredentials.phone,
+          name: validatedCredentials.name,
+          purpose: 'Customer Registration'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Could not resend OTP.');
+      }
+      setOtpTimer(60);
+      setOtpNotice(`New verification code sent to ${validatedCredentials.email}.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification OTP.');
     } finally {
       setLoading(false);
     }
@@ -286,13 +419,20 @@ export default function AuthModal({
           {/* Header */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <img src="/parva-logo.png" alt="Parva" className="h-8 sm:h-9 w-auto object-contain" />
+              <img 
+                src={brandingLogoUrl || "/parva-logo.png"} 
+                alt={brandingAltText || "Parva"} 
+                className="h-8 sm:h-9 w-auto object-contain" 
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/parva-logo.png'; }}
+              />
               <h2 id="auth-modal-title" className="font-black text-gray-900 text-xl sm:text-2xl tracking-tight">
                 {contextTitle || (
                   tab === 'signin' 
                     ? 'Welcome back' 
                     : tab === 'signup' 
                     ? 'Create account' 
+                    : tab === 'verify_otp'
+                    ? 'Verify your account'
                     : tab === 'complete_profile'
                     ? 'Complete your profile'
                     : 'Reset password'
@@ -305,6 +445,8 @@ export default function AuthModal({
                   ? 'Sign in to access your bookings, saved events, and vendor messages.'
                   : tab === 'signup'
                   ? 'Join Parva to book verified event vendors with instant confirmation.'
+                  : tab === 'verify_otp'
+                  ? `Enter the 6-digit code sent to ${validatedCredentials?.email || 'your email'} to activate your account.`
                   : tab === 'complete_profile'
                   ? 'Add your contact details to complete your event bookings smoothly.'
                   : 'Enter your account email to receive secure password reset instructions.'
@@ -345,6 +487,14 @@ export default function AuthModal({
             <div className="p-3.5 bg-rose-50 text-rose-800 rounded-xl text-xs sm:text-sm font-medium border border-rose-200 flex items-start gap-2.5">
               <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
               <span className="leading-snug flex-1">{error}</span>
+            </div>
+          )}
+
+          {/* OTP Notice Banner */}
+          {otpNotice && (
+            <div className="p-3.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs sm:text-sm font-medium border border-emerald-200 flex items-start gap-2.5">
+              <CheckCircle2 size={16} className="shrink-0 text-emerald-600 mt-0.5" />
+              <span className="leading-snug flex-1">{otpNotice}</span>
             </div>
           )}
 
@@ -545,13 +695,14 @@ export default function AuthModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-gray-700">Phone (Optional)</label>
+                    <label className="block text-xs font-semibold text-gray-700">Mobile (10 Digits) *</label>
                     <div className="relative">
                       <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         type="tel"
                         maxLength={10}
-                        placeholder="10 digits"
+                        required
+                        placeholder="e.g. 9876543210"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                         disabled={loading}
@@ -576,13 +727,18 @@ export default function AuthModal({
                   </div>
                 </div>
 
+                <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl flex items-center gap-2 text-[11px] text-amber-800">
+                  <ShieldCheck size={16} className="text-amber-600 shrink-0" />
+                  <span>A secure 6-digit OTP will be sent to your email to verify and activate your registration.</span>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-3"
                 >
                   {loading && <Loader2 size={16} className="animate-spin" />}
-                  <span>{loading ? 'Creating account...' : 'Create Account'}</span>
+                  <span>{loading ? 'Sending verification OTP...' : 'Verify with OTP & Register'}</span>
                 </button>
 
                 <div className="pt-2 text-center">
@@ -596,6 +752,79 @@ export default function AuthModal({
                       Sign In
                     </button>
                   </p>
+                </div>
+              </motion.form>
+            )}
+
+            {/* 2.1 OTP VERIFICATION STEP */}
+            {tab === 'verify_otp' && (
+              <motion.form
+                key="verify_otp"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                onSubmit={handleVerifyOtpAndSignUp}
+                className="space-y-4"
+              >
+                <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-4 text-center space-y-1">
+                  <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <KeyRound size={20} />
+                  </div>
+                  <h4 className="text-sm font-black text-gray-900">Enter Verification Code</h4>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    We sent a 6-digit code to <b className="text-gray-900 font-semibold">{validatedCredentials?.email}</b>
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700 text-center uppercase tracking-wider">
+                    6-Digit OTP Code
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    required
+                    placeholder="• • • • • •"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    disabled={loading}
+                    autoFocus
+                    className="w-full h-14 bg-gray-50 border-2 border-gray-200 rounded-2xl text-center text-2xl font-black font-mono tracking-[10px] text-gray-900 outline-none focus:bg-white focus:border-rose-600 transition disabled:opacity-50"
+                  />
+                  <p className="text-[11px] text-gray-400 text-center">
+                    Check your email inbox or spam folder for the one-time password
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {loading && <Loader2 size={16} className="animate-spin" />}
+                  <span>{loading ? 'Verifying OTP...' : 'Verify OTP & Complete Registration'}</span>
+                </button>
+
+                <div className="flex items-center justify-between text-xs pt-1 px-1">
+                  <button
+                    type="button"
+                    onClick={() => { setTab('signup'); setError(null); }}
+                    className="font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Edit details</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={loading || otpTimer > 0}
+                    onClick={handleResendOtp}
+                    className="font-bold text-rose-600 hover:underline disabled:text-gray-400 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {otpTimer > 0 ? `Resend code in ${otpTimer}s` : 'Resend OTP Code'}
+                  </button>
                 </div>
               </motion.form>
             )}

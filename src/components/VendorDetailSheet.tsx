@@ -215,10 +215,11 @@ export default function VendorDetailSheet({
   const servicesTotal = isCatering ? (activePlateRate * cateringGuestCount) : rawServicePrice;
 
   const currentFeePct = bookingFeePercentage || 5;
-  const calculatedBookingFee = Math.round((servicesTotal * currentFeePct) / 100);
+  const discountedSubtotal = Math.max(0, servicesTotal - couponDiscount);
+  const calculatedBookingFee = Math.round((discountedSubtotal * currentFeePct) / 100);
   const gstAmount = Math.round(calculatedBookingFee * 0.18);
-  const subtotalBeforeCoupon = calculatedBookingFee + gstAmount;
-  const finalPayableTotal = Math.max(0, subtotalBeforeCoupon - couponDiscount);
+  const finalPayableTotal = calculatedBookingFee + gstAmount;
+  const remainingBalanceDue = Math.max(0, discountedSubtotal - calculatedBookingFee);
 
   const downloadVendorPDF = async () => {
     if (onShowNotification) onShowNotification("Generating professional profile PDF... 📄");
@@ -363,7 +364,7 @@ export default function VendorDetailSheet({
     doc.text('Payment Summary:', margin, y);
     y += 8;
     doc.setFont('helvetica', 'normal');
-    doc.text(`Amount Paid (Advance): ₹5,000`, margin, y);
+    doc.text(`Amount Paid (Advance): ₹${finalPayableTotal.toLocaleString('en-IN')}`, margin, y);
     y += 6;
     doc.text('Status: SUCCESS', margin, y);
     y += 6;
@@ -1687,67 +1688,79 @@ export default function VendorDetailSheet({
                                       <span>Verified Booking Lock</span>
                                     </div>
                                     <p className="text-[10px] text-brand-text-secondary font-black uppercase tracking-widest mb-1">Direct Connection Fee</p>
-                                    <h4 className="text-4xl font-black text-brand-text tracking-tighter">₹5,000</h4>
+                                    <h4 className="text-4xl font-black text-brand-text tracking-tighter">₹{finalPayableTotal.toLocaleString('en-IN')}</h4>
                                     <p className="text-[11px] text-brand-text-secondary font-medium mt-2 leading-relaxed px-4">
-                                      This one-time connection fee locks your date with <b>{vendor.name}</b> and grants you 24/7 direct access. This amount is 100% adjustable against your final bill.
+                                      This one-time advance fee locks your date with <b>{vendor.name}</b> and grants you 24/7 direct access. This amount is 100% adjustable against your final bill.
                                     </p>
                                   </div>
 
                                   <div className="space-y-3">
                                     <button
-                                      onClick={() => {
-                                        
-                                          setPaymentStep('processing');
-                                          setTimeout(async () => {
-                                            setPaymentStep('success');
-                                            
-                                            // SAVE BOOKING TO FIRESTORE
-                                            try {
-                                              const { getDb } = await import('../lib/firebase');
-                                              const { doc, setDoc } = await import('firebase/firestore');
-                                              const db = getDb();
-                                              const bookingId = receiptData?.id || `PRV-${Date.now()}`;
-                                              
-                                              const newBooking = {
-                                                id: bookingId,
-                                                vendorId: vendor.id,
-                                                vendor: vendor,
-                                                userName: currentUser?.name || 'Customer',
-                                                userEmail: currentUser?.email || '',
-                                                userPhone: currentUser?.phone || '',
-                                                date: selectedDate,
-                                                time: selectedTimeSlot,
-                                                status: 'Confirmed',
-                                                totalAmount: receiptData?.totalAmountDue || 15000,
-                                                eventType: planningEventType || 'Event',
-                                                createdAt: new Date().toISOString()
-                                              };
-                                              
+                                      onClick={async () => {
+                                        const servicesToUse = bundledServices.length > 0 
+                                          ? bundledServices 
+                                          : [{ 
+                                              name: activeCateringService?.name || vendor.name, 
+                                              price: servicesTotal, 
+                                              unit: isCatering ? `₹${activePlateRate}/plate × ${cateringGuestCount} Guests` : 'per event',
+                                              basePlatePrice: isCatering ? activePlateRate : undefined
+                                            }];
 
-                                              await setDoc(doc(db, 'bookings', bookingId), newBooking);
-                                              
-                                              // ALSO UNLOCK CHAT
-                                              try {
-                                                if (currentUser && currentUser.uid) {
-                                                   const connId = `${currentUser.uid}_${vendor.id}`;
-                                                   await setDoc(doc(db, 'connections', connId), {
-                                                      userId: currentUser.uid,
-                                                      vendorId: vendor.id,
-                                                      timestamp: new Date().toISOString()
-                                                   });
-                                                }
-                                              } catch (connErr) {}
-                                              
-                                              if (onShowNotification) {
+                                        if (handlePayWithRazorpay) {
+                                          setIsPaymentModalOpen(false);
+                                          handlePayWithRazorpay({
+                                            vendor,
+                                            vendorId: vendor.id,
+                                            totalAmountDue: finalPayableTotal,
+                                            selectedServices: servicesToUse,
+                                            eventDate: selectedDate,
+                                            eventTimeSlot: selectedTimeSlot,
+                                            eventType: planningEventType || 'Event'
+                                          });
+                                          return;
+                                        }
 
-                                                onShowNotification('Booking successfully saved to database!');
-                                              }
-                                            } catch(err) {
-                                              console.error("Error saving booking", err);
-                                            }
-                                            
-                                          }, 2500);
-
+                                        setPaymentStep('processing');
+                                        try {
+                                          const { getDb } = await import('../lib/firebase');
+                                          const { doc, setDoc } = await import('firebase/firestore');
+                                          const db = getDb();
+                                          const bookingId = receiptData?.id || `PRV-${Date.now()}`;
+                                          
+                                          const newBooking = {
+                                            id: bookingId,
+                                            vendorId: vendor.id,
+                                            vendor: vendor,
+                                            userName: currentUser?.name || 'Customer',
+                                            userEmail: currentUser?.email || '',
+                                            userPhone: currentUser?.phone || '',
+                                            date: selectedDate,
+                                            time: selectedTimeSlot,
+                                            status: 'Confirmed',
+                                            totalAmount: servicesTotal,
+                                            eventType: planningEventType || 'Event',
+                                            createdAt: new Date().toISOString()
+                                          };
+                                          
+                                          await setDoc(doc(db, 'bookings', bookingId), newBooking);
+                                          
+                                          if (currentUser && currentUser.uid) {
+                                            const connId = `${currentUser.uid}_${vendor.id}`;
+                                            await setDoc(doc(db, 'connections', connId), {
+                                              userId: currentUser.uid,
+                                              vendorId: vendor.id,
+                                              timestamp: new Date().toISOString()
+                                            }).catch(() => {});
+                                          }
+                                          
+                                          setPaymentStep('success');
+                                          if (onShowNotification) {
+                                            onShowNotification('Booking successfully saved!');
+                                          }
+                                        } catch(err) {
+                                          console.error("Error saving booking", err);
+                                          setPaymentStep('method');
+                                        }
                                       }}
                                       className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
                                     >
@@ -1764,59 +1777,71 @@ export default function VendorDetailSheet({
                                     </button>
 
                                     <button
-                                      onClick={() => {
-                                        
-                                          setPaymentStep('processing');
-                                          setTimeout(async () => {
-                                            setPaymentStep('success');
-                                            
-                                            // SAVE BOOKING TO FIRESTORE
-                                            try {
-                                              const { getDb } = await import('../lib/firebase');
-                                              const { doc, setDoc } = await import('firebase/firestore');
-                                              const db = getDb();
-                                              const bookingId = receiptData?.id || `PRV-${Date.now()}`;
-                                              
-                                              const newBooking = {
-                                                id: bookingId,
-                                                vendorId: vendor.id,
-                                                vendor: vendor,
-                                                userName: currentUser?.name || 'Customer',
-                                                userEmail: currentUser?.email || '',
-                                                userPhone: currentUser?.phone || '',
-                                                date: selectedDate,
-                                                time: selectedTimeSlot,
-                                                status: 'Confirmed',
-                                                totalAmount: receiptData?.totalAmountDue || 15000,
-                                                eventType: planningEventType || 'Event',
-                                                createdAt: new Date().toISOString()
-                                              };
-                                              
+                                      onClick={async () => {
+                                        const servicesToUse = bundledServices.length > 0 
+                                          ? bundledServices 
+                                          : [{ 
+                                              name: activeCateringService?.name || vendor.name, 
+                                              price: servicesTotal, 
+                                              unit: isCatering ? `₹${activePlateRate}/plate × ${cateringGuestCount} Guests` : 'per event',
+                                              basePlatePrice: isCatering ? activePlateRate : undefined
+                                            }];
 
-                                              await setDoc(doc(db, 'bookings', bookingId), newBooking);
-                                              
-                                              // ALSO UNLOCK CHAT
-                                              try {
-                                                if (currentUser && currentUser.uid) {
-                                                   const connId = `${currentUser.uid}_${vendor.id}`;
-                                                   await setDoc(doc(db, 'connections', connId), {
-                                                      userId: currentUser.uid,
-                                                      vendorId: vendor.id,
-                                                      timestamp: new Date().toISOString()
-                                                   });
-                                                }
-                                              } catch (connErr) {}
-                                              
-                                              if (onShowNotification) {
+                                        if (handlePayWithRazorpay) {
+                                          setIsPaymentModalOpen(false);
+                                          handlePayWithRazorpay({
+                                            vendor,
+                                            vendorId: vendor.id,
+                                            totalAmountDue: finalPayableTotal,
+                                            selectedServices: servicesToUse,
+                                            eventDate: selectedDate,
+                                            eventTimeSlot: selectedTimeSlot,
+                                            eventType: planningEventType || 'Event'
+                                          });
+                                          return;
+                                        }
 
-                                                onShowNotification('Booking successfully saved to database!');
-                                              }
-                                            } catch(err) {
-                                              console.error("Error saving booking", err);
-                                            }
-                                            
-                                          }, 2500);
-
+                                        setPaymentStep('processing');
+                                        try {
+                                          const { getDb } = await import('../lib/firebase');
+                                          const { doc, setDoc } = await import('firebase/firestore');
+                                          const db = getDb();
+                                          const bookingId = receiptData?.id || `PRV-${Date.now()}`;
+                                          
+                                          const newBooking = {
+                                            id: bookingId,
+                                            vendorId: vendor.id,
+                                            vendor: vendor,
+                                            userName: currentUser?.name || 'Customer',
+                                            userEmail: currentUser?.email || '',
+                                            userPhone: currentUser?.phone || '',
+                                            date: selectedDate,
+                                            time: selectedTimeSlot,
+                                            status: 'Confirmed',
+                                            totalAmount: receiptData?.totalAmountDue || 15000,
+                                            eventType: planningEventType || 'Event',
+                                            createdAt: new Date().toISOString()
+                                          };
+                                          
+                                          await setDoc(doc(db, 'bookings', bookingId), newBooking);
+                                          
+                                          if (currentUser && currentUser.uid) {
+                                            const connId = `${currentUser.uid}_${vendor.id}`;
+                                            await setDoc(doc(db, 'connections', connId), {
+                                              userId: currentUser.uid,
+                                              vendorId: vendor.id,
+                                              timestamp: new Date().toISOString()
+                                            }).catch(() => {});
+                                          }
+                                          
+                                          setPaymentStep('success');
+                                          if (onShowNotification) {
+                                            onShowNotification('Booking successfully saved!');
+                                          }
+                                        } catch(err) {
+                                          console.error("Error saving booking", err);
+                                          setPaymentStep('method');
+                                        }
                                       }}
                                       className="w-full bg-[#f8f9fa] border-2 border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-brand-primary transition group"
                                     >
@@ -1853,7 +1878,7 @@ export default function VendorDetailSheet({
                                   <div>
                                     <h4 className="text-2xl font-black text-brand-text">BOOKING CONFIRMED!</h4>
                                     <p className="text-xs text-brand-text-secondary font-bold mt-1 leading-relaxed px-4">
-                                      Your advance payment of ₹5,000 has been received successfully.
+                                      Your advance payment of ₹{finalPayableTotal.toLocaleString('en-IN')} has been received successfully.
                                     </p>
                                   </div>
                                   <div className="space-y-3 pt-4">

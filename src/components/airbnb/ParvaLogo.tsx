@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBranding } from '../../hooks/useBranding';
 
 export interface ParvaLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -13,22 +14,30 @@ export function ParvaLogo({
   className = '',
   onClick
 }: ParvaLogoProps) {
+  const { logoUrl, logoAltText, logoDarkUrl } = useBranding();
+
   const sizeClasses = {
     sm: 'h-8',
     md: 'h-10',
     lg: 'h-14'
   }[size];
 
+  const effectiveLogoUrl = variant === 'white' && logoDarkUrl ? logoDarkUrl : logoUrl;
+  const isWhiteFilter = variant === 'white' && !logoDarkUrl ? 'brightness-0 invert' : '';
+
   return (
     <div
       onClick={onClick}
       className={`flex items-center gap-2 cursor-pointer select-none group ${className}`}
-      title="MyParva - Celebration Booking Platform"
+      title={logoAltText || 'MyParva - Celebration Booking Platform'}
     >
       <img 
-        src="/parva-logo.png" 
-        alt="MyParva" 
-        className={`${sizeClasses} object-contain transition-transform duration-300 group-hover:scale-105`} 
+        src={effectiveLogoUrl || '/parva-logo.png'} 
+        alt={logoAltText || 'MyParva'} 
+        className={`${sizeClasses} ${isWhiteFilter} object-contain transition-transform duration-300 group-hover:scale-105`}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = '/parva-logo.png';
+        }}
       />
     </div>
   );

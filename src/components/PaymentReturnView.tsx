@@ -15,9 +15,37 @@ export function PaymentReturnView({ onGoHome, onViewBookings, apiUrl }: PaymentR
   const [statusMessage, setStatusMessage] = useState<string>('Verifying your payment with Cashfree...');
   const [pollAttempts, setPollAttempts] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const backendBaseUrl = apiUrl || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://parava-backend.onrender.com');
+
+  const handleDownloadReceipt = async () => {
+    const bookingId = booking?.id;
+    const targetId = bookingId || orderId;
+    if (!targetId) return;
+    try {
+      setIsDownloadingReceipt(true);
+      const res = await fetch(`${backendBaseUrl}/api/bookings/${encodeURIComponent(targetId)}/receipt${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ''}`);
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+      }
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `Parva_Receipt_${targetId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Download Receipt Error:', err);
+      alert('Could not download receipt right now. You can access it anytime from "My Bookings".');
+    } finally {
+      setIsDownloadingReceipt(false);
+    }
+  };
 
   const verifyPaymentStatus = async (id: string, attemptCount = 0) => {
     try {
@@ -43,9 +71,9 @@ export function PaymentReturnView({ onGoHome, onViewBookings, apiUrl }: PaymentR
         setStatus('PENDING');
         setStatusMessage(data.message || 'Payment is awaiting final bank/UPI confirmation. Checking again in a few moments...');
         
-        // Auto retry up to 4 times with staged delay
-        if (attemptCount < 4) {
-          const delay = (attemptCount + 1) * 3000;
+        // Auto retry up to 5 times with rapid 1.2s delay for instant confirmation
+        if (attemptCount < 5) {
+          const delay = 1200;
           pollTimerRef.current = setTimeout(() => {
             setPollAttempts(attemptCount + 1);
             verifyPaymentStatus(id, attemptCount + 1);
@@ -78,11 +106,11 @@ export function PaymentReturnView({ onGoHome, onViewBookings, apiUrl }: PaymentR
       setStatusMessage(data.message || 'Payment status could not be confirmed immediately. Please check your bookings tab.');
     } catch (err: any) {
       console.error('[PaymentReturnView] Verification check error:', err);
-      if (attemptCount < 3) {
+      if (attemptCount < 4) {
         pollTimerRef.current = setTimeout(() => {
           setPollAttempts(attemptCount + 1);
           verifyPaymentStatus(id, attemptCount + 1);
-        }, 3000);
+        }, 1200);
       } else {
         setStatus('UNKNOWN');
         setStatusMessage('Network timeout while checking payment status. If your account was debited, your booking will be confirmed shortly.');
@@ -206,6 +234,15 @@ export function PaymentReturnView({ onGoHome, onViewBookings, apiUrl }: PaymentR
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDownloadingReceipt}
+                onClick={handleDownloadReceipt}
+                className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3.5 px-5 rounded-2xl shadow-md transition active:scale-95 cursor-pointer text-sm sm:text-base"
+              >
+                <Receipt size={16} />
+                <span>{isDownloadingReceipt ? 'Downloading...' : 'Download Receipt'}</span>
+              </button>
               <button
                 type="button"
                 onClick={onViewBookings}
